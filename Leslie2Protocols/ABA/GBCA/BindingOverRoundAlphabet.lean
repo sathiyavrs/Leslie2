@@ -45,7 +45,7 @@ variable {P : Parameters} {M : Type} [DecidableEq M] {r : ℕ}
 
 /-- **Binding (trace form) over the family alphabet.** The round is bound to
 one bit on the trace: all labels the trace carries that name a round-`r` return
-announce the same bit, and every one of them that hands out a value hands out
+announce the same bit, and every one of them that returns a value returns
 that bit. A return is named by `Sum.inl (Label.retG r id out bnd)` and by the
 Byzantine transition `Sum.inr (.byzantineRetG r id out bnd)` alike,
 `specificationLabelMap` sending both to the specification's return. -/
@@ -160,7 +160,7 @@ theorem specificationOverRoundAlphabet_retG_bound_agree
   · exact specificationOverRoundAlphabet_retG_bound_agree_le he h hst₁ hst₂ hstep₁ hstep₂
   · exact (specificationOverRoundAlphabet_retG_bound_agree_le he h hst₂ hst₁ hstep₂ hstep₁).symm
 
-/-- **A value-bearing return announces the bit it hands out**, along an
+/-- **A grade-1 or grade-2 return announces the bit it returns**, along an
 execution of the lifted specification. The value guard excludes `!v`, the bound
 guard excludes `!β`, and a state of an execution excludes at most one bit. -/
 theorem specificationOverRoundAlphabet_retG_value_eq_bound

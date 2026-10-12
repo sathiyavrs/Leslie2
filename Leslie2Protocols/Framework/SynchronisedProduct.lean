@@ -59,7 +59,7 @@ theorem prodPMF_pure_pure {α β : Type*} (a : α) (b : β) :
   rw [prodPMF_pure_left, PMF.pure_map]
 
 /-- The mass a `prodPMF` with Dirac left factor puts on `(a, y)` is `ν y` (used
-to read off a probabilistic factor's mass through idle product factors). -/
+to compute a probabilistic factor's mass through idle product factors). -/
 theorem prodPMF_pure_left_apply {α β : Type*}
     (a : α) (ν : PMF β) (y : β) : prodPMF (PMF.pure a) ν (a, y) = ν y := by
   rw [prodPMF_pure_left, PMF.map_apply]

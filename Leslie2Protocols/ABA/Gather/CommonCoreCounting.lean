@@ -21,9 +21,9 @@ The argument runs on one incidence on the gather network state: `j` is dominated
 at least `n − f` senders (`dominatedBy_card`) -- and the pigeonhole
 (`exists_dominators`) then gives a sender outside `F` with at least `f + 1` dominators, whose
 write-once `ECHO` payload is the core (`core_witness`). A `BIND` payload multicast by a process
-outside `F` is its write-once `BIND` field (`bind_confirmed`), backed by `n − f` received `VOTE`
-payloads (`bind_backed`). The `f + 1` dominators meet that quorum, so the core lies below the
-`BIND` payload (`transfer`).
+outside `F` is its write-once `BIND` field (`bind_confirmed`), which contains a `VOTE`
+payload received from each of `n − f` senders (`bind_backed`). The `f + 1` dominators meet that
+quorum, so the core lies below the `BIND` payload (`transfer`).
 
 The counting is over that one incidence on the gather network state, so the lemmas that read that
 state alone -- `mem_correct`, `mem_dominatedBy`, `correct_filter_dominatedBy`, `sum_dominatedBy` --
@@ -93,9 +93,9 @@ theorem echoOf_eq {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant 
 
 omit [DecidableEq X] in
 /-- **Every `dominatedBy` set is large**: a process outside `F` dominates at
-least `n − f` senders. Its `VOTE` payload, if it has one, is backed by `n − f`
-received `ECHO` messages; if it has none the condition is vacuous and the set is
-everything. -/
+least `n − f` senders. Its `VOTE` payload, if it has one, contains an `ECHO`
+payload received from each of `n − f` senders; if it has none the condition is vacuous and the set
+is everything. -/
 theorem dominatedBy_card {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s)
     {q : Fin P.n} (hq : q ∉ (gatherProgramsAndNetwork s).F) : P.n - P.f ≤ (dominatedBy (networkOf s)
       q).card := by

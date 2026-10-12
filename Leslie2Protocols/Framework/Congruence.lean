@@ -12,7 +12,8 @@ import Leslie2Protocols.Framework.Relabel
 # Forward simulation is a congruence for the composition operators
 
 A forward simulation between labelled transition systems (`ForwardSimulation`,
-`Simulation/ForwardLTS.lean`) survives each of the operators a composition is built from: binary
+`Simulation/ForwardLTS.lean`) is preserved by each of the operators a composition is built from:
+binary
 parallel composition, in either position (`ForwardSimulation.parallel_right`,
 `ForwardSimulation.parallel_left`); the full-synchronisation product of a finite family
 (`ForwardSimulation.synchronisedProduct`); hiding a set of labels (`ForwardSimulation.abstract`);
@@ -665,7 +666,7 @@ theorem System.abstract_tau_step {sys : System S Label} (L : Set Label) {s : S} 
   · exact Or.inl ⟨rfl, Silent.τ, hτ, h⟩
   · exact Or.inr ⟨hτ, h⟩
 
-/-- A silent run survives hiding. -/
+/-- A silent run of a system is a silent run of its abstraction. -/
 theorem System.weakLSilent_abstract {sys : System S Label} (L : Set Label) {q q' : S}
     (h : sys.weakLSilent q q') : (sys.abstract L).weakLSilent q q' :=
   System.weakLSilent_map (f := id)
@@ -709,7 +710,7 @@ section Relabel
 variable {S T Label Extra : Type} [Silent Label]
   {sysC : System S (Label ⊕ Extra)} {sysA : System T (Label ⊕ Extra)}
 
-/-- A silent run survives the restriction: the silent label of the extended
+/-- A silent run of `sys` is a silent run of `sys.relabel`: the silent label of the extended
 alphabet is the silent label of the base alphabet, injected on the left. -/
 theorem System.weakLSilent_relabel {sys : System S (Label ⊕ Extra)} {q q' : S}
     (h : sys.weakLSilent q q') : sys.relabel.weakLSilent q q' :=

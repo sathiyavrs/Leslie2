@@ -25,11 +25,11 @@ process has returned. The split states the same content without an overwrite: `c
 fires once, at any point, and its guard `ldr ∈ F ∨ input = some m` says a
 corrupted leader commits anything while a correct one commits only its input.
 Decoupling the commit from the call is not a strengthening but the correct
-account of the source's overwrite window: a leader corrupted *after* a correct
+account of the source's overwrite: a leader corrupted *after* a correct
 call can still direct the delivered value anywhere until the first return, and
 a spec that fixed `val` at call time would refuse that execution.
 
-Both properties are then linear. Agreement: `ret` hands out `val`, and `val`
+Both properties are then linear. Agreement: `ret` returns `val`, and `val`
 is written once. Validity: if the leader is never corrupted then `commit`'s
 guard forces `val = input`.
 

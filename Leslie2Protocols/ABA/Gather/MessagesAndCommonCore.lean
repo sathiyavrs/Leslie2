@@ -19,7 +19,7 @@ payload sets (`Message`), each multicast to all processes.
 `ECHO`, the `VOTE` and the `BIND` payload it has multicast, and its return
 flag.
 
-`coreOf` reads a payload set off the sent sets and the corrupted set of a gather
+`coreOf` computes a payload set from the sent sets and the corrupted set of a gather
 network state, and nothing else. The incidence lemmas stated beneath it read
 that state alone, and are the rows and the columns the counting argument of
 `ABA/Gather/CommonCoreCounting.lean` sums.
@@ -66,7 +66,7 @@ def BaseProcessVariables.initial (n : ℕ) (X : Type) : BaseProcessVariables n X
 
 /-! ### The core of a gather network state
 
-`coreOf` reads a payload set off the sent sets and the corrupted set of a
+`coreOf` computes a payload set from the sent sets and the corrupted set of a
 gather network state, and nothing else (`coreOf_networkState_only`). It is the
 `ECHO` payload of a sender whose payload lies below the `VOTE` payloads of
 many processes outside `F`. `Gather/CommonCoreCounting.lean` is the argument that it has at

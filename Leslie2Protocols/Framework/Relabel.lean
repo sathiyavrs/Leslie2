@@ -35,7 +35,7 @@ Restriction discards transitions rather than states, so it preserves
 
 ## The precongruence
 
-A probabilistic forward simulation survives the restriction
+A probabilistic forward simulation is preserved by the restriction
 (`ProbabilisticForwardSimulation.relabel`).
 
 The restriction changes the *label type*, and a weak transition
@@ -67,7 +67,7 @@ namespace System
 the extended alphabet `Label ⊕ Extra` as a system over `Label`: the state space
 and the initial state are unchanged, and the transitions on `l` are exactly the
 `Sum.inl l`-transitions of `sys`. Transitions labelled by an auxiliary
-`Sum.inr e` are discarded — abstract them to `τ` first if they are to survive. -/
+`Sum.inr e` are discarded — abstract them to `τ` first to keep them as silent transitions. -/
 def relabel (sys : System State (Label ⊕ Extra)) : System State Label where
   init := sys.init
   step s l μ := sys.step s (Sum.inl l) μ
@@ -417,7 +417,7 @@ theorem tsum_toExtendedRun (σ : WeakScheduler sys) (μ0 : PMF State)
 
 /-! ### The congruence -/
 
-/-- **A τ-closure survives the restriction.** -/
+/-- **A τ-closure of `sys` is a τ-closure of `sys.relabel`.** -/
 theorem weakTau_relabel {μ0 ν : PMF State} (h : weakTau sys μ0 ν) :
     weakTau sys.relabel μ0 ν := by
   classical
@@ -437,13 +437,14 @@ theorem weakTau_relabel {μ0 ν : PMF State} (h : weakTau sys μ0 ν) :
     exact AlterSeq.endState_mapLabels _ e.1 e.2 _
 
 omit [Silent Label] in
-/-- **A hyper-step survives the restriction**: the step relations coincide. -/
+/-- **A hyper-step of `sys` on `Sum.inl l` is a hyper-step of `sys.relabel` on `l`**: the step
+relations coincide. -/
 theorem hyperStep_relabel {μ ν : PMF State} {l : Label}
     (h : hyperStep sys μ (Sum.inl l) ν) : hyperStep sys.relabel μ l ν := by
   obtain ⟨p, hp, hν⟩ := h
   exact ⟨p, hp, hν⟩
 
-/-- **A weak `l`-step survives the restriction**, segment by segment. -/
+/-- **A weak `Sum.inl l`-step of `sys` is a weak `l`-step of `sys.relabel`**, segment by segment. -/
 theorem weakStep_relabel {μ ν : PMF State} {l : Label}
     (h : weakStep sys μ (Sum.inl l) ν) : weakStep sys.relabel μ l ν := by
   obtain ⟨a, b, h1, h2, h3⟩ := h

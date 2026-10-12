@@ -31,7 +31,7 @@ open Implementation Composition
 
 /-- **Binding of the round's composition, on a trace.** Every positive-probability trace of the
 round-`r` composition is bound to one bit: all its round-`r` returns announce that bit, and every
-one of them that hands out a value hands out it. Binding is a property of the labels
+one of them that returns a value returns that bit. Binding is a property of the labels
 (`GBCA.BindingTraceExtended`), so `composition_specificationTraces` carries it from
 `GBCA.specificationOverRoundAlphabet_binding`. -/
 theorem composition_binding (P : Parameters) (r : ℕ) :

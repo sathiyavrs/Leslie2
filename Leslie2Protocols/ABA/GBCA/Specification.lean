@@ -13,15 +13,15 @@ import Leslie2Protocols.Framework.LoopsAndInstanceFamilies
 The round-`r` instance of the Graded Binding Crusader Agreement specification.
 
 Binding is *negative* information. The state field `excluded : Finset Bool` is the
-set of bits the instance can no longer hand out; it starts empty. The internal
+set of bits the instance can no longer return; it starts empty. The internal
 τ-transition `bindUnset b` excludes one bit — `excluded := insert b excluded` — once a
-quorum has called and `f + 1` F-blind supporters back the *surviving* bit `!b`.
+quorum has called and `f + 1` F-blind supporters support the bit `!b`, which is not excluded.
 No transition removes a bit and `bindUnset` requires `excluded = ∅`, so `excluded` is written
 at most once per instance — the exclusion commits the round — and is monotone along
 every execution; `corrupt` leaves it alone. The once-only guard is what makes
-every fair round completable: a second exclusion after a grade-2 return would strand
-the processes yet to return, the value-bearing returns needing a live bit and
-`retGrade0` being blocked by the grade-2 guard. Every property below is a consequence of
+every fair round completable: a second exclusion after a grade-2 return would leave
+the processes yet to return with no enabled return: the grade-1 and grade-2 returns need a bit
+not excluded, and the grade-2 guard disables `retGrade0`. Every property below is a consequence of
 that monotonicity plus the membership guards on the return transitions, with no
 auxiliary invariant.
 
@@ -32,14 +32,13 @@ no grade-0 return can, and vice versa.
 
 ## Graded agreement is the guard pair
 
-Both value-bearing returns carry the guard pair `v ∉ excluded ∧ (!v) ∈ excluded`: the
-bit handed out is alive, and the other bit is already excluded. That pair *is*
+Both the grade-1 and the grade-2 return carry the guard pair `v ∉ excluded ∧ (!v) ∈ excluded`: the
+returned bit is not excluded, and the other bit is already excluded. That pair *is*
 graded agreement, with no supporting argument. A return of `v` puts `!v` into
 `excluded`; monotonicity carries `!v ∈ excluded` to every later state of the run; a
 later return of `w` needs `w ∉ excluded`, so `w ≠ !v`, so `w = v`. Two returns in
-one execution therefore name the same bit whatever their grades, and a single
-bit — the unique survivor once any value-bearing return has fired — is the only
-bit any extension can ever hand out.
+one execution therefore name the same bit whatever their grades. Once a return of grade 1
+or 2 has fired, the bit not excluded is the only bit any extension can return.
 
 ## The bound bit on the label
 
@@ -48,21 +47,21 @@ announces it on the label `.retG r id out bnd`. The bit is a ghost output: it is
 the value the specification holds as state, and no program reads it. On a
 reachable state `excluded` holds at most one bit, so the guard determines `bnd`
 as the complement of the excluded bit. All the returns of a round therefore
-announce one bit. A value-bearing return carries `(!v) ∈ excluded` as well, so it
+announce one bit. A return of grade 1 or 2 carries `(!v) ∈ excluded` as well, so it
 announces `bnd = v`. This makes binding a property of the trace alone: the
-round-`r` returns of a trace name a single bit, and each of them that hands out a
-value hands out that bit.
+round-`r` returns of a trace name a single bit, and each of them that returns a
+value returns that bit.
 
 ## `retGrade0` and Graded Binding
 
 The grade-0 return's guard `(!bnd) ∈ excluded` is ABDY22's Graded Binding clause read
 on this state: *there is a bit `b` such that no non-faulty party decides `1 − b`
 at grade `≥ 1` in any extension*. The witness is the announced bit `bnd`, and the
-bit no extension can hand out is `!bnd`, because the value-bearing returns refuse
+bit no extension can return is `!bnd`, because the grade-1 and grade-2 returns refuse
 an excluded bit and `excluded` only grows. The witness is thus valid in every
 extension of the run and not merely at the moment of the return. A grade-0 return
-commits the instance: from that point on at most one bit is alive anywhere in the
-future, which is what makes handing out no bit the right answer. `retGrade0`
+commits the instance: from that point on at most one bit is not excluded in any later
+state, which is what makes returning no bit the right answer. `retGrade0`
 additionally requires `f + 1` F-blind support for each bit (D15), which is what
 witnesses that neither bit was forced.
 
@@ -74,12 +73,12 @@ announce its complement, so the round is bound to one bit on the trace even
 though no process is handed a value. The commitment is sound because the
 announced bit is a ghost output: it is program data for no component, so no
 process is answered with the internal choice. The guard `(!bnd) ∈ excluded` is
-the binding witness either way — `!bnd` is a bit that no extension can hand out
-— whether the round goes on to hand out `bnd` or hands out nothing at all.
+the binding witness either way. The bit `!bnd` is a bit that no extension can return,
+whether the round goes on to return `bnd` or returns no bit at all.
 
-## Where a handed-out value comes from (D14/D15)
+## Where a returned value comes from (D14/D15)
 
-* **D14 (repair, load-bearing).** The source blueprint's TS 2 witnesses binding
+* **D14 (repair, necessary for Validity).** The source blueprint's TS 2 witnesses binding
   by a *single* correct caller (`∃ id ∉ F, call id = b`), and grade-1 / grade-0 dissent
   likewise by a single correct dissenter. That singular witness loses the same
   account of where a value comes from that the D13 repair restores in Transition System 1, one level
@@ -87,32 +86,32 @@ the binding witness either way — `!bnd` is a bit that no extension can hand ou
   be corrupted later in the trace, after which nothing attributes the outcome to
   a never-corrupted input — and `hybrid` built on this TS 2 provably violates
   the papers' Validity (deterministic witness at `n = 4, f = 1`, inputs
-  `1,0,0,0`: bind at `1` off the sole `1`-holder, `retGrade1`-adopt everywhere,
+  `1,0,0,0`: bind at `1` with the sole holder of `1` as its witness, `retGrade1`-adopt everywhere,
   round-1 unanimity decides `1`, `fail 0`, `retABA 1 1` — never-corrupted
   processes all input `0`). ABDY22's implementation carries the `f + 1` via
   Valid-set relay thresholds; TS 2 abstracted it to one witness.
 * **D15 (the repair).** Every witness is a count
   `f + 1 ≤ #{id | call id = some b ∨ id ∈ F}` at the relevant bit — exactly
   TS 1's `InputSupport` shape (D13), directly `F`-blind: the count is monotone in `F`
-  and in `call`, so it is immune to later `fail`s. On the exclusion set the
+  and in `call`, so later `fail`s do not decrease it. On the exclusion set the
   counts sit at three places. `bindUnset b` counts support for the bit it
-  *spares*, `!b`; the `retGrade1` dissent guard counts support for the bit it does
-  *not* hand out, `!v`; `retGrade0` counts support for both bits. The account survives
-  verbatim: `F` is monotone with `|F_final| ≤ f`, so among `f + 1` distinct
+  leaves not excluded, `!b`; the `retGrade1` dissent guard counts support for the bit it does
+  *not* return, `!v`; `retGrade0` counts support for both bits. The pigeonhole argument
+  applies unchanged: `F` is monotone with `|F_final| ≤ f`, so among `f + 1` distinct
   supporters some member is outside the *final* `F`, hence outside the current
-  `F`, hence a never-corrupted genuine caller — corrupt supporters are paid for
-  by the `F` budget itself, with no phantom-call bookkeeping. Chaining the two:
-  a bit `v` handed out at grade `≥ 1` requires `(!v) ∈ excluded`, and the
+  `F`, hence a never-corrupted genuine caller — corrupt supporters are counted
+  against the `F` budget itself, with no record of phantom calls. Chaining the two:
+  a bit `v` returned at grade `≥ 1` requires `(!v) ∈ excluded`, and the
   `bindUnset (!v)` that put it there witnessed `f + 1` F-blind supporters of
-  `!(!v) = v`; the budget pigeonhole then recovers a never-corrupted genuine
-  caller of `v` behind every value-bearing return.
+  `!(!v) = v`; the budget pigeonhole then yields a never-corrupted genuine
+  caller of `v` for every return of grade 1 or 2.
 
 * **D19 (the state shape).** The source blueprint's TS 2 carries a bound value
   `bind ∈ {0, 1, ⊥}`. The exclusion set is the excluded-bit form of that
   value: `excluded ∈ {∅, {b}}`, embedding `bind = ⊥ ↦ excluded = ∅` and
   `bind = b ↦ excluded = {!b}`. The two states therefore differ in the guards, not
   in the cardinality. The blueprint's `bind = some v` guard on the
-  value-bearing returns becomes the pair `v ∉ excluded ∧ (!v) ∈ excluded`, its
+  grade-1 and grade-2 returns becomes the pair `v ∉ excluded ∧ (!v) ∈ excluded`, its
   `bind = none` guard on binding becomes `excluded = ∅`, and the grade-0 return's
   binding obligation `bind ≠ ⊥` becomes `(!bnd) ∈ excluded`. The source puts the
   bound value on the grade-0 return label; here `bnd` is that value, announced on
@@ -133,7 +132,7 @@ structure SpecState (n : ℕ) where
   call : Fin n → Option Bool
   /-- Which processes have received their return. -/
   ret : Fin n → Bool
-  /-- The exclusion set: the bits the instance can no longer hand out.
+  /-- The exclusion set: the bits the instance can no longer return.
   Monotone, written at most once, by `bindUnset`. -/
   excluded : Finset Bool
   /-- The grade: `some true` after a grade-2 return, `some false` after a
@@ -207,7 +206,7 @@ inductive Step (P : Parameters) (r : ℕ) :
   /-- Input-enabledness loop for `call`. -/
   | callLoop (s : SpecState P.n) (id : Fin P.n) (b : Bool) :
       Step P r s (.callG r id b) (PMF.pure s)
-  /-- Binding: a quorum has called and `f + 1` processes support the surviving
+  /-- Binding: a quorum has called and `f + 1` processes support the
   bit `!b` (D15, InputSupport form: caller or `F`-member); exclude `b`. Fires at most
   once per instance — the guard is `excluded = ∅` — and `excluded` never shrinks. -/
   | bindUnset (s : SpecState P.n) (b : Bool)
@@ -216,7 +215,7 @@ inductive Step (P : Parameters) (r : ℕ) :
         (fun id => s.call id = some (!b) ∨ id ∈ s.F)).card)
       (hd0 : s.excluded = ∅) :
       Step P r s .tau (PMF.pure { s with excluded := insert b s.excluded })
-  /-- Grade-1 return: adopt the surviving bit `v` (`f + 1` dissenting supporters,
+  /-- Grade-1 return: adopt the bit `v`, which is not excluded (`f + 1` dissenting supporters,
   D15). The guard pair `v ∉ excluded`, `(!v) ∈ excluded` is graded agreement; the
   announced bit `bnd` is the one whose complement is excluded. -/
   | retGrade1 (s : SpecState P.n) (id : Fin P.n) (v : Bool) (bnd : Bool)
@@ -227,8 +226,8 @@ inductive Step (P : Parameters) (r : ℕ) :
       (hr : s.ret id = false) :
       Step P r s (.retG r id (.grade1 v) bnd)
         (PMF.pure { s with ret := Function.update s.ret id true })
-  /-- Grade-2 return: decide the surviving bit `v` (writes grade 2). Same guard pair and same
-  announced bit as `retGrade1`. -/
+  /-- Grade-2 return: decide the bit `v`, which is not excluded (writes grade 2). Same guard pair
+  and same announced bit as `retGrade1`. -/
   | retGrade2 (s : SpecState P.n) (id : Fin P.n) (v : Bool) (bnd : Bool)
       (hlive : v ∉ s.excluded) (hexcluded : (!v) ∈ s.excluded)
       (hbnd : (!bnd) ∈ s.excluded)
@@ -238,8 +237,8 @@ inductive Step (P : Parameters) (r : ℕ) :
         (PMF.pure { s with grade := some true, ret := Function.update s.ret id true })
   /-- Grade-0 return: no output, but the bound bit is announced. The guard `(!bnd) ∈ excluded` is
   the Graded Binding witness, valid in every extension because `excluded` only grows, and it names
-  `bnd` as the surviving bit. Both bits carry `f + 1` F-blind support (D15), which is what makes
-  handing out no bit the right answer; the grade is written 0. -/
+  `bnd` as the bit not excluded. Both bits carry `f + 1` F-blind support (D15), which is what makes
+  returning no bit the right answer; the grade is written 0. -/
   | retGrade0 (s : SpecState P.n) (id : Fin P.n) (bnd : Bool)
       (hbnd : (!bnd) ∈ s.excluded)
       (hwT : P.f + 1 ≤ (Finset.univ.filter

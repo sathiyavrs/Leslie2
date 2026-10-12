@@ -17,9 +17,10 @@ specification). `specificationRelation_init` holds it at the two initial states,
 both systems at once, in the shape the family congruence consumes.
 
 The relation carries the invariant of `ABA/GBCA/AFW/Invariant.lean`, and reads the calls,
-the return flags and the corrupted sets off the round's state directly (`call_eq`, `ret_eq`,
-`F_eq`). The specification's `excluded` and `grade` are bookkeeping the round records nothing, so
-the relation carries a witness for each. An excluded bit is covered by an exclusion witness
+the return flags and the corrupted sets directly from the round's state (`call_eq`, `ret_eq`,
+`F_eq`). The specification's `excluded` and `grade` record data that has no field in the round's
+state,
+so the relation carries a witness for each. An excluded bit is covered by an exclusion witness
 `ExclusionWitness` (`exclusion_witness`), the grade-2 guard by a value on at least `|S| − f`
 entries of the second gather's core (`grade2_witness`), and the grade-0 guard by that core
 carrying each bit on at most `f` entries (`grade0_witness`).
@@ -29,7 +30,7 @@ carrying each bit on at most `f` entries (`grade0_witness`).
 The return label carries the round's bound bit, which the round's network holds (D29). The clause
 `excluded_bound` says the specification's `excluded` holds nothing but that bit's complement, so a
 return finds either `(!bnd) ∈ excluded` already — and fires `ret` alone — or `excluded = ∅` — and
-fires `bindUnset (!bnd) ; ret`. A value-bearing outcome's value is the bound bit, by
+fires `bindUnset (!bnd) ; ret`. The value of a grade-1 or grade-2 outcome is the bound bit, by
 `boundOfCore_of_aboveThreshold` on the first gather's core, so the specification's guard pair
 `v ∉ excluded`, `(!v) ∈ excluded` is the same pair.
 -/

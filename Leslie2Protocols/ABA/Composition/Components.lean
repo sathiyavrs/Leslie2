@@ -25,7 +25,7 @@ components.
 ## The extended alphabet
 
 `Label n` is the shared alphabet of the protocol and of its specification. It cannot name the two
-message networks, the Byzantine call and return transitions, or the branches of a call or return
+message networks, the Byzantine call and return transitions, or the cases of a call or return
 that it does not distinguish. `NetworkEvent n M` names them, over the type `M` of the
 messages a graded-agreement round exchanges (`ABA/Implementation/Alphabet.lean`), and
 `ExtendedLabel n M = Label n ⊕ NetworkEvent n M` is the alphabet of every component here. Its
@@ -75,9 +75,9 @@ both transitions here idle on it.
 ## What this file supplies
 
 The two step relations above, the two automata they carry, the determinacy of both, and the lemmas
-that read a transition of each off its label (`roundLoopStep_*`, `abaNetworkStep_*`) — among them
-`roundLoopStep_noStep`, which reads every transition of a replaced program as a self-loop. It also
-supplies the systems of the synchronised round-loop group in both directions
+that determine a transition of each from its label (`roundLoopStep_*`, `abaNetworkStep_*`) — among
+them `roundLoopStep_noStep`, which reads every transition of a replaced program as a self-loop. It
+also supplies the systems of the synchronised round-loop group in both directions
 (`roundLoopProduct_cases`, `roundLoopProduct_pure`) and the lemmas that determine a round-loop
 tuple from its per-process transitions (`roundLoopVariables_*`). -/
 
@@ -491,11 +491,11 @@ theorem roundLoopProduct_no_tau {P : Parameters} {M : Type} [DecidableEq M]
 
 /-! ### One round loop's transitions, by label class
 
-Each lemma reads a transition of `RoundLoopStep` off its label: the participant's transition as its
-guards together with the Dirac it produces, and the idle transition of a non-participant as the
-identity. A participant's transition carries the health guard `corrupted = false`, and on a label
-outside `actsAt j` the replaced program's self-loop is a second transition on the same label
-(D23). -/
+Each lemma determines a transition of `RoundLoopStep` from its label: the participant's
+transition as its guards together with the Dirac it produces, and the idle transition of a
+non-participant as the identity. A participant's transition carries the replacement guard
+`corrupted = false`, and on a label outside `actsAt j` the replaced program's self-loop is a second
+transition on the same label (D23). -/
 
 section RoundLoopCases
 
@@ -731,9 +731,9 @@ theorem roundLoopStep_byzantineRetW {r : ℕ} {k : Fin P.n} {b : Bool}
   cases h <;> rfl
 
 /-- **The replaced program writes nothing** (D23). Whatever the label, a round
-loop whose flag is up leaves its variables where they stand. The proof is by cases
-on the algorithm: every transition that writes carries the health guard, so no
-transition of a replaced program survives except a self-loop. -/
+loop whose flag is set leaves its variables unchanged. The proof is by cases
+on the algorithm: every transition that writes carries the replacement guard `corrupted = false`, so
+every transition of a replaced program is a self-loop. -/
 theorem roundLoopStep_noStep {L : ExtendedLabel P.n M} (hc : c.corrupted = true)
     (h : RoundLoopStep P j c L ν) : ν = PMF.pure c := by
   cases h <;> simp_all

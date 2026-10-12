@@ -26,8 +26,8 @@ The invariant carries
 * the corruption budget (`F_card`) and delivery soundness (`received_subset_sent`);
 * protocol conformance of correct multicasts (`echo_confirmed`, `vote_input`,
   `vote_confirmed`, `bind_confirmed`, `bindBot_confirmed`, `echo5_input`, `echo5_confirmed`,
-  `echo5Bot_confirmed`): each correct `ECHO`/`VOTE`/`BIND`/`ECHO5` is backed by the
-  received messages that Algorithm 6 demands (the received messages only grow, so a witness once
+  `echo5Bot_confirmed`): a correct sender of `ECHO`/`VOTE`/`BIND`/`ECHO5` has
+  received the messages that Algorithm 6 demands (the received messages only grow, so a witness once
   present persists in the current state);
 * write-once recording of correct multicasts (`echo_once`, `vote_once`,
   `bind_once`, `echo5_once`): a correct process's payload is the one held in the
@@ -117,7 +117,7 @@ def InputSupport (P : Parameters) (s : RoundState P.n) (b : Bool) : Prop :=
   P.f + 1 ≤ (Finset.univ.filter
     (fun id => (s.processVariables id).input = some b ∨ id ∈ s.F)).card
 
-/-- The support count is monotone: it survives any step that preserves
+/-- The support count is monotone: it is preserved by any step that preserves
 genuine holders and grows `F`. -/
 theorem InputSupport.mono {s s' : RoundState P.n} {b : Bool}
     (hproc : ∀ id, (s.processVariables id).input = some b → (s'.processVariables id).input = some b)
@@ -134,7 +134,7 @@ structure Invariant (P : Parameters) (s : RoundState P.n) : Prop where
   F_card : s.F.card ≤ P.f
   /-- Delivery soundness: everything delivered was multicast. -/
   received_subset_sent : ∀ i j m, m ∈ s.received i j → m ∈ s.sent j
-  /-- Correct `ECHO b` is backed by an `n − f` quorum of received `INPUT b` messages. -/
+  /-- A correct sender of `ECHO b` has received an `n − f` quorum of `INPUT b` messages. -/
   echo_confirmed : ∀ j b, j ∉ s.F → Message.echo b ∈ s.sent j →
     P.n - P.f ≤ s.receivedCount j (.input b)
   /-- Correct `ECHO` multicasts are recorded in the write-once `sentEcho`
@@ -143,7 +143,7 @@ structure Invariant (P : Parameters) (s : RoundState P.n) : Prop where
     (s.processVariables j).sentEcho = some b
   /-- Correct voters hold an input (D8). -/
   vote_input : ∀ j w, j ∉ s.F → Message.vote w ∈ s.sent j → (s.processVariables j).input ≠ none
-  /-- Correct `VOTE b` is backed by an `n − f` quorum of received `ECHO b` messages. -/
+  /-- A correct sender of `VOTE b` has received an `n − f` quorum of `ECHO b` messages. -/
   vote_confirmed : ∀ j b, j ∉ s.F → Message.vote (some b) ∈ s.sent j →
     P.n - P.f ≤ s.receivedCount j (.echo b)
   /-- Correct `VOTE` multicasts are recorded in the write-once `sentVote`
@@ -155,10 +155,11 @@ structure Invariant (P : Parameters) (s : RoundState P.n) : Prop where
   field; in particular a correct process multicasts at most one payload. -/
   bind_once : ∀ j w, j ∉ s.F → Message.bind w ∈ s.sent j →
     (s.processVariables j).sentBind = some w
-  /-- Correct `BIND b` is backed by an `n − f` quorum of received `VOTE b` messages. -/
+  /-- A correct sender of `BIND b` has received an `n − f` quorum of `VOTE b` messages. -/
   bind_confirmed : ∀ j b, j ∉ s.F → Message.bind (some b) ∈ s.sent j →
     P.n - P.f ≤ s.receivedCount j (.vote (some b))
-  /-- Correct `BIND ⊥` is backed by `n − f` received any-payload `VOTE` messages. -/
+  /-- A correct sender of `BIND ⊥` has received `VOTE` messages of any payload from `n − f`
+  senders. -/
   bindBot_confirmed : ∀ j, j ∉ s.F → Message.bind none ∈ s.sent j →
     P.n - P.f ≤ s.voteCount j
   /-- Correct `ECHO5` senders hold an input (D8, one level up). -/
@@ -167,10 +168,11 @@ structure Invariant (P : Parameters) (s : RoundState P.n) : Prop where
   that carries the grade-2/grade-0 exclusivity. -/
   echo5_once : ∀ j w, j ∉ s.F → Message.echo5 w ∈ s.sent j →
     (s.processVariables j).sentEcho5 = some w
-  /-- Correct `ECHO5 b` is backed by an `n − f` quorum of received `BIND b` messages. -/
+  /-- A correct sender of `ECHO5 b` has received an `n − f` quorum of `BIND b` messages. -/
   echo5_confirmed : ∀ j b, j ∉ s.F → Message.echo5 (some b) ∈ s.sent j →
     P.n - P.f ≤ s.receivedCount j (.bind (some b))
-  /-- Correct `ECHO5 ⊥` is backed by `n − f` received any-payload `BIND` messages. -/
+  /-- A correct sender of `ECHO5 ⊥` has received `BIND` messages of any payload from `n − f`
+  senders. -/
   echo5Bot_confirmed : ∀ j, j ∉ s.F → Message.echo5 none ∈ s.sent j →
     P.n - P.f ≤ s.bindCount j
   /-- Budget-robust input origin: for every corruption superset `G` within

@@ -197,7 +197,7 @@ theorem composedExtended_tau_coin (P : Parameters)
 
 /-! ### The graded-agreement family's transitions
 
-The family routes a round-tagged label to its round, takes `τ` at any round,
+The family passes a round-tagged label to the instance of its round, takes `τ` at any round,
 broadcasts `fail`, and idles on everything else. -/
 
 /-- The round-`r` instance moves on a label it owns. -/

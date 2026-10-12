@@ -9,7 +9,7 @@ import Leslie2Protocols.Framework.SynchronisedProduct
 import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 
 /-!
-# The transitions of the reliable-broadcast composition, read off their labels
+# The transitions of the reliable-broadcast composition, determined by their labels
 
 The composition is `relabel ∘ abstract ∘ parallel` over the synchronised group of programs
 and the instance's network. The lemmas here unfold that pipeline in both directions.
@@ -21,8 +21,8 @@ moves the network alone. `brachaInstanceExtended_synchronised_cases` and
 `brachaInstanceExtended_tau_cases` read a synchronised step that way, and the `_step` lemmas build
 one from the transitions of the factors.
 
-`programStep_*` reads one program's transition off its label: the participant's guards together
-with the Dirac it produces, and the idle transition of a non-participant as the identity.
+`programStep_*` determines one program's transition from its label: the participant's guards
+together with the Dirac it produces, and the idle transition of a non-participant as the identity.
 `networkStep_*` does the same for the instance's network.
 
 A synchronised step delivers a program function given pointwise, by its value at the acting process
@@ -199,7 +199,7 @@ theorem brachaInstanceExtended_tau_cases {P : Parameters} {ldr : Fin P.n}
 
 /-! ### One program's transitions, by label class
 
-Each lemma reads one transition off its label: the participant's guards
+Each lemma determines one transition from its label: the participant's guards
 together with the Dirac it produces, and the idle transition of a
 non-participant as the identity. The state and the distribution are variables,
 so `cases` unifies against any state of the program. -/

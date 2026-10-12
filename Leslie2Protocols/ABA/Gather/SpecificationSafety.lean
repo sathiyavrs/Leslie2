@@ -40,7 +40,7 @@ variable {X : Type} [DecidableEq X] {P : Parameters}
 
 /-! ### The core along a run -/
 
-/-- The guards of a return, read off its label. -/
+/-- The guards of a return, determined by its label. -/
 theorem ret_guards {s : SpecState P.n X} {id : Fin P.n} {g : Fin P.n → Option X}
     {C : AcceptedPairs P.n X} {μ : PMF (SpecState P.n X)}
     (hstep : Step P s (.ret id g C) μ) :
@@ -49,7 +49,7 @@ theorem ret_guards {s : SpecState P.n X} {id : Fin P.n} {g : Fin P.n → Option 
   | ret id' g' C' hC hmem _ _ => exact ⟨hC, hmem⟩
 
 /-- **The core is written once.** `bindCore` is its only writer and fires
-only from `core = none`, so the value survives every later transition and every
+only from `core = none`, so the value is unchanged by every later transition and every
 corruption. -/
 theorem core_stable {C : AcceptedPairs P.n X} :
     ∀ (s : SpecState P.n X) (l : Label P.n X) (μ : PMF (SpecState P.n X))

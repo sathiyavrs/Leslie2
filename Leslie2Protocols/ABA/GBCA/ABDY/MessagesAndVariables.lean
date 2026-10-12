@@ -38,11 +38,11 @@ second component that leaves the rest of the round alone.
 `setProcessVariables`
 and `receiveMessage` on a round's variables, `multicast`, `corrupt` and `setBound` on the network
 state. Each write comes with the lemmas that carry every other projection through it, which is
-what lets a guard be read off a state after a write without unfolding the pair.
+what lets a guard be evaluated on a state after a write without unfolding the pair.
 
 The counting is `receivedCount`, the number of distinct senders of a message at a receiver; the
 per-level counts `echoCount`, `voteCount`, `bindCount` and `echo5Count`; and `bothValid`, which
-says that both bits are backed by an `n − f` `INPUT` quorum in a receiver's delivered sets, the
+says that for each bit a receiver's delivered sets hold an `n − f` `INPUT` quorum, the
 set `Valid` of the algorithm being `{0, 1}` there. Two quorum lemmas close the file:
 a count of received messages above `|G|` yields a sender outside `G`, and two `n − f` quorums of
 received messages at possibly different receivers share a correct sender.
@@ -90,13 +90,13 @@ inductive Message : Type
 /-- **The round's bound bit**, as a function of the round's messages. It is the
 bit a return of outcome `out` announces on its label.
 
-A value-bearing outcome announces the value it hands out. An outcome carrying no
+A grade-1 or grade-2 outcome announces the value it returns. An outcome carrying no
 value announces the payload of a correct `⟨VOTE, b⟩` sender, and `true` where
 there is none. A correct `⟨VOTE, b⟩` sender holds an `n − f` quorum of received
 `⟨ECHO, b⟩` messages and at most one bit carries such a quorum, so on a reachable
-state the two bit branches are exclusive and the order in which they are read
-is immaterial. Where neither branch applies no bit is ever handed out, and the
-announced bit is the surviving one of a round that hands out nothing.
+state the two bit cases are exclusive and the order in which they are tested
+is immaterial. Where neither case applies no bit is ever returned, and the
+announced bit is the bit not excluded in a round that returns no bit.
 
 The bit is a ghost output: no program reads it, and the three return transitions
 are the only transitions that read it. -/
@@ -162,8 +162,8 @@ The network state carries the name of the instance that composes it beside the
 programs (`ABA/GBCA/ABDY/Components.lean`). -/
 
 /-- The round variables of one process: its own local state and the messages delivered to it,
-indexed by sender. What it has sent is not recorded here — the sender's sent lives in the
-network. -/
+indexed by sender. What it has sent is not recorded here — the sender's sent set is held
+by the network. -/
 structure RoundVariables (n : ℕ) : Type where
   /-- The process's own protocol state. -/
   processVariables : ProcessVariables
@@ -200,8 +200,7 @@ def bindCount (p : RoundVariables n) : ℕ :=
 def echo5Count (p : RoundVariables n) : ℕ :=
   (Finset.univ.filter (fun k => ∃ v, Message.echo5 v ∈ p.received k)).card
 
-/-- Both bits are backed by an `n − f` `INPUT` quorum among the delivered
-messages. -/
+/-- For each bit, the delivered messages hold an `n − f` `INPUT` quorum. -/
 def bothValid (P : Parameters) (p : RoundVariables P.n) : Prop :=
   P.n - P.f ≤ p.receivedCount (.input true) ∧ P.n - P.f ≤ p.receivedCount (.input false)
 
@@ -356,7 +355,7 @@ def initial (n : ℕ) : RoundState n :=
   (fun _ => RoundVariables.initial n, GBCA.ByABDY.NetworkState.initial n)
 
 /-! The two components' own initial states project componentwise, so unfolding
-`initial` leaves no residue. -/
+`initial` yields exactly those two states. -/
 
 @[simp] theorem _root_.PLTS.ABA.GBCA.ByABDY.RoundVariables.initial_processVariables (n : ℕ) :
     (RoundVariables.initial n).processVariables = ProcessVariables.initial := rfl
@@ -394,8 +393,8 @@ def bindCount (s : RoundState n) (i : Fin n) : ℕ :=
 def echo5Count (s : RoundState n) (i : Fin n) : ℕ :=
   (Finset.univ.filter (fun j => ∃ v, Message.echo5 v ∈ s.received i j)).card
 
-/-- `Valid = {0, 1}` at process `i`: both bits are backed by an `n − f`
-`INPUT` quorum among `i`'s delivered messages. -/
+/-- `Valid = {0, 1}` at process `i`: for each bit, the messages delivered to `i` hold an
+`n − f` `INPUT` quorum. -/
 def bothValid (P : Parameters) (s : RoundState P.n) (i : Fin P.n) : Prop :=
   P.n - P.f ≤ s.receivedCount i (.input true) ∧ P.n - P.f ≤ s.receivedCount i (.input false)
 

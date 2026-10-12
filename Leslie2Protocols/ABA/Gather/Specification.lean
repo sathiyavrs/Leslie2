@@ -43,10 +43,10 @@ The instance binds one payload set: the `core`, written before the first
 return by `bindCore`, of at least `n − f` committed entries, and carried by
 every return.
 
-The core is a ghost output. No process holds it; the set a return hands out
+The core is a ghost output. No process holds it; the set a return label names
 is specification state. The return label carries it — `ret id g C` names the
-returner, the map it is handed and the core — so the binding content is
-read off a trace rather than off a state, and a system that embeds this
+returner, the map it returns and the core — so the binding content is
+determined by a trace rather than by a state, and a system that embeds this
 instance binds by reading its labels.
 
 Two guards of `bindCore` are what a return then delivers: `hval` makes the

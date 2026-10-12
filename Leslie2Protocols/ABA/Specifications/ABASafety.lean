@@ -25,8 +25,8 @@ paper-form statement (D13): a return of `b` by a never-corrupted process is
 `callABA` of the trace, with the caller `id'` itself never corrupted. Both
 axes of the witness are faithful to the papers. A process has one input, and
 the first call is the event that carries it. The witnessing caller must be
-never corrupted, not merely a member of some support set that a later `fail`
-could taint.
+never corrupted, not merely a member of some support set, since a later `fail`
+can corrupt a member of that set.
 
 The proof is invariant reasoning along genuine executions (via
 `Framework/TraceDistributionSupport.lean`), on two invariants:
@@ -62,8 +62,8 @@ once written. A never-corrupted returner is outside the fold at `m`, hence
 outside the pre-state's corrupted set, so `retABA_cases`'s second disjunct is
 impossible and both returns read that one value.
 
-Validity is a budget pigeonhole at the return. `retABA_cases` reads the returned
-bit off the pre-state's decision value and `SpecificationInvariant.val_support` yields `f + 1`
+Validity is a budget pigeonhole at the return. `retABA_cases` takes the returned
+bit from the pre-state's decision value and `SpecificationInvariant.val_support` yields `f + 1`
 supporters of that bit. Every supporter is either ghost-recorded or
 ever-corrupted, and at most `f` ids are ever corrupted (`failSet` never
 exceeds the budget), so some recorded supporter is never corrupted
@@ -380,7 +380,7 @@ theorem SpecificationInvariant.step {s : SpecState P.n} {l : Label P.n} {μ : PM
     rw [PMF.mem_support_pure_iff] at hs'; subst hs'
     exact hI
   | coinFlip hm hv hmix =>
-    -- every branch writes `mode` alone
+    -- every outcome writes `mode` alone
     rw [PMF.mem_support_map_iff] at hs'
     obtain ⟨o, -, rfl⟩ := hs'
     cases o <;> exact ⟨hI.F_le, hI.val_support⟩
@@ -774,7 +774,7 @@ sits at some execution position `j`. The pre-state `s` of that event carries
 the history invariant over the label prefix, its corrupted set is the
 trace-level fold at `m`, and each process's first `callABA` of that prefix
 reappears at a trace position below `m`, first there as well. Both safety
-predicates are read off this one
+predicates are derived from this one
 statement: Validity needs the invariant and the pushback, Agreement needs the
 execution position and the fold. -/
 private theorem exists_retSite (P : Parameters) {pe : ProbabilisticExecution (spec P)}

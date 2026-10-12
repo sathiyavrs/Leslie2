@@ -7,17 +7,17 @@ Authors: Sathiya / Claude
 import Leslie2Protocols.ABA.Implementation.NetworkStateWritesAndRemovals
 
 /-!
-# The transitions of the implementation, read off their labels
+# The transitions of the implementation, determined by their labels
 
 The implementation is `relabel ∘ abstract ∘ parallel ∘ parallel ∘ synchronisedProduct` over the
-process group, the network and the lifted coin. The lemmas here unfold that pipeline once and
-for all. `programProduct_cases` reads a synchronised transition of the process group on a
-visible label: every process steps, and the product distribution is their Dirac product.
-`programProduct_tau_cases` reads the silent one, where one process moves and the others stand.
-`systemHidden_step_iff` and `system_step_iff` split a composite transition into a hidden event and
-a label that survives the hiding. `systemExtended_event_cases`,
-`systemExtended_label_cases` and `systemExtended_tau_cases` read a synchronised step of the three
-components backwards, to the transitions of the group, of the network and of the coin.
+process group, the network and the lifted coin. The lemmas here unfold that pipeline once.
+`programProduct_cases` reads a synchronised transition of the process group on a visible label:
+every process steps, and the product distribution is their Dirac product. `programProduct_tau_cases`
+reads the silent one, where one process moves and the others remain unchanged.
+`systemHidden_step_iff` and `system_step_iff` split a composite transition into a hidden event and a
+label that the hiding leaves visible. `systemExtended_event_cases`, `systemExtended_label_cases` and
+`systemExtended_tau_cases` decompose a synchronised step of the three components into the
+transitions of the group, of the network and of the coin.
 
 The two graded-agreement returns are the only transitions that read the ghost, and what they read
 is the relation `ghostOutput` at the network's state. `systemExtended_retG_bound` and
@@ -74,7 +74,7 @@ theorem programProduct_tau_cases {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
   · obtain ⟨y, rfl⟩ := programStep_dirac hstep
     exact ⟨i, y, hstep, by rw [piPMF_update_pure, PMF.pure_map]⟩
 
-/-! ### The transitions of the implementation, read off their labels -/
+/-! ### The transitions of the implementation, determined by their labels -/
 
 section SystemStepCases
 variable {G : Type} [DecidableEq M] [Inhabited G]
@@ -102,7 +102,7 @@ theorem systemHidden_step_iff (q : State P M S G) (l : Label P.n)
 
 omit [IsRoundStep P M E S roundStep] in
 /-- The implementation's step relation: a sub-protocol API label seen as `τ`, or
-a label that survives the hiding. -/
+a label that the hiding leaves visible. -/
 theorem system_step_iff (q : State P M S G) (l : Label P.n)
     (μ : PMF (State P M S G)) :
     (system P M E S G roundStep ghostStep ghostOutput).step q l μ ↔

@@ -16,7 +16,7 @@ through `roundProjectionUpdate`: each local state vector of the projection becom
 update of the old one, and each network state is recovered from the written sent family by its own
 tag (`messagesOf`).
 `messagesOf_recordSent_some` and `messagesOf_recordSent_none` are the sent algebra a transition
-still owes, and one simp lemma per coordinate reads the written projection off
+still owes, and one simp lemma per coordinate computes the written projection from
 `roundProjectionUpdate`.
 `networkState_ext`,
 `stateOverBroadcasts_ext` and `roundStateOverGathers_ext` identify a network state, a

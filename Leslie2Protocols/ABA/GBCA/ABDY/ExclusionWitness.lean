@@ -20,15 +20,15 @@ against Case A yields a correct double-`ECHO` sender (`receivedEchoQuorum_unique
 `2(n − f) > n + f` (`no_disjoint_quorums`).
 
 A witness is `F`-blind and monotone in the received messages (`ExclusionWitness.mono`), so it
-survives every transition of the algorithm: a multicast (`exclusionWitness_send`), a return
+is preserved by every transition of the algorithm: a multicast (`exclusionWitness_send`), a return
 (`exclusionWitness_ret`), and a write of the round's bound bit
 (`exclusionWitness_setBound`).
 
 The derivation chains turn a return's own quorums into an exclusion witness. `retGrade2`'s `ECHO5 v`
-quorum and `retGrade1`'s `f + 1` received `BIND v` messages both route to an `n − f` quorum of
+quorum and `retGrade1`'s `f + 1` received `BIND v` messages both yield an `n − f` quorum of
 received `VOTE v` messages at a correct process (`received_binds_of_echo5_quorum`,
 `voteQuorum_of_received_binds`), which excludes `!v` — the quorum itself is a `VoteQuorumAgainst`
-(`exclusionWitness_of_voteQuorum`) — and witnesses `v` alive
+(`exclusionWitness_of_voteQuorum`) — and refutes the exclusion witness for `v` itself
 (`not_exclusionWitness_of_voteQuorum`). The grade-0 return's `ECHO5 ⊥`
 quorum yields a witness for *some* bit (`exclusionWitness_of_echo5Bot_quorum`): if a
 correct bit-voter exists anywhere, its `vote_confirmed` quorum of received messages is Case A for
@@ -37,7 +37,7 @@ both bits at once (`exclusionWitness_of_noCorrectVote`). `exclusionWitness_bound
 the complement of the bit a grade-0 return announces.
 
 Two lemmas carry a Case A quorum between the `ECHO` level and its neighbours:
-`receivedEchoQuorum_of_received_votes` reads one off `f + 1` received `VOTE v` messages, and
+`receivedEchoQuorum_of_received_votes` derives one from `f + 1` received `VOTE v` messages, and
 `inputQuorum_of_receivedEchoQuorum` refines one to an `n − f` quorum of received `INPUT v` messages.
 -/
 
@@ -51,7 +51,7 @@ variable {P : Parameters}
 
 /-! ### The exclusion witnesses -/
 
-/-- Case A carrier: some process holds an `n − f` quorum of received `ECHO v` messages.
+/-- Case A witness: some process holds an `n − f` quorum of received `ECHO v` messages.
 The witness is `F`-blind and monotone in the received messages, hence stable under `fail`
 and under every transition of the algorithm, and at most one bit can carry it
 (`receivedEchoQuorum_unique`). -/
@@ -94,7 +94,7 @@ theorem receivedEchoQuorum_unique {s : RoundState P.n} (hI : Invariant P s) {v v
   rw [e1] at e2
   exact Option.some.inj e2
 
-/-- Case B carrier: an `n − f` quorum of processes each of which is corrupted or has committed its
+/-- Case B witness: an `n − f` quorum of processes each of which is corrupted or has committed its
 write-once `VOTE` field to a payload other than `some b`. -/
 def VoteQuorumAgainst (P : Parameters) (s : RoundState P.n) (b : Bool) : Prop :=
   P.n - P.f ≤ (Finset.univ.filter
@@ -222,7 +222,7 @@ theorem exclusionWitness_of_voteQuorum {s : RoundState P.n} (hI : Invariant P s)
     injection hc with hc
     cases v <;> simp at hc
 
-/-- **Availability, the live bit**: an `n − f` quorum of received `VOTE v` messages refutes both
+/-- **Availability of the bit `v`**: an `n − f` quorum of received `VOTE v` messages refutes both
 cases of the witness for `v` itself — against Case A the derived `ECHO v` quorum meets the
 `ECHO (!v)` quorum in a
 correct double-echoer, and against Case B the quorum meets the quorum only inside `F`. -/

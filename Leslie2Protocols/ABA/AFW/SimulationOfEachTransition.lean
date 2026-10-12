@@ -12,9 +12,9 @@ import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 # Each transition of the implementation matched by a run of the composed system
 
 `AFW.protocol P` is the gather-based protocol as it runs and `AFW.composed P` reads the same
-protocol as a composition of components, down to the broadcast instances. Every transition of the
-implementation is matched here by a run of the composed system from the state the projection
-`AFW.roundProjection` reads: the readers that identify a transition off its label, the builders of
+protocol as a composition of components, with the broadcast instances beneath. Every transition of
+the implementation is matched here by a run of the composed system from the state the projection
+`AFW.roundProjection` reads: the lemmas that identify a transition from its label, the builders of
 a transition of one gather instance and of one round, and corruption read through the projection.
 The matching runs follow the label classes.
 A send is one silent transition of the round: an `ECHO`, `VOTE` or `BIND` multicast on a gather
@@ -43,7 +43,7 @@ namespace AFW
 open Implementation hiding NetworkEvent ExtendedLabel
 open Composition GBCA.ByABDY
 
-/-! ### Reading a transition off a label the process owns
+/-! ### A transition determined by a label the process owns
 
 A program's transition on a label of `roundOwn j` is a transition of the
 implementation: every other transition of the implementation either carries a
@@ -467,8 +467,8 @@ theorem roundProjectionFamily_byzantine {P : Parameters} (u : ∀ _ : Fin P.n, A
     simp only [roundProjection, firstGatherProjection, secondGatherProjection,
       recordGBCASend_sent_ne w r k m hr, recordGBCASend_F, recordGBCASend_ghost]
 
-/-- A transition that leaves every round's variables where they stand leaves the
-whole family of rounds where it stands. -/
+/-- A transition that leaves every round's variables unchanged leaves the
+whole family of rounds unchanged. -/
 theorem roundProjection_unchanged {P : Parameters} {x u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n}
     (h : ∀ i, (x i).2 = (u i).2) (w : NetworkState P.n) :
     (fun r => roundProjection P u w r) = fun r => roundProjection P x w r := by
@@ -918,7 +918,7 @@ theorem roundVariables_match_callG (P : Parameters) {u : ∀ _ : Fin P.n, AFW.Pr
         (roundOverBracha_callG (roundProjection P u w r) j b hin hin)
 
 /-- The graded-agreement return of the implementation is the round's own return, the graded
-outcome read off what the second gather's return left in the variables. -/
+outcome computed from what the second gather's return left in the variables. -/
 theorem roundVariables_match_retG (P : Parameters) {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n}
     (w : NetworkState P.n) {j : Fin P.n} {c : RoundLoopVariables P.n} {p : RoundVariablesMap P.n}
     (hu : (u j).2 = p) {r : ℕ} {out : GBCAOutput}

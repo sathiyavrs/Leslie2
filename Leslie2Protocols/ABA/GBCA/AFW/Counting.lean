@@ -11,8 +11,8 @@ import Leslie2Protocols.ABA.Vocabulary.Labels
 # The counting of the graded-agreement round
 
 The local counting the round-`r` GBCA implementation of the modular
-construction of Attiya, Flam and Welch runs on — their Algorithm 4 at `R = 2`,
-its two-gather branch, with the grade read off the second gather's counts in
+construction of Attiya, Flam and Welch runs on — their Algorithm 4 in its case
+`R ≥ 2`, at `R = 2`, with the grade computed from the second gather's counts in
 place of the approximate-agreement subroutine of its lines 7 and 8 (deviation
 D24).
 
@@ -32,9 +32,9 @@ occurring at least `|S| − f` times in `S`, `⊥` if
 `S`, and `true` when neither bit is. At the sizes the gather specification's
 `bindCore` allows (`|S| ≥ n − f > 2f`) at most one bit is carried by that many,
 so the definition selects it wherever one exists, and its complement is then
-below the threshold (`count_boundOfCore_belowThreshold`): a return handing out
-`v` announces `v`, and a return handing out nothing announces a bit whose
-complement no return can hand out.
+below the threshold (`count_boundOfCore_belowThreshold`): a return of
+`v` announces `v`, and a return of no bit announces a bit whose
+complement no return can return.
 
 ## The entry counts
 
@@ -311,7 +311,7 @@ theorem gradeOf_grade0 {P : Parameters} {g : Fin P.n → Option (Option Bool)}
   · exact Nat.lt_succ_iff.mp (lt_of_not_ge h4)
   · exact Nat.lt_succ_iff.mp (lt_of_not_ge h3)
 
-/-- **The round's bound bit**, read off the first gather's core: the bit
+/-- **The round's bound bit**, computed from the first gather's core: the bit
 carried by at least `|S| − f` of the entries of `S`, and `true` when neither
 bit is. -/
 def boundOfCore (P : Parameters) (S : AcceptedPairs P.n Bool) : Bool :=

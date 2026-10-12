@@ -9,7 +9,7 @@ import Leslie2Protocols.Framework.SynchronisedProduct
 import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 
 /-!
-# The transitions of the graded-agreement round, read off their labels
+# The transitions of the graded-agreement round, determined by their labels
 
 The round is `relabel ∘ abstract ∘ parallel` over the round's programs beside the round's
 network and the two gather instances. The lemmas here unfold that pipeline in both
@@ -28,7 +28,8 @@ their transitions and a Dirac product. `roundOverGathersExtended_tau_cases` read
 as a step of exactly one gather instance. The `roundOverGathers_*` lemmas carry both across the
 hiding and the relabelling.
 
-`programStep_*` reads one graded-agreement program's transition off its label: the participant's
+`programStep_*` determines one graded-agreement program's transition from its label: the
+participant's
 transition as its guards together with the Dirac it produces, and the idle transition of a
 non-participant as the identity. `networkStep_*` does the same for the round's network.
 -/
@@ -142,14 +143,14 @@ theorem roundPrograms_outside_cases (hlp : programLabelMap P.n L = some ProgramL
   obtain ⟨y, w, -, -, hnet⟩ := roundPrograms_label_cases hlp (by simp) h
   exact networkStep_outside hnet
 
-/-- The stutter of the round's programs, read off a Dirac successor. -/
+/-- The stutter of the round's programs, determined from a Dirac successor. -/
 theorem roundPrograms_idle_pure (hlp : programLabelMap P.n L = none)
     (h : (roundPrograms P r).step (u, v) L (PMF.pure (x, v'))) : x = u ∧ v' = v := by
   have he := PMF.pure_injective (roundPrograms_idle_cases hlp h)
   rw [Prod.mk.injEq] at he
   exact he
 
-/-- The synchronised transition of the round's programs, read off a Dirac successor. -/
+/-- The synchronised transition of the round's programs, determined from a Dirac successor. -/
 theorem roundPrograms_label_pure {lp : ProgramLabel P.n} (hlp : programLabelMap P.n L = some lp)
     (hlpτ : lp ≠ ProgramLabel.tau) (h : (roundPrograms P r).step (u, v) L (PMF.pure (x, v'))) :
     (∀ i, ProgramStep P r i (u i) lp (PMF.pure (x i))) ∧ NetworkStep P r v lp (PMF.pure v') := by
@@ -323,7 +324,7 @@ theorem roundOverGathers_tau_secondGather
 end Factors
 /-! ### One program's transitions, by label class
 
-Each lemma reads one transition off its label: the participant's transition as
+Each lemma determines one transition from its label: the participant's transition as
 its guards together with the Dirac it produces, and the idle transition of a
 non-participant as the identity. The state and the distribution are variables,
 so `cases` unifies against any state of the program. -/

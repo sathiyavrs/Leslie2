@@ -9,7 +9,7 @@ import Leslie2Protocols.Framework.SynchronisedProduct
 import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 
 /-!
-# The transitions of the gather composition, read off their labels
+# The transitions of the gather composition, determined by their labels
 
 The composition is `relabel ∘ abstract ∘ parallel` over two synchronised products. The
 lemmas here unfold that pipeline in both directions.
@@ -24,9 +24,9 @@ network or one input instance.
 lemmas build one from the factors' transitions. The pullback `inputBroadcastLabelMap` is
 computed label by label.
 
-`programStep_*` reads one gather program's transition off its label: the participant's transition
-as its guards together with the Dirac it produces, and the idle transition of a non-participant as
-the identity. `networkStep_*` does the same for the gather network.
+`programStep_*` determines one gather program's transition from its label: the participant's
+transition as its guards together with the Dirac it produces, and the idle transition of a
+non-participant as the identity. `networkStep_*` does the same for the gather network.
 
 A synchronised step delivers a program function given pointwise, by its value at the acting process
 and its
@@ -279,7 +279,7 @@ variable {n : ℕ} (X : Type) (k id j k' i : Fin n)
 end Pullbacks
 /-! ### One gather program's transitions, by label class
 
-Each lemma reads a transition of the gather program off its label: the
+Each lemma determines a transition of the gather program from its label: the
 participant's transition as its guards together with the Dirac it produces, and
 the idle transition of a non-participant as the identity. The state and the
 distribution are variables, so `cases` unifies against any state of the

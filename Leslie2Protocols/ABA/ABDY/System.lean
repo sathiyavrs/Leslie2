@@ -625,7 +625,8 @@ theorem protocolExtended_tau_cases (P : Parameters) {u : ∀ _ : Fin P.n, Proces
 
 /-! ### ABDY22's own transitions, by label class
 
-Each lemma reads a round transition off its label: the participant's transition as its guards
+Each lemma determines a round transition from its label: the participant's transition as its
+guards
 together with the Dirac it produces. The idle transition of a non-participant and the replaced
 program's self-loop are read by the implementation's own lemmas; here the label names the acting
 process, so those two systems are the ones ruled out. -/

@@ -11,7 +11,7 @@ import Leslie2Protocols.ABA.AFW.RoundProjection
 
 `BoundInvariant` is the conjunct of `AFW.ProtocolRelation` that no projection lemma supplies.
 `boundInvariant_writeGhost` carries it across a transition that leaves the candidate, the second
-gather's input and the graded outcome where they stand and writes the ghost.
+gather's input and the graded outcome unchanged and writes the ghost.
 -/
 
 namespace PLTS
@@ -27,14 +27,14 @@ variable {P : Parameters}
 
 `BoundInvariant` is the conjunct of `AFW.ProtocolRelation` that no projection lemma supplies. It
 reads the candidate, the second gather's input and the graded outcome, so a transition that leaves
-the three where they stand and writes the ghost keeps the conjunct. -/
+the three unchanged and writes the ghost keeps the conjunct. -/
 
 section Invariants
 
 variable {u x : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} {w v : NetworkState P.n}
 
-/-- The bound invariant survives a transition that leaves the three fields it reads where they
-stand and writes the ghost through `AFW.ghostStep`. -/
+/-- The bound invariant is preserved by a transition that leaves the three fields it reads
+unchanged and writes the ghost through `AFW.ghostStep`. -/
 theorem boundInvariant_writeGhost (hI : BoundInvariant P u w)
     (hcand : ∀ i r, ((x i).2.roundVariables r).candidate = ((u i).2.roundVariables r).candidate)
     (hinput : ∀ i r,

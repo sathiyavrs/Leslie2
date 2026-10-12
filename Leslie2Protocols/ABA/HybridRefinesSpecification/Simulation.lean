@@ -35,8 +35,8 @@ the concrete transition's own, read across `AbstractState.F_eq`.
 A corruption replaces the program of the process it names (D23), and both systems of the
 interface carry the replacement. The corrupted process's `retABA` is matched by
 `SpecStep.retByzantine`: neither the concrete state nor the abstract state moves. On every other
-label the replaced program self-loops, and the concrete transition it contributes is the corrupted
-branch the step cases already carry. -/
+label the replaced program self-loops, and the concrete transition it contributes is the case of a
+corrupted process that the step cases already carry. -/
 
 namespace PLTS
 namespace ABA

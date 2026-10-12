@@ -53,19 +53,19 @@ by nondeterministic `τ`-transitions.
 
 * **D18 (the five message levels).** This is a deviation from the source
   blueprint's `alg:GBCA`, which presents a **4-round compression** of
-  Algorithm 6: the `echo5` round is elided, the decide conditions read one level
-  down, and the grade-1 witness is `f + 1` `VOTE v` where Algorithm 6 has
-  `t + 1` `echo4 v`. The compression violates the paper's Graded Binding. One
-  process held before its `ECHO` through a grade-0 decision can afterwards
+  Algorithm 6: the `echo5` round is elided, the decide conditions count the
+  messages of the level below, and the grade-1 witness is `f + 1` `VOTE v` where Algorithm 6 has
+  `t + 1` `echo4 v`. The compression violates the paper's Graded Binding. A
+  process that has not sent its `ECHO` when a grade-0 return fires can afterwards
   direct its write-once echo at either bit, and one corruption completes
   `f + 1` `VOTE v` for the bit of the adversary's choice — so two extensions of
-  a single grade-0 return hand out two different bits. The encoding therefore
+  a single grade-0 return go on to return two different bits. The encoding therefore
   follows the cited algorithm rather than the blueprint's compression; the
   upstream blueprint carries a matching red annotation.
 
-The grade-1 witness is what the depth buys. `f + 1` received `BIND v` messages exceed
-the corruption budget, so they guarantee a correct `BIND v` sender, whose own
-wait-condition is an `n − f` quorum of received `VOTE v` messages over the write-once `VOTE`
+The grade-1 witness is what the depth of the five message levels gives. `f + 1` received
+`BIND v` messages exceed the corruption budget, so they guarantee a correct `BIND v` sender, whose
+own wait-condition is an `n − f` quorum of received `VOTE v` messages over the write-once `VOTE`
 level — and that quorum is the object the paper's binding argument counts
 (Lemmas 4.8/4.9 through E.9).
 
@@ -253,8 +253,8 @@ inductive Algorithm (P : Parameters) (r : ℕ) :
           { s.processVariables id with returned := true }).setBound bnd))
   /-- Grade-1 return (decide case (2)): an `n − f` any-`ECHO5` quorum containing
   `ECHO5 v`, `f + 1` `BIND v`s and `|Valid| > 1`. The `f + 1` received `BIND v` messages
-  put a correct `BIND v` sender — hence an `n − f` quorum of received `VOTE v` messages —
-  behind every grade-1 output. The process has called, its own `ECHO5` is out,
+  yield a correct `BIND v` sender, hence an `n − f` quorum of received `VOTE v` messages,
+  for every grade-1 output. The process has called, it has sent its own `ECHO5`,
   and no higher case holds: `hnotGrade2` denies case (1) at either bit. -/
   | retGrade1 (s : RoundState P.n) (id : Fin P.n) (v : Bool) (bnd : Bool)
       (hin : (s.processVariables id).input ≠ none)

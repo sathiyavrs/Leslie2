@@ -7,12 +7,12 @@ Authors: Sathiya / Claude
 import Leslie2Protocols.ABA.GBCA.ABDY.Composition
 
 /-!
-# The transitions of the round instance, read off their labels
+# The transitions of the round instance, determined by their labels
 
-`gbcaProgramStep_*` reads one program's transition off its label: the participant's transition as
-its guards together with the Dirac it produces, and the idle transition of a non-participant as the
-identity. `gbcaNetworkStep_*` does the same for the round's network on the two synchronisations and
-on the silent label.
+`gbcaProgramStep_*` determines one program's transition from its label: the participant's transition
+as its guards together with the Dirac it produces, and the idle transition of a non-participant as
+the identity. `gbcaNetworkStep_*` does the same for the round's network on the two synchronisations
+and on the silent label.
 
 The round variables and the network state are the two components of `GBCA.ByABDY.RoundState`
 (`GBCA/ABDY/MessagesAndVariables.lean`), the composed state the round instance runs on. What a
@@ -24,12 +24,12 @@ identify the state a transition writes with `setProcessVariables`, `recordGBCASe
 `deliverTo`
 or `corrupt` applied to the old state.
 
-`compositionExtended_synchronised_cases` and `compositionExtended_tau_cases` read a transition of
-the programs beside the network backwards: on a visible label of the internal alphabet every
+`compositionExtended_synchronised_cases` and `compositionExtended_tau_cases` decompose a transition
+of the programs beside the network: on a visible label of the internal alphabet every
 program and the network step together, and on the silent label only the network moves.
 
-`gbcaNetworkStep_*_round` reads the network's transition off a round-tagged label. The network has
-a transition only for its own round, so these readers return the round equation together with the
+`gbcaNetworkStep_*_round` determines the network's transition from a round-tagged label. The network
+has a transition only for its own round, so these lemmas return the round equation together with the
 network's move, and a call or return label of another round carries no transition of the instance at
 all.
 -/
@@ -42,7 +42,7 @@ open Implementation Composition
 
 /-! ### One program's transitions, by label class
 
-Each lemma reads a transition of the program off its label: the participant's
+Each lemma determines a transition of the program from its label: the participant's
 transition as its guards together with the Dirac it produces, and the idle
 transition of a non-participant as the identity. The state and the distribution
 are variables, so `cases` unifies against any state of the program. -/
@@ -432,10 +432,10 @@ theorem compositionExtended_tau_cases {P : Parameters} {r : ℕ}
   · obtain ⟨w', rfl⟩ := gbcaNetworkStep_dirac hn
     exact ⟨w', prodPMF_pure_pure _ _, hn⟩
 
-/-! ### The network's transitions read off a round-tagged label
+/-! ### The network's transitions, determined by a round-tagged label
 
 The network has a transition only for its own round: a call or return label of another round
-carries no transition of the instance at all. These readers therefore return
+carries no transition of the instance at all. These lemmas therefore return
 the round equation together with the network's move. -/
 
 section RoundTaggedNetworkStepCases

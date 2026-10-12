@@ -36,12 +36,12 @@ The file holds the algorithm alone: the phase `Phase`, the estimate a graded out
 dictates (`GBCAOutput.estimate`), and the per-process control variables `RoundLoopState`. The
 variables carry no sub-protocol state — the `callG`/`retG`/`callW`/`retW` interactions are calls and
 returns over the API labels, advancing the process's `phase` and recording the returned data, while
-the sub-protocol state itself lives in the round specifications and the common coin — and no network
-state: the DECIDED sets and the corrupted set belong to the network. The transitions themselves are
-`RoundLoopStep` (`ABA/Composition/Components.lean`), the transitions of the round-loop variables
-`RoundLoopVariables` over the extended alphabet, and `Implementation.ProgramStep`
-(`ABA/Implementation/System.lean`), the transitions of the protocol program that carries a round
-loop beside its round variables. This file realises the assumptions of
+the sub-protocol state itself is held by the round specifications and the common coin — and no
+network state: the DECIDED sets and the corrupted set belong to the network. The transitions
+themselves are `RoundLoopStep` (`ABA/Composition/Components.lean`), the transitions of the
+round-loop variables `RoundLoopVariables` over the extended alphabet, and
+`Implementation.ProgramStep` (`ABA/Implementation/System.lean`), the transitions of the protocol
+program that carries a round loop beside its round variables. This file realises the assumptions of
 `DESIGN-HybridRefinesSpecification.md`: the phase machine (invariant conjunct 4), the DECIDED
 diffusion state (conjunct 6), and input coherence
 (conjunct 5 — the correct `callG` guard ties the emitted bit to the current estimate).

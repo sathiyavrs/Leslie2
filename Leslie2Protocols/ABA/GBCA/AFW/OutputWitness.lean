@@ -33,7 +33,7 @@ invariant of `ABA/GBCA/AFW/Invariant.lean` states it of every grade a program ho
 states it of every bit the specification excludes.
 
 Both witnesses read the two cores and the first gather's committed-entry support. The cores are
-written once and the support only grows, so each survives every later transition
+written once and the support only grows, so every later transition preserves each
 (`OutputWitness.mono`).
 -/
 
@@ -247,7 +247,7 @@ theorem OutputWitness.mono {s s' : RoundStateOverGatherSpecifications P.n}
     exact ⟨⟨S, by rw [h2]; exact hS, hl⟩, fun b => le_trans (hw b) (hv b)⟩
 
 /-- The exclusion witness: the first gather's core counts `b` below
-`|S| − f`, so no later candidate is `b`. It survives every later step: the core is written once. -/
+`|S| − f`, so no later candidate is `b`. Every later step preserves it: the core is written once. -/
 def ExclusionWitness (P : Parameters) (s : RoundStateOverGatherSpecifications P.n) (b : Bool) :
   Prop :=
   ∃ S, (firstGather s).core = some S ∧ AcceptedPairs.count S b < S.card - P.f

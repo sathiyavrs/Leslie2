@@ -107,7 +107,7 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
       by_cases hid2 : id2 = id
       · rw [hid2]; exact hInputEq
       · rw [hProcNe id2 hid2]
-    -- OutcomeHolder reduction: a post-`stepRound` carrier is an old one or `id`, now holding the
+    -- OutcomeHolder reduction: a post-`stepRound` holder is an old one or `id`, now holding the
     -- adopted estimate at the finished round `r`.
     have hRedW : ∀ r₀ i1 v1, OutcomeHolder P g (c.stepRound id b) r₀ i1 v1 →
         OutcomeHolder P g c r₀ i1 v1 ∨ (i1 = id ∧ r₀ = r ∧ (c.processes id).estimate.getD b = v1) :=

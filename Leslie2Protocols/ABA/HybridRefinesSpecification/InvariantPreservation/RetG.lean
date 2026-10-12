@@ -13,12 +13,12 @@ import Leslie2Protocols.ABA.Composition.Hybrid
 `Invariant.step_retG`, preservation of `Invariant` at a return of the graded-agreement
 specification. The GBCA instance only ever touches `.grade` and `.ret`, never `.F`, `.excluded` or
 `.call`, and `.ret` is not inspected by `Invariant`; the core only ever touches `.estimate`,
-`.lastGrade` and `.phase` at `id`, never `.round` or `.input`. The two round-chaining lemmas the
-proof runs on stand beside it: `Invariant.commit_to_later_rounds` carries a live pair and the
-absence of grade 0 from a round to every later round, and
-`Invariant.grade0_chain_to_earlier_rounds` carries grade 0 to every earlier round. The
-hard obligations, `grade2Bound_commit`'s round-`r` commitment and `agree_bound`'s estimate transfer
-at `id`, need GBCA's own graded-agreement safety and are handed off.
+`.lastGrade` and `.phase` at `id`, never `.round` or `.input`. The proof uses two round-chaining
+lemmas of this file: `Invariant.commit_to_later_rounds` carries the guard pair
+`(!b) ∈ excluded ∧ b ∉ excluded` and the absence of grade 0 from a round to every later round, and
+`Invariant.grade0_chain_to_earlier_rounds` carries grade 0 to every earlier round. The round-`r`
+commitment of `grade2Bound_commit` comes from `Invariant.commit_to_later_rounds`, and `agree_bound`
+at `id` from `Invariant.no_grade0_succ` and `Invariant.no_grade0_succ_of_support`.
 -/
 
 namespace PLTS
@@ -28,12 +28,13 @@ open Implementation Composition
 
 variable {P : Parameters}
 
-/-- Once a round `r` is not (yet) graded 0 and its surviving bit `b` is still alive, every
-round `r' ≥ r` either has an empty exclusion set or the same live pair, and is never
-graded 0 either: `bind_succ` forces every bit excluded at a freshly-bound round `r' + 1` to
-be a bit already excluded at `r'` — hence `!b`, by the inductive pair — unless `r'` itself just
-closed at grade 0 (ruled out by the IH), and `grade0_chain` propagates the absence of
-grade 0 downward, so its contrapositive propagates it upward along the induction. -/
+/-- Once a round `r` is not (yet) graded 0 and its bit `b` is not excluded while `!b` is, every
+round `r' ≥ r` either has an empty exclusion set or the same guard pair
+`(!b) ∈ excluded ∧ b ∉ excluded`, and is never graded 0 either: `bind_succ` forces every bit
+excluded at a freshly-bound round `r' + 1` to be a bit already excluded at `r'` — hence `!b`, by the
+inductive pair — unless `r'` itself just closed at grade 0 (ruled out by the IH), and `grade0_chain`
+propagates the absence of grade 0 downward, so its contrapositive propagates it upward along the
+induction. -/
 theorem Invariant.commit_to_later_rounds {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) :
     ∀ r b, (g r).grade ≠ some false → (!b) ∈ (g r).excluded → b ∉ (g r).excluded →
@@ -158,8 +159,9 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
     rcases hstepC with ⟨hph, hr, rfl⟩ | ⟨hF, rfl⟩
     · rw [PMF.mem_support_pure_iff] at hc'; exact Or.inl ⟨hph, hr, hc'⟩
     · rw [PMF.mem_support_pure_iff] at hc'; exact Or.inr ⟨hF, hc'⟩
-  -- The return either hands out round `r`'s surviving bit (`retGrade2`/`retGrade1`, with its live
-  -- pair as fire-time guards) or hands out nothing and sets the round's grade to 0 (`retGrade0`).
+  -- The return either returns the bit round `r` leaves not excluded (`retGrade2`/`retGrade1`, with
+  -- the guard pair `v ∉ excluded ∧ (!v) ∈ excluded` at firing) or returns no bit and sets the
+  -- round's grade to 0 (`retGrade0`).
   have hRetInfo : (∃ v, out.estimate = some v ∧ v ∉ (g r).excluded ∧ (!v) ∈ (g r).excluded) ∨
       (out.estimate = none ∧ gr'.grade = some false) := by
     cases hstepG with
@@ -223,7 +225,7 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
       (by rw [hr1]; exact hCsupp hgf true) (by rw [hr1]; exact hCsupp hgf false)
     have hgf0 := hI.grade0_chain_to_earlier_rounds r0 (r - 1) (by omega) hgf'
     rw [hg0] at hgf0; simp at hgf0
-  -- OutcomeHolder reduction: a carrier of the post-state is an old carrier or the freshly
+  -- OutcomeHolder reduction: a holder of the post-state is an old holder or the freshly
   -- returned `id` itself, holding the return's own output.
   have hRedC : ∀ r₀ i1 v1, OutcomeHolder P (Function.update g r gr') c' r₀ i1 v1 →
       OutcomeHolder P g c r₀ i1 v1 ∨ (i1 = id ∧ r₀ = r ∧ out.estimate = some v1) := by
@@ -243,7 +245,7 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
           exact Or.inl (Or.inr ⟨he, hk⟩)
       · rw [hc'eq] at he hk
         exact Or.inl (Or.inr ⟨he, hk⟩)
-  -- Where a standing round-`r` carrier comes from: the permanent residue or grade 0.
+  -- Where an existing round-`r` holder comes from: the permanent fact `!v1 ∈ excluded` or grade 0.
   have hProvC : ∀ j1 v1, j1 ∉ c.F → OutcomeHolder P g c r j1 v1 →
       (!v1) ∈ (g r).excluded ∨ (g r).grade = some false := by
     intro j1 v1 hj hcar
@@ -295,9 +297,9 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
     by_cases h2 : r0 = r
     · rw [h2, hGself]; exact hGgradeTrue (h2 ▸ hg0)
     · rw [hGeq r0 h2]; exact hg0
-  -- The *fresh* round-`r` commitment: a live pair at the returning round that is not (yet)
-  -- graded 0 commits everything at and above it, through `commit_to_later_rounds`'s pair
-  -- invariant.
+  -- The *fresh* round-`r` commitment: when the returning round is not (yet) graded 0, the guard
+  -- pair `(!b0) ∈ excluded ∧ b0 ∉ excluded` at it commits everything at and above it, through
+  -- `commit_to_later_rounds`'s pair invariant.
   have hFreshCommit : ∀ b0, (g r).grade ≠ some false →
       (!b0) ∈ (g r).excluded → b0 ∉ (g r).excluded →
       Grade2Commitment P (Function.update g r gr') c' r b0 := by
@@ -415,9 +417,9 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
         exact Or.inl (Or.inl h1)
     · rw [hCDS] at h1
       exact Or.inl (Or.inr h1)
-  -- A fresh grade-2 return's value against any standing witness: same round via the
+  -- A fresh grade-2 return's value against any existing witness: same round via the
   -- fire-time pair, below via the witness's commitment, above via the fresh
-  -- commitment and the derived caller of the witness's spared bit.
+  -- commitment and the derived caller of the bit the witness leaves not excluded.
   have hpinCert : ∀ b1, out = .grade2 b1 → ∀ r1 b1', Grade2Witness P g c r1 b1' → b1' = b1 := by
     intro b1 hout r1 b1' hcert
     rcases hRetInfo with ⟨u, hoev, hulive, huexcluded⟩ | ⟨hoe, -⟩
@@ -480,7 +482,7 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
           rw [hc'eq, ABAState.setProcessVariables_processes_ne _ _ _ hid] at hne; exact hne
         exact hI.phase_input id' (hCF ▸ hmem) hne'
     · rw [hc'eq] at hne; rw [(hCprocs id').1]; exact hI.phase_input id' (hCF ▸ hmem) hne
-  · -- `down_settled`: off the returning round nothing moved; at `r' + 1 = r` a grade-0
+  · -- `down_settled`: at every other round nothing changes; at `r' + 1 = r` a grade-0
     -- return's both-bit support pushes grade 0 down one round
     -- (`grade0_chain_of_both_supports`).
     intro r' h
@@ -835,8 +837,8 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
     rw [hBindeq r'] at hb
     exact (hI.bind_support r' v hb).mono
       (fun id' b' h => by rw [(hCprocs id').1]; exact h) (fun x hx => by rw [hCF]; exact hx)
-  · -- I27: `retG` never touches `call`/`F`; off the returning round the grade is untouched
-    -- too, and on it `hCsupp` reads the guards straight off the return.
+  · -- I27: `retG` never touches `call`/`F`; at every other round the grade is untouched
+    -- too, and at the returning round `hCsupp` takes the guards from the return itself.
     intro r' b' hgf
     refine GBCA.callSupport_mono (s := g r') (fun id' h => by rw [hCalleq r']; exact h)
       (hFgeq r').ge ?_
@@ -851,9 +853,9 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
     rw [hBindeq r'] at hbd
     exact GBCA.callSupport_mono (fun id' h => by rw [hCalleq r']; exact h) (hFgeq r').ge
       (hI.excluded_support r' b0 hbd)
-  · -- I29 establishment: a fresh value-bearing return's carrier meets every standing
-    -- opposite carrier's permanent residue head-on — the return's own liveness guard
-    -- refutes it; a grade-0 return sets the round's grade to 0 instead.
+  · -- I29 establishment: for a fresh return of grade 1 or 2, every existing holder of the
+    -- opposite bit has `v ∈ excluded`, which contradicts the guard `v ∉ excluded`;
+    -- a grade-0 return sets the round's grade to 0.
     intro r₀ i0 j0 v v' hm hm' h h'
     have hred : ∀ i1 v1, OutcomeHolder P (Function.update g r gr') c' r₀ i1 v1 →
         OutcomeHolder P g c r₀ i1 v1 ∨ (i1 = id ∧ r₀ = r ∧ out.estimate = some v1) := by
@@ -918,7 +920,7 @@ theorem Invariant.step_retG {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
         · exact Or.inl hvv.symm
         · exact Or.inr (by rw [hreq0]; exact hGradeTo r hgf)
       · exact Or.inl (Option.some_inj.mp (hev0.symm.trans hev1))
-  · -- I30 establishment: a fresh grade-2 return is compared against every standing correct
+  · -- I30 establishment: a fresh grade-2 return is compared against every existing correct
     -- holder's witness through `hpinCert`.
     intro i0 j0 b0 b0' hm hm' h h'
     have hpin : ∀ b1, out = .grade2 b1 → ∀ j1 b1',

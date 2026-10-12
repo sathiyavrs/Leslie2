@@ -16,16 +16,16 @@ the round-`r` specification instance (`GBCA.specInst`, the exclusion-set specifi
 initial states, and `specificationRelation_corrupt` carries it across a corruption of both systems
 at once, which is the shape the family lifting consumes.
 
-The composed state is the protocol's own data, so only `call`, `ret` and `F` are read off it
+The composed state is the protocol's own data, so only `call`, `ret` and `F` are read from it
 directly (`SpecificationRelation.call_eq`, `ret_eq`, `F_eq`). The specification's `excluded` and
-`grade` are bookkeeping the protocol records nothing; the relation carries witnesses on the received
-messages for them instead:
+`grade` record data that has no field in the protocol's state; the relation carries witnesses on the
+received messages for them instead:
 
 * `exclusion_witness` — every excluded bit `b` is covered by an exclusion witness
   `ExclusionWitness P s b`. The relation bounds `excluded` from above and never from below:
   which bits are actually excluded is recovered by case analysis at the return transitions, not
   recorded.
-* `grade2_witness` / `grade0_witness` — the grade at 2 is backed by an `n − f` quorum of
+* `grade2_witness` / `grade0_witness` — the grade at 2 is witnessed by an `n − f` quorum of
   received `ECHO5 v` messages, the grade at 0 by an `n − f` `ECHO5 ⊥` quorum. Two
   opposing quorums intersect in a correct process that would have multicast
   two different `ECHO5` payloads, contradicting the write-once `echo5_once` —
@@ -37,8 +37,8 @@ messages for them instead:
   and it holds because the exclusion fires with the round's first return. It supplies the guard
   `(!bnd) ∈ excluded` of a return that announces a bit already recorded, and with
   `exclusion_witness` it yields `SpecificationRelation.bound_witness`: the recorded bit
-  carries an exclusion witness for its complement. A value-bearing return then announces its own
-  value (`SpecificationRelation.retBound_eq`) — the return's `n − f` quorum of received `VOTE v`
+  carries an exclusion witness for its complement. A grade-1 or grade-2 return then announces its
+  own value (`SpecificationRelation.retBound_eq`) — the return's `n − f` quorum of received `VOTE v`
   messages refutes a witness for `v` (`not_exclusionWitness_of_voteQuorum`), so a recorded bit is
   `v`, and a bit computed here is `v` by `boundOf`. A grade-0 return announces `boundOf`'s bit,
   whose complement is witnessed by `exclusionWitness_boundOf_grade0`.
@@ -95,11 +95,11 @@ structure SpecificationRelation (P : Parameters) (s : RoundState P.n) (t : SpecS
   F_eq : t.F = s.F
   /-- Every excluded bit carries a monotone exclusion witness. -/
   exclusion_witness : ∀ b, b ∈ t.excluded → ExclusionWitness P s b
-  /-- The grade at 2 is backed by an `n − f` quorum of received `ECHO5 v` messages
+  /-- The grade at 2 is witnessed by an `n − f` quorum of received `ECHO5 v` messages
   for some bit `v`. -/
   grade2_witness : t.grade = some true →
     ∃ v i, P.n - P.f ≤ s.receivedCount i (.echo5 (some v))
-  /-- The grade at 0 is backed by an `n − f` quorum of received `ECHO5 ⊥`
+  /-- The grade at 0 is witnessed by an `n − f` quorum of received `ECHO5 ⊥`
   messages. -/
   grade0_witness : t.grade = some false →
     ∃ i, P.n - P.f ≤ s.receivedCount i (.echo5 none)
@@ -133,7 +133,7 @@ The round-indexed family lift of the refinement takes `fail` as a broadcast act,
 round at once. It needs the per-round relation to be preserved by that act. The specification
 corruption projections (`corrupt_call`/`corrupt_ret`/`corrupt_excluded`/`corrupt_grade`) come from
 `ABA/GBCA/Specification.lean`; the two `corrupt` functions stay equal by
-`specificationRelation_corrupt_F_eq`. The statement is proved directly rather than read off
+`specificationRelation_corrupt_F_eq`. The statement is proved directly rather than derived from
 the `fail` case of the matching `specificationRelation_transition`
 (`ABA/GBCA/ABDY/RefinesSpecification.lean`), which only yields an existential match. Its consumers
 are that matching and the family lifting of `ABA/ABDY/Substitution.lean`. -/
@@ -197,7 +197,7 @@ theorem SpecificationRelation.bound_witness {s : RoundState P.n} {t : SpecState 
   rw [hR.bound_excluded, hb, excludedOf_some]
   exact Finset.mem_singleton_self _
 
-/-- **The announced bit of a value-bearing return.** A return of `v` carries an
+/-- **The announced bit of a grade-1 or grade-2 return.** A return of `v` carries an
 `n − f` quorum of received `VOTE v` messages, which refutes an exclusion witness for `v`; so a
 bound bit already recorded, whose complement is witnessed, is `v` itself,
 and one computed here is `v` by `boundOf`. -/
@@ -316,7 +316,7 @@ theorem excluded_eq_singleton {d : Finset Bool} {v : Bool}
     (h1 : v ∉ d) (h2 : (!v) ∈ d) : d = {!v} := by
   ext b; cases b <;> cases v <;> simp_all
 
-/-- `bindUnset (!v) ; retGrade2 v` from an all-alive state (`excluded = ∅`, the
+/-- `bindUnset (!v) ; retGrade2 v` from a state that excludes no bit (`excluded = ∅`, the
 `bindUnset` guard). The `bindUnset (!v)` support guard reads `some (!(!v))`; `Bool.not_not` rewrites
 it to `hw`'s `some v`. The exclusion of `!v` is also
 the announced bit's guard, so the return announces `v`. -/
@@ -373,7 +373,7 @@ theorem excludeThenRetGrade1_run {r : ℕ} {t : SpecState P.n} {id : Fin P.n} {v
     · exact hlive hv
   exact weakLStep_tauThen h1 h2 (by simp)
 
-/-- `bindUnset (!bnd) ; retGrade0` from an all-alive state (`excluded = ∅`, the
+/-- `bindUnset (!bnd) ; retGrade0` from a state that excludes no bit (`excluded = ∅`, the
 `bindUnset` guard): the exclusion of `!bnd` is the announced bit's guard, so the
 return announces `bnd`. -/
 theorem excludeThenRetGrade0_run {r : ℕ} {t : SpecState P.n} {id : Fin P.n} {bnd : Bool}

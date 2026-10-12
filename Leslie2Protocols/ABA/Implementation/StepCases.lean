@@ -7,16 +7,16 @@ Authors: Sathiya / Claude
 import Leslie2Protocols.ABA.Implementation.System
 
 /-!
-# The transitions of one program and of the network, read off their labels
+# The transitions of one program and of the network, determined by their labels
 
-`programStep_*` reads one program's transition off its label: the participant's transition as its
-guards together with the Dirac it produces, and the idle transition of a non-participant as the
-identity. The state and the distribution are variables, so `cases` unifies against any round
-variables. A participant's transition carries the health guard `corrupted = false`, and on a label
-outside `actsAt j` the replaced program's self-loop is a second transition on the same label
-(D23).
+`programStep_*` determines one program's transition from its label: the participant's
+transition as its guards together with the Dirac it produces, and the idle transition of a
+non-participant as the identity. The state and the distribution are variables, so `cases` unifies
+against any round variables. A participant's transition carries the replacement guard
+`corrupted = false`, and on a label outside `actsAt j` the replaced program's self-loop is a second
+transition on the same label (D23).
 
-The readers hold for every implementation, because a label outside `roundOwn j` has a
+These lemmas hold for every implementation, because a label outside `roundOwn j` has a
 transition written for all of them and `IsRoundStep` confines the implementation's own transitions
 to `roundOwn j`. The Byzantine round transitions have no transition at the process they name
 (D22, D23), so on `byzantineCallG`, `byzantineCallGLoop` and `byzantineRetG` every process idles
@@ -75,11 +75,11 @@ theorem programStep_tau_terminate
 
 /-! ### One program's transitions, by label class
 
-Each lemma reads one transition off its label: the participant's transition as
+Each lemma determines one transition from its label: the participant's transition as
 its guards together with the Dirac it produces, and the idle transition of a
 non-participant as the identity. The state and the distribution are variables,
 so `cases` unifies against any state of the program. A participant's transition
-carries the health guard `corrupted = false`, and on a label outside `actsAt j`
+carries the replacement guard `corrupted = false`, and on a label outside `actsAt j`
 the replaced program's self-loop is a second transition on the same label (D23). -/
 
 theorem programStep_callABA_own {b : Bool}
@@ -349,10 +349,10 @@ theorem programStep_byzantineRetG_noStep {r : ℕ} {out : GBCAOutput} {bnd : Boo
   | corruptedIdle _ _ _ _ _ hown => exact hown rfl
 
 /-- **The replaced program writes nothing** (D23). Whatever the label, a
-process whose flag is up leaves both halves of its variables where they stand.
-Every transition that writes carries the health guard, the implementation's own
-transitions by `IsRoundStep.correct`, so no transition of a replaced program
-survives except a self-loop. -/
+process whose flag is set leaves both halves of its variables unchanged.
+Every transition that writes carries the replacement guard `corrupted = false`, the
+implementation's own transitions by `IsRoundStep.correct`, so every transition of a replaced
+program is a self-loop. -/
 theorem programStep_noStep {L : ExtendedLabel P.n M E} (hc : q.1.corrupted = true)
     (h : ProgramStep P M E S roundStep j q L ν) : ν = PMF.pure q := by
   cases h

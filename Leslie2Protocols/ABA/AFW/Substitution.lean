@@ -30,8 +30,8 @@ of `ABDY.composed` and takes the shared simulation `hybridRefinesSpecification`
 `familyBroadcastSubstitution` and its two companions lift a per-round simulation —
 `GBCA.ByAFW.broadcastSubstitution`, `GBCA.ByAFW.gatherSubstitution` and
 `GBCA.ByAFW.refinesSpecification` — to the family, under the family lifting of
-`Framework/FamilySimulation.lean`. Its premise is that the relation survives the corruption
-broadcast, and `broadcastSubstitution_failAct`, `gatherSubstitution_failAct` and
+`Framework/FamilySimulation.lean`. Its premise is that the relation is preserved by the
+corruption broadcast, and `broadcastSubstitution_failAct`, `gatherSubstitution_failAct` and
 `roundSpecificationSubstitution_failAct` supply it: they are the rounds' own
 simultaneous-corruption statements, taken on the extended `fail` label. The four congruences of the
 pipeline then carry each family simulation under the composed system's own context —
@@ -55,8 +55,8 @@ namespace AFW
 
 /-! ## Broadcast compatibility
 
-The three relations survive the corruption broadcast: the rounds' own simultaneous-corruption
-statements, taken on the extended `fail` label. -/
+The three relations are preserved by the corruption broadcast: the rounds' own
+simultaneous-corruption statements, taken on the extended `fail` label. -/
 
 /-- Corruption preserves the broadcast substitution relation. -/
 theorem broadcastSubstitution_failAct (P : Parameters) :

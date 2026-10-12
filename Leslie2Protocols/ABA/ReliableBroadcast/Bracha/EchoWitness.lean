@@ -11,8 +11,9 @@ import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.MessagesAndVariables
 
 `BRB.EchoWitness P s m` holds when some process in the state `s` has received `⟨ECHO, m⟩` from
 an echo quorum, more than `(n + f) / 2` senders. It counts received messages and not correctness,
-so it is blind to the corrupted set, and received messages only accumulate, so it survives every
-transition of the instance: the simp lemmas here carry it across a write to a program's variables,
+so it does not depend on the corrupted set, and received messages only accumulate, so it is
+preserved by every transition of the instance: the simp lemmas here carry it across a write to a
+program's variables,
 a multicast and a corruption, and `EchoWitness.receiveMessage` carries it across a delivery.
 
 The refinement of the instance into the broadcast specification

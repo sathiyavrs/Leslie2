@@ -9,10 +9,10 @@ import Leslie2Protocols.Framework.FamilySimulation
 /-!
 # Forward simulation is a congruence for `System.mapIdle`
 
-A forward simulation between two systems over `L` survives reading both systems over a finer
-alphabet `L'` along the same partial label map `φ : L' → Option L` (`System.mapIdle`,
-`Framework/LoopsAndInstanceFamilies.lean`): delegated labels are matched through the simulation, and
-unmapped labels — idle self-loops in both systems — are matched by idling
+A forward simulation between two systems over `L` is a forward simulation between the same two
+systems read over a finer alphabet `L'` along the same partial label map `φ : L' → Option L`
+(`System.mapIdle`, `Framework/LoopsAndInstanceFamilies.lean`): delegated labels are matched through
+the simulation, and unmapped labels — idle self-loops in both systems — are matched by idling
 (`ForwardSimulation.mapIdle`).
 
 The only hypotheses are a τ round-trip for `φ`: the silent label of `L'`
@@ -81,7 +81,8 @@ section WeakRuns
 
 variable [Silent L] [Silent L'] {sys : System S L} {φ : L' → Option L}
 
-/-- **A silent weak run survives the read-back**, whenever the silent label of
+/-- **A silent weak run of `sys` is a silent weak run of `sys.mapIdle φ`**, whenever the silent
+label of
 `L'` delegates to the silent label of `L`: the witness execution is silent
 throughout, so relabelling every transition to `τ'` gives a witness over `L'`. -/
 theorem System.weakLSilent_mapIdle_of {q q' : S}
@@ -105,7 +106,7 @@ theorem System.weakLSilent_mapIdle_of {q q' : S}
     exact hend
   · exact trace_mapLabels_const_tau _ e hterm
 
-/-- **A labelled weak run survives the read-back** at any delegating label:
+/-- **A labelled weak run of `sys` is a weak run of `sys.mapIdle φ`** at any delegating label:
 `q =l=> q'` of `sys` is `q =l'=> q'` of `sys.mapIdle φ` whenever
 `φ l' = some l`. The witness execution is relabelled per transition — silent
 transitions to `τ'`, the single external one to `l'`. -/

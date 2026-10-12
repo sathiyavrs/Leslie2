@@ -269,7 +269,7 @@ no transition at the process they name (D11, D22). Every label of the extended a
 `roundOwn j` has a transition here: the participant's, or an idle one.
 
 A corruption replaces the program of the process it names (D23). Every
-participant's transition carries the health guard `c.corrupted = false`, so the
+participant's transition carries the replacement guard `c.corrupted = false`, so the
 variables stay as they are at the corruption; `failSelf` is the transition that writes
 the flag, and `corruptedIdle` is the replaced program. That self-loop is taken on
 every label other than `τ` and the labels of `actsAt j`, on which the replaced
@@ -668,8 +668,8 @@ noncomputable def system : System (State P M S G) (Label P.n) :=
 end Composition
 /-! ### What an implementation must supply about its own transitions -/
 
-/-- What the implementation's graded-agreement transitions must satisfy for the readers of
-`Implementation/StepCases.lean` to read the remaining transitions off a label: a transition of
+/-- What the implementation's graded-agreement transitions must satisfy for the lemmas of
+`Implementation/StepCases.lean` to determine the remaining transitions from a label: a transition of
 process `j` carries a label of `roundOwn j`, it fires only at a process whose program has
 not been replaced (D23), it is Dirac, and its return takes the announced bit
 free (D29). -/

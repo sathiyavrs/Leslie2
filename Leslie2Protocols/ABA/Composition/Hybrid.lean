@@ -38,10 +38,10 @@ transitions of its components (`gbcaSpecificationFamily_owned`, `gbcaSpecificati
 `hybridExtended_tau_specification`, `hybridExtended_tau_coin`, `hybrid_synchronisation`,
 `hybrid_hidden`, `hybrid_visible`). The common coin's own transitions over the round alphabet are
 `wccFamily_owned`, `wccFamily_fail` and the resolution `wccFamily_tau`.
-The account also runs in the inverse direction, from a composite transition back into the
-transitions its four components contributed. A labelled transition reaches `hybrid` along one of
-three routes through the two hidings: a synchronisation label and a sub-protocol API label are
-both hidden to `τ`, and every remaining label survives both hidings.
+The lemmas below also decompose a composite transition into the transitions its four
+components contributed. A labelled transition reaches `hybrid` through the two hidings in one of
+three ways: a synchronisation label and a sub-protocol API label are
+both hidden to `τ`, and every remaining label is hidden by neither hiding.
 
 `hybrid` is where the two chains of `ABA/Results.lean` meet.
 `ABA/ABDY/Substitution.lean` carries the composed system of ABDY22's protocol
@@ -49,7 +49,7 @@ to it in one stage, and `ABA/AFW/Substitution.lean` carries `AFW.composed`, the 
 system of the gather-based protocol, in three stages. The simulation of
 `ABA/HybridRefinesSpecification/Simulation.lean` runs from `hybrid` on this vocabulary, the
 non-vacuity witnesses of `ABA/HybridRefinesSpecification/NonVacuity.lean` are built with it, and
-`ABA/Results.lean` reads off the protocols' Validity and Agreement guarantee through
+`ABA/Results.lean` derives the protocols' Validity and Agreement guarantee through
 `safety_transfer`.
 -/
 
@@ -113,7 +113,7 @@ variable {M : Type} [DecidableEq M]
 
 /-! ### The specification family's transitions
 
-The family routes a round-tagged label to its round, takes `τ` at any round,
+The family passes a round-tagged label to the instance of its round, takes `τ` at any round,
 broadcasts `fail`, and idles on everything else — `GBCA.ByABDY.gbcaInstanceFamily`'s transitions
 with the round instance replaced by its specification. -/
 
@@ -416,7 +416,7 @@ theorem hybridHidden_step_iff (P : Parameters) (q : HybridState P) (l : Label P.
     · exact Or.inr ⟨inl_notMem_networkEventLabels l, hstep⟩
 
 /-- The protocol-shaped specification's step relation: a sub-protocol API
-label seen as `τ`, or a label that survives the hiding. -/
+label seen as `τ`, or a label that the hiding leaves visible. -/
 theorem hybrid_step_iff (P : Parameters) (q : HybridState P) (l : Label P.n)
     (μ : PMF (HybridState P)) :
     (hybrid P M).step q l μ ↔
@@ -427,9 +427,9 @@ theorem hybrid_step_iff (P : Parameters) (q : HybridState P) (l : Label P.n)
 /-! ### Building a transition through the two hidings
 
 A transition of the four components reaches the protocol-shaped specification
-along one of three routes, according to its label: a synchronisation label and a
+in one of three ways, according to its label: a synchronisation label and a
 sub-protocol API label are both hidden to `τ`, and every remaining label
-survives both hidings. -/
+is hidden by neither hiding. -/
 
 /-- A synchronised transition is silent: the synchronisation labels are hidden. -/
 theorem hybrid_synchronisation (P : Parameters) {q : HybridState P} {e : NetworkEvent P.n M}
@@ -446,7 +446,7 @@ theorem hybrid_hidden (P : Parameters) {q : HybridState P} {l : Label P.n}
   rw [hybrid_step_iff]
   exact Or.inl ⟨rfl, l, hl, (hybridHidden_step_iff P q l μ).mpr (Or.inr h)⟩
 
-/-- A label outside the sub-protocol API survives both hidings. -/
+/-- A label outside the sub-protocol API is hidden by neither hiding. -/
 theorem hybrid_visible (P : Parameters) {q : HybridState P} {l : Label P.n}
     {μ : PMF (HybridState P)} (hl : l ∉ Label.hiddenAPI P.n)
     (h : (hybridExtended P M).step q (Sum.inl l) μ) :

@@ -22,14 +22,14 @@ analysis replaces by the graded-agreement specification, so its interface is exa
 replacement may see: the round's ports `callG r`, `retG r`, `gbcaCallLoop r` and the
 three Byzantine graded-agreement labels of round `r`, and nothing else.
 
-`gbcaInstanceFamily` is the ℕ-indexed family of these instances: `System.family` routes a
-round-tagged label to its round, takes `τ` at any round, and broadcasts `fail` to every round at
-once. It is built from three functions on the shared extended alphabet. `roundOwnsLabel` gives the
-round a label of the interface belongs to, and `none` at every other label — the ABA API, the coin
-ports, `fail`, the DECIDED sets and the round synchronisations of the protocol network.
-`isFailLabel` picks out the one label every round takes at once. `corruptionAct` is the broadcast
-corruption act on an instance state: the round's network state records it and the round variables do
-not (D1).
+`gbcaInstanceFamily` is the ℕ-indexed family of these instances: `System.family` passes a
+round-tagged label to the instance of its round, takes `τ` at any round, and broadcasts `fail` to
+every round at once. It is built from three functions on the shared extended alphabet.
+`roundOwnsLabel` gives the round a label of the interface belongs to, and `none` at every other
+label — the ABA API, the coin ports, `fail`, the DECIDED sets and the round synchronisations of the
+protocol network. `isFailLabel` picks out the one label every round takes at once. `corruptionAct`
+is the broadcast corruption act on an instance state: the round's network state records it and the
+round variables do not (D1).
 
 ## Determinacy
 

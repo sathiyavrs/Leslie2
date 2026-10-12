@@ -30,7 +30,7 @@ emulate the blueprint's sync-set composition `∥_S`:
      distribution is `μr.map (Function.update s r ·)` — no product PMFs arise.
   2. *global broadcast* (`glob l`, e.g. corruption `fail id`): every instance
      applies the deterministic transform `act l` simultaneously (a Dirac
-     step). This is what keeps per-instance copies of shared bookkeeping (the
+     step). This is what keeps per-instance copies of a shared variable (the
      corrupted set) together — a single-coordinate step could not.
   3. *not its own* (unowned, non-global): a global idle self-loop.
 
@@ -100,7 +100,7 @@ theorem System.mapIdle_step {S L L' : Type} (φ : L' → Option L) (sys : System
   | none => simp
   | some l => simp
 
-/-- Delegated labels read off the underlying system. -/
+/-- A delegated label has the transitions of the underlying system on the label it maps to. -/
 theorem System.mapIdle_step_some {S L L' : Type} {φ : L' → Option L}
     {sys : System S L} {s : S} {l' : L'} {l : L} (hφ : φ l' = some l)
     (μ : PMF S) : (sys.mapIdle φ).step s l' μ ↔ sys.step s l μ := by
@@ -131,7 +131,7 @@ section MapIdleWeak
 variable {S L L' : Type} [Silent L] [Silent L'] {sys : System S L}
   {φ : L' → Option L} {s s' : S}
 
-/-- **A silent weak run survives the read-back**: `q =ε=> q'` of `sys` is
+/-- **A silent weak run of `sys` is one of `sys.mapIdle φ`**: `q =ε=> q'` of `sys` is
 `q =ε=> q'` of `sys.mapIdle φ`, the witness execution relabelled along a
 section `g` of `φ`. -/
 theorem System.weakLSilent_mapIdle (g : L → L') (hsec : ∀ x, φ (g x) = some x)
@@ -145,7 +145,7 @@ theorem System.weakLSilent_mapIdle (g : L → L') (hsec : ∀ x, φ (g x) = some
   · rw [AlterSeq.endState_mapLabels g e hterm]; exact hend
   · rw [System.trace_mapLabels _ sys g hgτ, htr, Stream'.Seq.map_nil]
 
-/-- **A labelled weak run survives the read-back**: `q =l=> q'` of `sys` is
+/-- **A labelled weak run of `sys` is one of `sys.mapIdle φ`**: `q =l=> q'` of `sys` is
 `q =l'=> q'` of `sys.mapIdle φ` at any label `l'` the section `g` puts over
 `l`. -/
 theorem System.weakLStep_mapIdle (g : L → L') (hsec : ∀ x, φ (g x) = some x)

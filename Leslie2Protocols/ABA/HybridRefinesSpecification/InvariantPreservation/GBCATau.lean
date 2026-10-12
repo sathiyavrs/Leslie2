@@ -12,11 +12,11 @@ import Leslie2Protocols.ABA.Composition.Hybrid
 
 `Invariant.step_gbcaTau`, preservation of `Invariant` at `bindUnset`, the GBCA family's only
 genuine `τ`-step, which excludes one bit of round `r`'s exclusion set. The corners that carry a
-value across lean on the exclusion's own D15 guard: the spared bit `!b` keeps `f + 1` F-blind
+value across use the exclusion's own D15 guard: the bit `!b` left not excluded keeps `f + 1` F-blind
 call support at
-round `r`, whose derived correct caller determines `!b` at every standing commitment.
-`down_settled`'s round-`r` corner needs "a call at round `r` implies current round `≥ r`", a fact
-`Invariant` does not carry explicitly, and is handed off.
+round `r`, whose derived correct caller determines `!b` at every existing commitment.
+The same caller gives `down_settled` at round `r - 1`: `call_round` (I8) places it at round `r` or
+above, and `round_bound` (I5') then closes round `r - 1`.
 -/
 
 namespace PLTS
@@ -123,8 +123,8 @@ theorem Invariant.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
       by_cases h2 : r' = r
       · subst h2; exact hClosedSelf
       · by_cases h1 : r' + 1 = r
-        · -- the fresh exclusion at `r' + 1` had a correct caller of the spared bit, whose
-          -- round progress closes `r'`
+        · -- the fresh exclusion at `r' + 1` had a correct caller of the bit left not excluded,
+          -- whose round progress closes `r'`
           obtain ⟨id0, hid0F, hcall0⟩ :=
             GBCA.exists_correct_caller _hw (by rw [hI.F_gbca r]; exact hI.F_card)
           have hFid0 : id0 ∉ c.F := by
@@ -153,7 +153,7 @@ theorem Invariant.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
           refine ⟨?_, fun hh => hbr.2 (Finset.mem_insert_of_mem hh)⟩
           rcases Finset.mem_insert.mp hbr.1 with hnew | hold
           · -- the fresh exclusion is `!b'`: the round bound at grade 2 already had an excluded bit,
-            -- which can be neither `b` (`hb`) nor `b'` (still alive), so it is `!b'`
+            -- which can be neither `b` (`hb`) nor `b'` (not excluded), so it is `!b'`
             obtain ⟨wd, hwd⟩ :=
               Finset.nonempty_iff_ne_empty.mpr (hI.grade2_needs_bind r' hgr)
             have hwb : wd ≠ b := fun hh => hb (hh ▸ hwd)
@@ -214,7 +214,8 @@ theorem Invariant.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
               · rcases hw0 with hh | hh
                 · rw [hcoin] at hh; simp only [CoinValue.bit.injEq] at hh; rw [hh]
                 · rw [hcoin] at hh; simp at hh
-          · -- round `r'` already had an excluded bit, which the live pair fixes at `!v`:
+          · -- round `r'` already had an excluded bit, which the guard pair
+            -- `v ∉ excluded ∧ (!v) ∈ excluded` fixes at `!v`:
             -- the pre-exclude pair holds and the old `agree_bound` applies
             have hpairold : (!v) ∈ (g r').excluded ∧ v ∉ (g r').excluded := by
               rw [hExcludedSelf'] at hbr
@@ -258,7 +259,7 @@ theorem Invariant.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
       by_cases h1 : r' + 1 = r
       · rw [h1, hExcludedSelf] at h
         rcases Finset.mem_insert.mp h with hnew | hold
-        · -- the fresh exclusion: the spared bit `!b = v` was carried by the derived
+        · -- the fresh exclusion: the bit `!b = v` left not excluded was carried by the derived
           -- correct caller, whose `call_of_previousRound` is the conclusion verbatim
           have hveq : v = !b := by
             revert hnew; cases v <;> cases b <;> simp
@@ -287,7 +288,7 @@ theorem Invariant.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
       rw [hGradeeq] at h ⊢
       exact hI.grade0_chain r' h
     · intro id b' h; rw [hCalleq] at h; exact hI.input_gbcaRound0_permanent id b' h
-    · -- `flip_witness`: `grade` and every residue component are preserved monotonically
+    · -- `flip_witness`: `grade` and every component of `DissentWitness` are preserved monotonically
       intro r' h
       rcases hI.flip_witness r' h with hg | hd
       · left; rw [hGradeeq]; exact hg
@@ -306,7 +307,8 @@ theorem Invariant.step_gbcaTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
         exact GBCA.SpecState.quorum_of_eq (hFeq r) (hCalleq r) _hq
       · rw [hExcludedNe r' h2] at h
         exact GBCA.SpecState.quorum_of_eq (hFeq r') (hCalleq r') (hI.bound_quorum r' h)
-    · -- I26 establishment: the fresh exclusion's D15 count is the spared bit's sent source
+    · -- I26 establishment: the fresh exclusion's D15 count is the sent source of the bit left
+      -- not excluded
       intro r' v hb'
       by_cases h2 : r' = r
       · rw [h2, hExcludedSelf] at hb'

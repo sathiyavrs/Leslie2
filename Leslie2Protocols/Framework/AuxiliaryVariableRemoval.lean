@@ -27,8 +27,8 @@ and `φ : L → L` identifies the labels that differ only in the value the compo
 Two clauses carry the content.
 
 * `project` — every transition `s -[l]→ μ` of `sysA` is a transition `π s -[l]→ μ.map π` of
-  `sys0`, on the same label. The component adds no step, and the distribution over what
-  survives `π` is unchanged.
+  `sys0`, on the same label. The component adds no step, and the distribution projected
+  along `π` is unchanged.
 * `lift` — every transition `π s -[l]→ μ` of `sys0` is met by a transition `s -[l']→ ν` of
   `sysA` with `φ l' = φ l` and `μ = ν.map π`. The component blocks no step.
 
@@ -52,7 +52,8 @@ label
 
 ## Congruences
 
-A removal survives parallel composition in either position, against a component whose step relation
+A removal is preserved by parallel composition in either position, against a component whose step
+relation
 is saturated along `φ` (`System.LabelSaturated`); abstraction of a `φ`-saturated set of labels; and
 restriction along the left summand of an extended alphabet (`Framework/Relabel.lean`). Saturation
 itself is preserved by parallel composition, abstraction, the full-synchronisation product

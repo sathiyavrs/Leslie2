@@ -76,7 +76,7 @@ def initial (P : Parameters) : ABAState P :=
   (fun _ => RoundLoopVariables.initial P.n, ABANetworkState.initial P.n)
 
 /-! The two components' own initial states project componentwise, so unfolding
-`initial` leaves no residue. -/
+`initial` yields exactly those two states. -/
 
 @[simp] theorem _root_.PLTS.ABA.RoundLoopVariables.initial_processVariables (n : ℕ) :
     (RoundLoopVariables.initial n).processVariables = RoundLoopState.initial n := rfl

@@ -63,9 +63,9 @@ structure Invariant (P : Parameters) (ldr : Fin P.n) (s : BrachaState P.n M) : P
   /-- A correct sender's sent `VOTE` matches its write-once field. -/
   vote_confirmed : ∀ k ∉ s.F, ∀ m, Message.vote m ∈ s.sent k →
     (s.processVariables k).sentVote = some m
-  /-- A correct vote is backed by a quorum of received `ECHO` messages somewhere: the vote on a
-  quorum
-  witnesses itself, and the amplified vote inherits the witness from a correct backer. -/
+  /-- A correct vote is echo-witnessed: some receiver holds a quorum of received `ECHO`
+  messages for it. A vote cast on a quorum is its own witness, and an amplified vote inherits
+  the witness from a correct sender of the same vote. -/
   vote_backed : ∀ k ∉ s.F, ∀ m, (s.processVariables k).sentVote = some m → EchoWitness P s m
 
 /-- The invariant holds initially. -/

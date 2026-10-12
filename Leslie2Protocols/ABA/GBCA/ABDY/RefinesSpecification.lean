@@ -32,7 +32,7 @@ corrupted sets.
 `specificationCorruptionAct` is the broadcast corruption act the lifted specification carries at
 the extended alphabet. `specificationRelation_init` and `refinesSpecification_failAct` are the two
 premises `ForwardSimulation.family` (`Framework/FamilySimulation.lean`) asks of the round-indexed
-family: the relation holds at the initial states, and it survives the broadcast corruption. The
+family: the relation holds at the initial states, and the broadcast corruption preserves it. The
 family lifting that consumes them is `ABA/ABDY/Substitution.lean`.
 
 Binding is stated on the labels of a trace (`GBCA.BindingTraceExtended`), so the inclusion carries
@@ -647,8 +647,8 @@ theorem composition_specificationTraces (P : Parameters) (r : ℕ) :
 /-! ### What the family lift will need
 
 The two premises of `ForwardSimulation.family` for the round-indexed family: the relation holds at
-the initial states (`specificationRelation_init`, `GBCA/ABDY/SpecificationRelation.lean`), and it
-survives the broadcast corruption. -/
+the initial states (`specificationRelation_init`, `GBCA/ABDY/SpecificationRelation.lean`), and the
+broadcast corruption preserves it. -/
 
 /-- The broadcast corruption act on a specification state, over the extended
 alphabet: `GBCA.failAct` taken on the extended `fail` label. -/

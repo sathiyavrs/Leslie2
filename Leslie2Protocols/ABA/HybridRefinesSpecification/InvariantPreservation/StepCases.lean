@@ -281,7 +281,7 @@ synchronisation label that stands for it (`gbcaCallLoop` and the Byzantine call 
 transitions), and the DECIDED send of a grade-2 round, taken after the coin return on the
 synchronisation label `decidedSend`. The eighth source is the silent resolution of the common coin
 at some round. A replaced program contributes no source of its own: its self-loop on `callG`,
-`retG`, `callW`, `retW` and `decidedRelay` reads as the corrupted branch already present at those
+`retG`, `callW`, `retW` and `decidedRelay` reads as the corrupted case already present at those
 transitions, `id ∈ F` being supplied by I0 (D23). -/
 theorem hybrid_step_tau (P : Parameters) (G : ℕ → GBCA.SpecState P.n)
     (C : ∀ _ : Fin P.n, RoundLoopVariables P.n) (A : ABANetworkState P.n)

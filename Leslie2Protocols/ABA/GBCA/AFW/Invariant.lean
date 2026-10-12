@@ -39,7 +39,7 @@ invariant therefore states the first gather's witnesses on the program's candida
 first gather's return guards are in scope, and `secondGatherCall_candidate` transfers the candidate
 to the second gather's call at `secondGatherCall`. The graded outcome is recorded at
 `secondGatherReturn`, and `out_witness` is what the second gather's return guards witness about
-it. Both cores are write-once, so a witness survives every later transition.
+it. Both cores are write-once, so every later transition preserves a witness.
 -/
 
 namespace PLTS
@@ -57,7 +57,7 @@ are the gather commit guards, per gather; `candidate_aboveThreshold` and `candid
 record what the candidate the first gather's return determines witnesses about
 that gather, and `secondGatherCall_candidate` carries the candidate into the second gather's
 call; `candidate_bound` and `secondGatherCall_bound` say that the transition writing the
-candidate writes the bound bit, and `bound_core` that the bit is read off the
+candidate writes the bound bit, and `bound_core` that the bit is computed from the
 first gather's core; `out_witness` records what the second gather's return
 witnesses about the grade; the `core*` clauses re-state the core-write guards,
 which the write-once cores keep true. -/

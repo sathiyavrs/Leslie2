@@ -36,7 +36,7 @@ Committed entries are written once, so `approved` is monotone along every transi
 A gather program reads what an input instance returned to it out of its own variables. The clause
 `inputBroadcastReturned_val` carries a returned value back to the commitment that wrote it: it is
 established at the `inputBroadcastRet` transition, whose guard is the broadcast specification's
-`val = some v`, and it survives because a committed value is written once.
+`val = some v`, and every later transition preserves it because a committed value is written once.
 
 ## The calls
 
@@ -87,8 +87,8 @@ structure Conformance (P : Parameters) (s : StateOverBroadcastSpecification P.n 
   vote_confirmed : ∀ j ∉ (gatherProgramsAndNetwork s).F, ∀ W, Message.vote W ∈
     (gatherProgramsAndNetwork s).sent j →
     ((gatherProgramsAndNetwork s).processVariables j).sentVote = some W
-  /-- A correct vote is backed by `n − f` senders' echo payloads, each contained
-  in it. -/
+  /-- A correct process's `VOTE` payload contains an `ECHO` payload received from each of
+  `n − f` senders. -/
   vote_backed : ∀ j ∉ (gatherProgramsAndNetwork s).F, ∀ W, ((gatherProgramsAndNetwork
     s).processVariables j).sentVote = some W →
     ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
@@ -97,8 +97,8 @@ structure Conformance (P : Parameters) (s : StateOverBroadcastSpecification P.n 
   bind_confirmed : ∀ j ∉ (gatherProgramsAndNetwork s).F, ∀ U, Message.bind U ∈
     (gatherProgramsAndNetwork s).sent j →
     ((gatherProgramsAndNetwork s).processVariables j).sentBind = some U
-  /-- A correct bind payload is backed by `n − f` senders' vote payloads, each contained
-  in it. -/
+  /-- A correct process's `BIND` payload contains a `VOTE` payload received from each of
+  `n − f` senders. -/
   bind_backed : ∀ j ∉ (gatherProgramsAndNetwork s).F, ∀ U, ((gatherProgramsAndNetwork
     s).processVariables j).sentBind = some U →
     ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧

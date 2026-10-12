@@ -65,7 +65,7 @@ The step `hybrid ⊑ ABA.spec` belongs to neither chain. `hybrid_spec`
 `ABDY.refines` and `AFW.refines` chain the soundness inclusions of their chain (Result 1) by
 `Set.Subset.trans`; `ABDY.chainSimulation` and `AFW.chainSimulation` compose the simulations
 themselves by `ProbabilisticForwardSimulation.trans` (Result 2). `AFW.composed_refines` and
-`AFW.chainSimulationOfComposed` are the two routes from `AFW.composed`. The two routes are
+`AFW.chainSimulationOfComposed` are the two derivations from `AFW.composed`. The two derivations are
 independent — the inclusion never invokes transitivity of simulation.
 
 ## Scope of the headline
@@ -140,7 +140,7 @@ theorem composed_safe (P : Parameters) :
   safety_transfer (Set.Subset.trans (substitution P) (hybrid_spec P GBCA.ByABDY.Message))
     (spec_safe P)
 
-/-! ### The two routes -/
+/-! ### The two derivations -/
 
 /-- **Trace-distribution refinement** (blueprint `thm:aba-main`, safety
 fragment): every trace distribution achievable by the protocol is

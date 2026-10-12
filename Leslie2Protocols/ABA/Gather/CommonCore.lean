@@ -9,7 +9,7 @@ import Leslie2Protocols.ABA.Gather.BroadcastSubstitution
 /-!
 # The common core at the two gather implementations
 
-The common core read off a trace (`Gather.CoreTrace`, `ABA/Gather/SpecificationSafety.lean`) holds
+The common core of a trace (`Gather.CoreTrace`, `ABA/Gather/SpecificationSafety.lean`) holds
 at the gather instance over the broadcast specifications and at the gather instance over Bracha's
 broadcast: `Gather.instanceOverBroadcastSpecification_core` and `Gather.instanceOverBracha_core`.
 Every return of a positive-probability trace names one payload set, of at least `n − f` entries and
@@ -18,8 +18,8 @@ below the returned map, and every return of that trace names the same set.
 `toSpecificationLabel` sends an interface label to the specification label it stands for: the call
 loop stands for the call it loops on. An execution of `specificationOverInstanceAlphabet` has the
 states of a `specInst` execution and labels that `toSpecificationLabel` sends to its labels, so
-`specificationOverInstanceAlphabet_core` reads `CoreTrace` off the relabelled trace, where
-`Gather.specInst_core` reads it at the specification itself. The two implementations then inherit
+`specificationOverInstanceAlphabet_core` derives `CoreTrace` from the relabelled trace, where
+`Gather.specInst_core` proves it for the specification itself. The two implementations then inherit
 it along their refinements (`PLTS.safety_transfer`): the counting refinement
 (`instanceOverBroadcastSpecification_refines`, `ABA/Gather/RefinesSpecification.lean`) and, beneath
 it, the broadcast substitution (`instanceOverBracha_refines`,
@@ -44,7 +44,8 @@ def toSpecificationLabel {n : ℕ} : InstanceLabel n X → Label n X
   | Sum.inr (.callLoop id x) => .call id x
 
 omit [DecidableEq X] in
-/-- The specification's alphabet read off an interface label is `toSpecificationLabel`. -/
+/-- The label map to the specification's alphabet sends an interface label to its
+`toSpecificationLabel`. -/
 theorem specificationLabelMap_eq_toSpecificationLabel {n : ℕ} (l : InstanceLabel n X) :
     specificationLabelMap n X l = some (toSpecificationLabel l) := by
   cases l with
@@ -61,7 +62,7 @@ theorem specificationOverInstanceAlphabet_step_toSpecification (P : Parameters)
 
 /-- **The lifted specification binds one core.** An execution of `specificationOverInstanceAlphabet`
 has the states of a `specInst` execution and labels that `toSpecificationLabel` sends to its
-labels, so the guards of a return are read off the specification's own transitions. -/
+labels, so the guards of a return are those of the specification's own transitions. -/
 theorem specificationOverInstanceAlphabet_core (P : Parameters) (X : Type) [DecidableEq X] :
     ∀ D ∈ achievableTraceDists (specificationOverInstanceAlphabet P X), ∀ t, D t ≠ 0 →
       CoreTrace P (t.map toSpecificationLabel) := by

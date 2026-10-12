@@ -97,7 +97,7 @@ end NetworkState
 
 /-- The local state of one process: its own variables and the messages delivered to
 it, indexed by sender. It holds nothing of what it has sent — the sender's
-sent lives in the network state. -/
+sent set is held by the network state. -/
 structure LocalState (n : ℕ) (Pr M : Type) : Type where
   /-- The process's own variables. -/
   processVariables : Pr

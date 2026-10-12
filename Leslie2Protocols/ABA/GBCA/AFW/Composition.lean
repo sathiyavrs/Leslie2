@@ -25,8 +25,9 @@ The composition is generic in the two gather instances: `roundOverGathers` takes
 and `roundOverGatherSpecifications` supplies the lifted gather specifications
 (`Gather.specificationOverInstanceAlphabet`). All three run on `RoundStateOverGathers n G₁ G₂`, and
 the four `init` lemmas are the states they start from. `roundOverBracha` is the gather-based GBCA
-implementation: AFW25's Algorithm 4 at `R = 2`, its two-gather branch, with the grade read off the
-second gather's counts in place of the approximate-agreement subroutine of its lines 7 and 8 (D24).
+implementation: AFW25's Algorithm 4 in its case `R ≥ 2`, at `R = 2`, with the grade computed from
+the second gather's counts in place of the approximate-agreement subroutine of its lines 7 and 8
+(D24).
 
 ## Projections of the round's state
 

@@ -21,7 +21,7 @@ input instance's commitment, and `withoutBindAbove_card` is the count that holds
 the recorded core. The count is that of `ABA/Gather/CommonCoreCounting.lean`: at most `f`
 processes outside `F` have sent no `BIND` payload containing the recorded core
 (`withoutBindAbove`). That set only loses members along every
-transition and every corruption, so the count survives both.
+transition and every corruption, so the count is preserved by both.
 
 `specificationRelation_init` holds the relation at the two initial states, and
 `specificationRelation_corrupt` carries it across a corruption of both systems at once, which is

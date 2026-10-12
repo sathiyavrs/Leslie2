@@ -265,7 +265,7 @@ theorem secondGatherMessageOf_inj : ∀ a a' (b : Gather.Message n (Option Bool)
   cases a <;> cases a' <;> simp_all [secondGatherMessageOf]
 
 end TaggedMessages
-/-- The first gather's instance state of round `r`, read off the adversary's
+/-- The first gather's instance state of round `r`, computed from the adversary's
 tagged sent sets and its corrupted set. The local states are the initial
 ones: `Gather.coreOf` reads the network state alone
 (`Gather.coreOf_networkState_only`). -/
@@ -274,7 +274,7 @@ def firstGatherOf (P : Parameters) (w : NetworkState P.n) (r : ℕ) :
   (fun _ => LocalState.initial P.n _ (Gather.BaseProcessVariables.initial P.n Bool),
     ⟨messagesOf firstGatherMessageOf firstGatherMessageOf_inj (w.sent r), w.F⟩)
 
-/-- The second gather's instance state of round `r`, read off the adversary's
+/-- The second gather's instance state of round `r`, computed from the adversary's
 tagged sent sets and its corrupted set. -/
 def secondGatherOf (P : Parameters) (w : NetworkState P.n) (r : ℕ) :
     InstanceState P.n (Gather.BaseProcessVariables P.n (Option Bool))

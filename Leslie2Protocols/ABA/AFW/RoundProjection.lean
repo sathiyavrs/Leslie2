@@ -16,11 +16,11 @@ import Leslie2Protocols.Framework.Congruence
 # The projection of the gather-based protocol onto its composed system
 
 `AFW.protocol P` is the gather-based protocol as it runs and `AFW.composed P` reads the same
-protocol as a composition of components, down to the broadcast instances. This file holds two of
-the three things the simulation between them rests on: the projection that computes a composed state
-from the implementation, and the relation that projection carries. `ABA/AFW/Composition.lean` holds
-the third, the builders that assemble a transition of the composed system out of transitions of its
-components.
+protocol as a composition of components, with the broadcast instances beneath. This file holds two
+of the three things the simulation between them rests on: the projection that computes a composed
+state from the implementation, and the relation that projection carries. `ABA/AFW/Composition.lean`
+holds the third, the builders that assemble a transition of the composed system out of transitions
+of its components.
 
 ## The composed state is a projection of the implementation
 
@@ -28,11 +28,11 @@ A state of `composed P` is computed from a state of `protocol P`. The round loop
 coin are shared objects, the ABA network is the DECIDED sets beside the corrupted set, and the
 round-`r` state is assembled by `roundProjection`. Assembling it undoes the two rearrangements the
 implementation performs. The local states are transposed back: an instance's local state vector at
-round `r` is read off the variables the `n` processes hold in that round. And the sent sets are
-recovered one tag at a time: an instance's network state carries the messages of its own tag, read
-off the adversary's single tagged sent family by `AFW.messagesOf`. A round has `2n + 2` network
-states: one for each gather, which carries that gather's `ECHO`, `VOTE` and `BIND` messages, and
-one for each input-broadcast instance of each gather. The untaggings are
+round `r` is computed from the variables the `n` processes hold in that round. And the sent sets are
+recovered one tag at a time: an instance's network state carries the messages of its own tag,
+computed from the adversary's single tagged sent family by `AFW.messagesOf`. A round has `2n + 2`
+network states: one for each gather, which carries that gather's `ECHO`, `VOTE` and `BIND` messages,
+and one for each input-broadcast instance of each gather. The untaggings are
 `AFW.firstGatherMessageOf` and `AFW.secondGatherMessageOf` for the two gathers, and
 `firstGatherInputBroadcastMessageOf` and `secondGatherInputBroadcastMessageOf` for the
 input-broadcast instances.
@@ -50,7 +50,7 @@ performs.
 The round carries three fields no guard of it reads: the core of each of its
 two gather instances, and the round's bound bit. In the implementation the network
 holds those three as the ghost of the round (`AFW.Ghost`), so the projection
-reads them off it, and a transition's ghost write is the round's write of them
+reads that ghost, and a transition's ghost write is the round's write of them
 (`roundProjection_writeGhost`, `roundProjection_writeGhost_ne`, `roundProjection_ghostId`). The two
 projections of a gather's core agree because each is `Gather.coreOf` of the same
 network state (`coreOfNetwork_firstGatherProjection`, `coreOfNetwork_secondGatherProjection`).
@@ -104,7 +104,7 @@ variable {X : Type}
 
 variable {P : Parameters}
 
-/-- The round-`r` state of the first gather instance, read off the implementation's state:
+/-- The round-`r` state of the first gather instance, computed from the implementation's state:
 the local state vectors transposed out of the variables the processes hold in that round,
 the network states recovered tag by tag from the adversary's tagged sent sets,
 and the instance's core the first field of the adversary's ghost. -/
@@ -118,7 +118,7 @@ noncomputable def firstGatherProjection (P : Parameters) (u : ∀ _ : Fin P.n, A
       ⟨messagesOf (firstGatherInputBroadcastMessageOf k) (firstGatherInputBroadcastMessageOf_inj k)
         (w.sent r), w.F⟩))
 
-/-- The round-`r` state of the second gather instance, read off the implementation's state,
+/-- The round-`r` state of the second gather instance, computed from the implementation's state,
 its core the second field of the adversary's ghost. -/
 noncomputable def secondGatherProjection (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessVariables
   P.n)
@@ -130,11 +130,11 @@ noncomputable def secondGatherProjection (P : Parameters) (u : ∀ _ : Fin P.n, 
       ⟨messagesOf (secondGatherInputBroadcastMessageOf k)
         (secondGatherInputBroadcastMessageOf_inj k) (w.sent r), w.F⟩))
 
-/-- One process's variables in the round, read off its round variables, field by field: the first
-gather's input is the round's input, the candidate and the graded outcome are the two the round
-variables hold, the second gather's input marks the second call, and the round has returned exactly
-when its second gather has returned and the variables hold no graded outcome, which is the state the
-round's own return leaves. -/
+/-- One process's variables in the round, computed from its round variables, field by field: the
+first gather's input is the round's input, the candidate and the graded outcome are the two the
+round variables hold, the second gather's input marks the second call, and the round has returned
+exactly when its second gather has returned and the variables hold no graded outcome, which is the
+state the round's own return leaves. -/
 def programProjection {n : ℕ} (st : RoundVariables n) : GBCA.ByAFW.ProcessVariables n where
   input := st.firstGather.processVariables.input
   candidate := st.candidate
@@ -142,14 +142,14 @@ def programProjection {n : ℕ} (st : RoundVariables n) : GBCA.ByAFW.ProcessVari
   output := st.output
   returned := st.secondGather.processVariables.returned && st.output.isNone
 
-/-- The round-`r` state of the composed system, read off the implementation's state: the
+/-- The round-`r` state of the composed system, computed from the implementation's state: the
 process variables beside the round's bound bit, and the two gather instances. -/
 noncomputable def roundProjection (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n)
     (w : NetworkState P.n) (r : ℕ) : GBCA.ByAFW.RoundStateOverBracha P.n :=
   ((fun j => programProjection ((u j).2.roundVariables r), (w.ghost r).2.2),
     (firstGatherProjection P u w r, secondGatherProjection P u w r))
 
-/-! ### Reading the composed round's state off the projection -/
+/-! ### The composed round's state computed from the projection -/
 
 section Readers
 
@@ -206,8 +206,8 @@ variable (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n) (w : NetworkState P.n) 
             (secondGatherInputBroadcastMessageOf_inj k) (w.sent r), w.F⟩) := rfl
 
 /-- **The two systems of the first gather's core agree**: the instance's core
-is read off its network state alone, and that network state is the one
-`AFW.firstGatherOf` hands the adversary. -/
+is computed from its network state alone, and that network state is the one
+`AFW.firstGatherOf` computes from the adversary's state. -/
 theorem coreOfNetwork_firstGatherProjection :
     Gather.coreOfNetwork P (Gather.gatherProgramsAndNetwork (firstGatherProjection P u w r)).2 =
       Gather.coreOf P
@@ -379,8 +379,8 @@ theorem protocolRelation_mk (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessVa
       ((∀ j, (u j).1 = C j) ∧ o = o' ∧ A = ⟨w.decidedSent, w.F⟩ ∧
         (G = fun r => roundProjection P u w r) ∧ BoundInvariant P u w) := Iff.rfl
 
-/-- The bound invariant survives a transition that leaves the three fields it reads where they
-stand and keeps every bound bit already recorded. -/
+/-- The bound invariant is preserved by a transition that leaves the three fields it reads
+unchanged and keeps every bound bit already recorded. -/
 theorem boundInvariant_of {u x : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} {w v : NetworkState P.n}
     (hI : BoundInvariant P u w)
     (hcand : ∀ i r, ((x i).2.roundVariables r).candidate = ((u i).2.roundVariables r).candidate)
@@ -394,8 +394,8 @@ theorem boundInvariant_of {u x : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} {w v
         rw [hinput i r]; exact (hI.2 r i).1 (by rw [← hout i r]; exact ho),
       fun hs => by rw [hcand i r]; exact (hI.2 r i).2 (by rw [← hinput i r]; exact hs)⟩⟩
 
-/-- The bound invariant survives a transition that clears the graded outcome of a round, the
-candidate and the second gather's input standing. -/
+/-- The bound invariant is preserved by a transition that clears the graded outcome of a round
+and leaves the candidate and the second gather's input unchanged. -/
 theorem boundInvariant_ofOutputCleared {u x : ∀ _ : Fin P.n, AFW.ProcessVariables P.n}
     {w v : NetworkState P.n} (hI : BoundInvariant P u w)
     (hcand : ∀ i r, ((x i).2.roundVariables r).candidate = ((u i).2.roundVariables r).candidate)
@@ -410,9 +410,9 @@ theorem boundInvariant_ofOutputCleared {u x : ∀ _ : Fin P.n, AFW.ProcessVariab
         rw [hinput i r]; exact (hI.2 r i).1 (hout i r ho),
       fun hs => by rw [hcand i r]; exact (hI.2 r i).2 (by rw [← hinput i r]; exact hs)⟩⟩
 
-/-- The bound invariant survives the second gather's call: the candidate and the graded outcome
-stand, and at every round the second gather's input either stands or is written at variables whose
-candidate is recorded. -/
+/-- The bound invariant is preserved by the second gather's call: the candidate and the graded
+outcome are unchanged, and at every round the second gather's input is either unchanged or written
+at variables whose candidate is recorded. -/
 theorem boundInvariant_ofSecondGatherCall {u x : ∀ _ : Fin P.n, AFW.ProcessVariables P.n}
     {w v : NetworkState P.n} (hI : BoundInvariant P u w)
     (hcand : ∀ i r, ((x i).2.roundVariables r).candidate = ((u i).2.roundVariables r).candidate)

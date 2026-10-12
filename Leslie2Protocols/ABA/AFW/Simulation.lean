@@ -11,8 +11,8 @@ import Leslie2Protocols.Framework.DiracRelationCoupling
 # The gather-based protocol into its composed system
 
 `AFW.protocol P` is the gather-based protocol as it runs and `AFW.composed
-P` reads the same protocol as a composition of components, down to the
-broadcast instances. This file carries the first into the second, which is
+P` reads the same protocol as a composition of components, with the
+broadcast instances beneath. This file carries the first into the second, which is
 where the gather-based chain passes from implementation to specification, as
 `ABA/ABDY/Simulation.lean` does for ABDY22's. `ABA/Results.lean` takes the
 inclusion from here to the ABA specification.
@@ -30,7 +30,7 @@ couplings for a Dirac outcome and for an outcome whose only free coordinate is t
 `AFW.coupling_tau`, `AFW.coupling_label` and `AFW.coupling_event` match the silent label, a
 visible shared label and a synchronisation of the implementation, each from the runs of
 `ABA/AFW/SimulationOfEachTransition.lean`. `AFW.coupling_hidden` concludes in a weak run of the
-composed group, and `AFW.coupling_step` carries that run through the sub-protocol hiding with
+composed group, and `AFW.coupling_step` applies the sub-protocol hiding to that run with
 `weakTau_abstract`, `weakTau_of_weakStep_mem` and `weakStep_abstract`.
 `AFW.protocolSimulation` is the forward simulation these matchings assemble, and
 `AFW.protocol_composed` the trace inclusion it yields. -/

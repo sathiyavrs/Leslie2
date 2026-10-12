@@ -14,9 +14,9 @@ import Leslie2Protocols.ABA.Composition.Hybrid
 specification. The GBCA instance only ever touches `.call`, never `.F`, `.excluded` or `.grade`,
 and the core only ever touches `.phase` at `id`, never `.input`, `.estimate` or `.round`.
 `grade2Bound_commit`'s second conjunct comes from its own third conjunct and the correct call guard
-`estimate = b`. The correct-fresh-call corner of `input_gbcaRound0` and `input_called` needs
-"`estimate = input` before any round-`0` return", a coherence of phase and input that is not an
-explicit `Invariant` conjunct, and is handed off.
+`estimate = b`. At a fresh correct call, `input_gbcaRound0` follows from `estimate0` (I11), which
+gives `estimate = input` before any round-`0` return, and `input_called` follows from
+`phase_input` (I2'').
 -/
 
 namespace PLTS

@@ -39,7 +39,7 @@ variable {P : Parameters} {r : ℕ}
 
 /-! ### Trace-distribution inclusion
 
-The lifted specification is reached by two independent routes.
+The lifted specification is reached by two independent derivations.
 `roundOverGatherSpecifications_refines` and `roundOverBroadcastSpecification_specificationTraces`
 chain inclusions by `Set.Subset.trans`; `roundOverBracha_refinesSpecification` composes the three
 simulations themselves by `ProbabilisticForwardSimulation.trans`, and
@@ -97,8 +97,8 @@ theorem roundOverBroadcastSpecification_specificationTraces (P : Parameters) (r 
 
 /-- **Binding of the round over the gather specifications, on a trace.** Every
 positive-probability trace of the round is bound to one bit: all its round-`r`
-returns announce that bit, and every one of them that hands out a value hands
-out it. Binding is a property of the labels (`BindingTraceExtended`), so
+returns announce that bit, and every one of them that returns a value returns
+that bit. Binding is a property of the labels (`BindingTraceExtended`), so
 `roundOverGatherSpecifications_refines` carries it from
 `specificationOverRoundAlphabet_binding`. -/
 theorem roundOverGatherSpecifications_binding (P : Parameters) (r : ℕ) :

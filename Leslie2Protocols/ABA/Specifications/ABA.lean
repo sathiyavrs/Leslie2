@@ -108,8 +108,8 @@ def corrupt (P : Parameters) (id : Fin P.n) (s : SpecState P.n) : SpecState P.n 
 end SpecState
 
 /-- D13 support for `v`: `f + 1` ids, each either ghost-recorded as inputting
-`v` or corrupted. The count is `F`-blind (D15), hence immune to later
-corruptions. -/
+`v` or corrupted. The count is `F`-blind (D15), so a later corruption does not
+decrease it. -/
 def InputSupport (P : Parameters) (s : SpecState P.n) (v : Bool) : Prop :=
   P.f + 1 ≤ (Finset.univ.filter (fun id => s.input id = some v ∨ id ∈ s.F)).card
 
@@ -169,7 +169,7 @@ inductive SpecStep (P : Parameters) :
   where both bits carry `f + 1` support. Under unanimity among the correct processes on one bit the
   other bit is never supported, so the guard fails at every state such a run
   reaches. The flip is then unreachable, and with it every probabilistic
-  branch of the system, so the unanimous path is Dirac. This is the liveness
+  transition of the system, so the unanimous path is Dirac. This is the liveness
   half of Validity, held structurally by the guard rather than proven. -/
   | coinFlip (s : SpecState P.n) (hm : s.mode = .flipEnabled) (hv : s.val = none)
       (hmix : ∀ b, InputSupport P s b) :

@@ -58,7 +58,7 @@ instance `k` returned here. The four transitions that read what has been returne
 ## The core
 
 The core is a function of the gather network state alone (`coreOf_networkState_only`), so the
-gather network holds it. `coreOfNetwork` reads it off the network state,
+gather network holds it. `coreOfNetwork` computes it from the network state,
 `coreOf_eq_coreOfNetwork` identifies the two systems, and the network's `ret` transition writes the
 core and carries it on the label.
 
@@ -202,7 +202,7 @@ core unwritten. -/
 def NetworkState.initial (n : ℕ) (X : Type) : NetworkState n X :=
   ⟨ABA.NetworkState.initial n (Message n X), none⟩
 
-/-- The core read off a network state. The programs' variables are not consulted
+/-- The core computed from a network state. The programs' variables are not consulted
 (`coreOf_networkState_only`), so any vector of variables gives the same set. -/
 noncomputable def coreOfNetwork {X : Type} (P : Parameters)
     (w : ABA.NetworkState P.n (Message P.n X)) : AcceptedPairs P.n X :=

@@ -271,7 +271,7 @@ theorem is_exec_of_probOf_ne_zero
   obtain ⟨s₀, tr⟩ := e
   have h_ofList : Seq.ofList (tr.toList hFin) = tr := Seq.ofList_toList tr hFin
   constructor
-  · -- partial-execution component, read off the `ofList` form
+  · -- partial-execution component, derived from the `ofList` form
     have h_ne : pe.probOf ⟨s₀, Seq.ofList (tr.toList hFin)⟩
         (Seq.terminates_ofList _) ≠ 0 := by
       rw [pe.probOf_congr ⟨s₀, Seq.ofList (tr.toList hFin)⟩ ⟨s₀, tr⟩

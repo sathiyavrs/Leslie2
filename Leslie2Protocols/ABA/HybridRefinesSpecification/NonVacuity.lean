@@ -36,7 +36,7 @@ round messages: no step of it carries a round message.
   each recording its caller: the second carries the caller count to `2 > f`;
 * `step_resolve` + `step_resolve_mass` — the coin's silent resolution (a coin `τ`) and the run's
   **single probabilistic step**: at `val = ⊥` with the caller count above `f`, the resolution
-  draws `val` from `wccPMF`. The successor lands on the `bit true` branch — the outcome agreeing
+  draws `val` from `wccPMF`. The successor has `val = bit true` — the outcome agreeing
   with the bound value — with mass exactly `ε = 1/2 > 0`;
 * `step_callW₂` — process `2`'s coin call, recording its caller at a resolved `val`;
 * `step_retW₀/₁/₂` — the three coin returns (`retW 0`, *hidden*): each process takes the round
@@ -51,12 +51,12 @@ round messages: no step of it carries a round message.
 
 Plus `step_fail` — a `fail` broadcast synchronising all four components.
 
-Because every step but the resolution is a Dirac and the chosen branch of
+Because every step but the resolution is a Dirac and the chosen outcome of
 the resolution has mass `ε > 0`, the whole path is a positive-probability execution: a
 product of Diracs times one `ε` factor. Every guard on these closed numeric
 states discharges by `decide`/`rfl`; the Dirac successor distributions collapse
-through `prodPMF_pure_pure` and `PMF.pure_map`, and the resolution's branch
-mass through `prodPMF_pure_left_apply` and `map_apply_inj`.
+through `prodPMF_pure_pure` and `PMF.pure_map`, and the mass of the resolution's
+outcome through `prodPMF_pure_left_apply` and `map_apply_inj`.
 
 The ABA components are named as `ABA/Composition/ABAState.lean` groups them: a state of the run
 is a triple — the round specifications, one `ABAState` holding the round loops beside the ABA
@@ -83,7 +83,7 @@ open Composition
 
 /-- A concrete parameter set: four processes, corruption budget one, and a
 never-failing `ε = 1/2` coin, so that each bit outcome carries positive mass
-(`ε = 1/2`) and the witnessed resolution can take the `bit true` branch.
+(`ε = 1/2`) and the witnessed resolution can take the outcome `bit true`.
 `2 * ε + δ ≤ 1` holds with equality (`2 * (1/2) + 0 = 1`); the adversarial `⊤`
 outcome and the failure outcome then both have mass `0`. -/
 noncomputable abbrev fourProcesses : Parameters := ⟨4, 1, by omega, 1 / 2, 0, by
@@ -204,7 +204,7 @@ noncomputable def abaAfterCallG1 : ABAState fourProcesses := abaCallG 1 abaAfter
 noncomputable def abaAfterCallG2 : ABAState fourProcesses := abaCallG 2 abaAfterCallG1
 
 /-- Round specifications after `bindUnset` excludes the round-`0` bit `false`,
-sparing `true`. -/
+leaving `true` not excluded. -/
 def gbcaSpecificationsAfterBindUnset : ℕ → GBCA.SpecState 4 := Function.update
   gbcaSpecificationsAfterCall2 0 { gbcaSpecificationsAfterCall2 0 with excluded := {false} }
 
@@ -233,7 +233,7 @@ def coinAfterRecordingCall0 : ℕ → WCC.SpecState 4 := coinCall 0 coinInitial
 `0` to `2 > f`. -/
 def coinAfterRecordingCall1 : ℕ → WCC.SpecState 4 := coinCall 1 coinAfterRecordingCall0
 
-/-- The common coin after its resolution, on the `bit true` branch of the draw. -/
+/-- The common coin after its resolution, at the outcome `bit true` of the draw. -/
 def coinAfterResolution : ℕ → WCC.SpecState 4 := coinResolve (.bit true) coinAfterRecordingCall1
 
 /-- The common coin after process `2`'s recording call, which closes the round's
@@ -429,9 +429,9 @@ theorem step_callG₂ :
 specification (family `τ`, interleaved) -/
 
 /-- With three of four processes having called, the round-`0` quorum `n − f = 3` is met, so
-`bindUnset` excludes the bit `false` (the three callers of `true` supply the `f + 1` support for the
-surviving bit). This is a family `τ`, interleaved on the specification while the other three
-components hold. -/
+`bindUnset` excludes the bit `false` (the three callers of `true` supply the `f + 1` support for
+`true`, the bit left not excluded). This is a family `τ`, interleaved on the specification while
+the other three components hold. -/
 theorem step_bindUnset :
     (hybrid fourProcesses M).step
     (hybridStateOf gbcaSpecificationsAfterCall2 abaAfterCallG2 coinInitial) Label.tau
@@ -599,7 +599,7 @@ theorem step_resolve :
     (WCC.Step.resolve (P := fourProcesses) (r := 0) (coinAfterRecordingCall1 0) (by decide)
       (by simp only [WCC.SpecState.threshold]; decide))
 
-/-- The draw lands on the `bit true` branch — the outcome that agrees with the
+/-- The draw yields the outcome `bit true` — the outcome that agrees with the
 bound value — with mass exactly `ε = 1/2 > 0`. This is the run's single
 `ε` factor; every other step is Dirac, so the whole path has positive
 probability. -/
