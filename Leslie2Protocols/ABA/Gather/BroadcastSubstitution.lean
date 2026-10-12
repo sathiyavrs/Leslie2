@@ -17,22 +17,18 @@ import Leslie2.Results
 `Gather.broadcastSubstitution`: the gather instance over Bracha's broadcast
 (`Gather.instanceOverBracha`) is forward simulated by the gather instance over the broadcast
 specification (`Gather.instanceOverBroadcastSpecification`), along
-`Gather.BroadcastSubstitutionRelation` — the gather programs and network held equal, and each
-broadcast coordinate
-related to its specification coordinate by the BRB refinement relation (`BRB.SpecificationRelation`,
-`ABA/ReliableBroadcast/Bracha/RefinesSpecification.lean`).
+`Gather.BroadcastSubstitutionRelation`: the gather programs and network are held equal, and each
+input broadcast coordinate is related to its specification coordinate by the BRB refinement relation
+(`BRB.SpecificationRelation`, `ABA/ReliableBroadcast/Bracha/RefinesSpecification.lean`).
 
-The proof is the congruence argument alone. The two instances are one expression over two families
-of broadcast instances, so the BRB refinement (`BRB.brachaRefinesSpecification`) is carried through
-the operators that expression is built from: `ForwardSimulation.mapIdle` reads one coordinate over
-the composition's alphabet, `ForwardSimulation.synchronisedProduct` collects the coordinates of one
-family, `ForwardSimulation.parallel_right` and `ForwardSimulation.parallel_left` hold the other
-family and then the gather itself, and `ForwardSimulation.abstract` and `ForwardSimulation.relabel`
-hide the events and read the result back over the interface alphabet. The two families are replaced
-one after the other and the two steps are joined by `ForwardSimulation.trans`.
-`ForwardSimulation.congr` then reshapes the composite relation into `BroadcastSubstitutionRelation`:
-the intermediate state the composite quantifies over is the input coordinates of the abstract system
-beside the bind coordinates of the concrete system.
+The proof is the congruence argument alone. The two instances are one expression over one family
+of input broadcast instances, so the BRB refinement (`BRB.brachaRefinesSpecification`) is carried
+through the operators that expression is built from: `ForwardSimulation.mapIdle` reads one
+coordinate over the composition's alphabet, `ForwardSimulation.synchronisedProduct` collects the
+coordinates of the family, `ForwardSimulation.parallel_left` holds the gather programs, and
+`ForwardSimulation.abstract` and `ForwardSimulation.relabel` hide the events and read the result
+back over the interface alphabet. `ForwardSimulation.congr` then reshapes the composite relation
+into `BroadcastSubstitutionRelation`.
 
 Both instances are LTS, so `instanceOverBracha_refines` reads the substitution as an
 inclusion of achievable trace distributions. `broadcastSubstitutionRelation_corrupt` states that
@@ -49,7 +45,7 @@ variable {X : Type} [DecidableEq X] {P : Parameters}
 /-! ### The relation -/
 
 /-- The broadcast substitution relation: the gather programs and network equal, and each
-broadcast coordinate related to its specification coordinate by the BRB
+input broadcast coordinate related to its specification coordinate by the BRB
 refinement relation. -/
 structure BroadcastSubstitutionRelation (P : Parameters) (s : StateOverBracha P.n X)
     (t : StateOverBroadcastSpecification P.n X) : Prop where
@@ -59,15 +55,12 @@ structure BroadcastSubstitutionRelation (P : Parameters) (s : StateOverBracha P.
   /-- Each input coordinate is BRB-refined. -/
   inputBroadcastRelation : ∀ k,
     BRB.SpecificationRelation P k (inputBroadcasts s k) (inputBroadcasts t k)
-  /-- Each bind coordinate is BRB-refined. -/
-  bindBroadcastRelation : ∀ q,
-    BRB.SpecificationRelation P q (bindBroadcasts s q) (bindBroadcasts t q)
 
 /-- The relation holds initially. -/
 theorem broadcastSubstitutionRelation_init :
     BroadcastSubstitutionRelation P (instanceOverBracha P X).init
     (instanceOverBroadcastSpecification P X).init :=
-  ⟨rfl, fun _ => BRB.specificationRelation_init, fun _ => BRB.specificationRelation_init⟩
+  ⟨rfl, fun _ => BRB.specificationRelation_init⟩
 
 /-! ### The substitution -/
 
@@ -86,31 +79,10 @@ theorem broadcastSubstitution (P : Parameters) (X : Type) [DecidableEq X] :
     fun k => ForwardSimulation.mapIdle (inputBroadcastLabelMap P.n X k) (inputBroadcastLabelMap_tau
       P.n X k)
       (fun _ h => inputBroadcastLabelMap_eq_tau h) (BRB.brachaRefinesSpecification P k)
-  have hBind : ∀ q : Fin P.n,
-      ForwardSimulation ((BRB.brachaInstance P q (AcceptedPairs P.n X)).mapIdle
-        (bindBroadcastLabelMap P.n X
-        q))
-        ((BRB.specificationOverInstanceAlphabet P q (AcceptedPairs P.n X)).mapIdle
-          (bindBroadcastLabelMap
-          P.n X q)) (BRB.SpecificationRelation P q) :=
-    fun q => ForwardSimulation.mapIdle (bindBroadcastLabelMap P.n X q) (bindBroadcastLabelMap_tau
-      P.n X q)
-      (fun _ h => bindBroadcastLabelMap_eq_tau h) (BRB.brachaRefinesSpecification P q)
   have hSyncIn := ForwardSimulation.synchronisedProduct hIn
-  have hSyncBind := ForwardSimulation.synchronisedProduct hBind
-  have hBroad := (hSyncIn.parallel_right
-      (System.synchronisedProduct fun q => (BRB.brachaInstance P q (AcceptedPairs P.n X)).mapIdle
-        (bindBroadcastLabelMap P.n X q))).trans
-    (hSyncBind.parallel_left
-      (System.synchronisedProduct fun k => (BRB.specificationOverInstanceAlphabet P k X).mapIdle
-        (inputBroadcastLabelMap P.n X k)))
-  have hSub := ((hBroad.parallel_left (gatherPrograms P X)).abstract (gatherEvents P.n X)).relabel
-  refine ForwardSimulation.congr (fun s t => ?_) hSub
-  constructor
-  · rintro ⟨hga, ⟨b₁, b₂⟩, ⟨hin, rfl⟩, rfl, hbind⟩
-    exact ⟨hga, hin, hbind⟩
-  · rintro ⟨hga, hin, hbind⟩
-    exact ⟨hga, (t.2.1, s.2.2), ⟨hin, rfl⟩, rfl, hbind⟩
+  have hSub := ((hSyncIn.parallel_left (gatherPrograms P X)).abstract (gatherEvents P.n X)).relabel
+  exact ForwardSimulation.congr (fun _ _ => ⟨fun ⟨hga, hin⟩ => ⟨hga, hin⟩,
+    fun ⟨hga, hin⟩ => ⟨hga, hin⟩⟩) hSub
 
 /-! ### Trace-distribution inclusion -/
 
@@ -131,12 +103,11 @@ theorem broadcastSubstitutionRelation_corrupt {X : Type} [DecidableEq X] {P : Pa
     {s : StateOverBracha P.n X} {t : StateOverBroadcastSpecification P.n X}
     (hR : BroadcastSubstitutionRelation P s t) (id : Fin P.n) :
     BroadcastSubstitutionRelation P
-    (corruptAll P id (InstanceState.corrupt P id) (InstanceState.corrupt P id) s)
-    (corruptAll P id (BRB.SpecState.corrupt P id) (BRB.SpecState.corrupt P id) t) :=
+    (corruptAll P id (InstanceState.corrupt P id) s)
+    (corruptAll P id (BRB.SpecState.corrupt P id) t) :=
   ⟨congrArg (fun x => (x.1, { x.2 with network := x.2.network.corrupt P id }))
     hR.gatherProgramsAndNetwork_eq,
-    fun k => BRB.specificationRelation_corrupt (hR.inputBroadcastRelation k) id,
-    fun q => BRB.specificationRelation_corrupt (hR.bindBroadcastRelation q) id⟩
+    fun k => BRB.specificationRelation_corrupt (hR.inputBroadcastRelation k) id⟩
 
 /-! ### Mechanical axiom check -/
 

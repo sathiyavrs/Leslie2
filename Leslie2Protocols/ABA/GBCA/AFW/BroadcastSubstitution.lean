@@ -115,11 +115,11 @@ theorem broadcastSubstitutionRelation_corrupt {P : Parameters} {s : RoundStateOv
     (id : Fin P.n) :
     BroadcastSubstitutionRelation P
       (corruptAll P id
-        (fun i => Gather.corruptAll P i (InstanceState.corrupt P i) (InstanceState.corrupt P i))
-        (fun i => Gather.corruptAll P i (InstanceState.corrupt P i) (InstanceState.corrupt P i)) s)
+        (fun i => Gather.corruptAll P i (InstanceState.corrupt P i))
+        (fun i => Gather.corruptAll P i (InstanceState.corrupt P i)) s)
       (corruptAll P id
-        (fun i => Gather.corruptAll P i (BRB.SpecState.corrupt P i) (BRB.SpecState.corrupt P i))
-        (fun i => Gather.corruptAll P i (BRB.SpecState.corrupt P i) (BRB.SpecState.corrupt P i))
+        (fun i => Gather.corruptAll P i (BRB.SpecState.corrupt P i))
+        (fun i => Gather.corruptAll P i (BRB.SpecState.corrupt P i))
         t) :=
   ⟨hR.roundPrograms_eq, Gather.broadcastSubstitutionRelation_corrupt hR.firstGatherRelation id,
     Gather.broadcastSubstitutionRelation_corrupt hR.secondGatherRelation id⟩

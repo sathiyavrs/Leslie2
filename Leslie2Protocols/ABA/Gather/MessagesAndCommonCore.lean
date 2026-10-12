@@ -13,11 +13,11 @@ import Leslie2Protocols.ABA.ReliableBroadcast.Specification
 The variables a gather instance is written over and the core of its network
 state.
 
-A gather instance's plain-multicast messages are the `ECHO` and `VOTE` payload
-sets (`Message`); the `BIND` payloads are sent by reliable broadcast and are not
-messages of the network. `BaseProcessVariables` is the base variables of one process: its input,
-the `ECHO` and the `VOTE` payload it has multicast, the `BIND` payload it has
-handed to its own bind broadcast, and its return flag.
+A gather instance's network messages are the `ECHO`, `VOTE` and `BIND`
+payload sets (`Message`), each multicast to all processes.
+`BaseProcessVariables` is the base variables of one process: its input, the
+`ECHO`, the `VOTE` and the `BIND` payload it has multicast, and its return
+flag.
 
 `coreOf` reads a payload set off the sent sets and the corrupted set of a gather
 network state, and nothing else. The incidence lemmas stated beneath it read
@@ -29,19 +29,20 @@ namespace PLTS
 namespace ABA
 namespace Gather
 
-/-- The plain-multicast messages of one gather instance: the `ECHO` and
-`VOTE` payload sets. The `BIND` payloads are sent by reliable broadcast and are
-not messages of the network. -/
+/-- The network messages of one gather instance: the `ECHO`, `VOTE` and
+`BIND` payload sets. -/
 inductive Message (n : ℕ) (X : Type) : Type
   /-- `⟨ECHO, A⟩`. -/
   | echo (A : AcceptedPairs n X)
   /-- `⟨VOTE, A⟩`. -/
   | vote (A : AcceptedPairs n X)
+  /-- `⟨BIND, U⟩`. -/
+  | bind (U : AcceptedPairs n X)
   deriving DecidableEq
 
-/-- The base variables of one process in one gather instance. The payload handed
-to the process's own bind broadcast is a field here; the payloads a bind
-broadcast has returned here are fields of `ProcessVariables` (`ABA/Gather/Components.lean`). -/
+/-- The base variables of one process in one gather instance. The payloads the
+input broadcasts have returned here are fields of `ProcessVariables`
+(`ABA/Gather/Components.lean`). -/
 structure BaseProcessVariables (n : ℕ) (X : Type) : Type where
   /-- The payload received via `call` (`none` before the call). -/
   input : Option X
@@ -49,8 +50,7 @@ structure BaseProcessVariables (n : ℕ) (X : Type) : Type where
   sentEcho : Option (AcceptedPairs n X)
   /-- The `VOTE` payload multicast, if any (write-once). -/
   sentVote : Option (AcceptedPairs n X)
-  /-- The `BIND` payload handed to the process's own bind broadcast, if any
-  (write-once). -/
+  /-- The `BIND` payload multicast, if any (write-once). -/
   sentBind : Option (AcceptedPairs n X)
   /-- Whether this process has returned. -/
   returned : Bool
@@ -70,8 +70,8 @@ def BaseProcessVariables.initial (n : ℕ) (X : Type) : BaseProcessVariables n X
 gather network state, and nothing else (`coreOf_networkState_only`). It is the
 `ECHO` payload of a sender whose payload lies below the `VOTE` payloads of
 many processes outside `F`. `Gather/CommonCoreCounting.lean` is the argument that it has at
-least `n − f` entries and lies below every committed `BIND` payload of a
-process outside `F`. -/
+least `n − f` entries and lies below every `BIND` payload a correct process has
+multicast. -/
 
 section CommonCore
 variable {n : ℕ} {X : Type} (w : InstanceState n (BaseProcessVariables n X) (Message n X))

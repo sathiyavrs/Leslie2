@@ -11,26 +11,34 @@ import Leslie2Protocols.ABA.Gather.Invariant
 
 `coreOfNetwork` is a bound core of the gather instance over the broadcast specifications
 (`Gather.instanceOverBroadcastSpecification`, `ABA/Gather/Composition.lean`). At every state at
-which some process outside `F` holds a committed `BIND` payload, it has at least `n − f` entries
-(`single_core`), its entries are committed input entries (`single_core_approved`), and it lies
-below the committed `BIND` payload of every process outside `F` (`single_core`). `coreOf_recorded`
-is the pair of guards the specification's `bindCore` consumes, read off an `n − f` quorum of
-coordinates holding a committed `BIND` payload.
+which the sent set of some process outside `F` holds a `BIND` payload, the core has at least
+`n − f` entries (`single_core`), its entries are committed input entries (`single_core_approved`),
+and it lies below every `BIND` payload in the sent set of a process outside `F` (`single_core`).
 
-The argument runs on one incidence on the gather network state: `j` is dominated by `q` when `q`'s
-committed `BIND` payload contains `j`'s `ECHO` payload. The invariant of
+The argument runs on one incidence on the gather network state: `j` is dominated by `q` when every
+`VOTE` payload `q` sent contains an `ECHO` payload `j` sent. The invariant of
 `ABA/Gather/Invariant.lean` makes every `dominatedBy` set large -- a process outside `F` dominates
 at least `n − f` senders (`dominatedBy_card`) -- and the pigeonhole
 (`exists_dominators`) then gives a sender outside `F` with at least `f + 1` dominators, whose
-write-once `ECHO` payload is the core (`transfer`, `core_witness`).
+write-once `ECHO` payload is the core (`core_witness`). A `BIND` payload multicast by a process
+outside `F` is its write-once `BIND` field (`bind_confirmed`), backed by `n − f` received `VOTE`
+payloads (`bind_backed`). The `f + 1` dominators meet that quorum, so the core lies below the
+`BIND` payload (`transfer`).
 
 The counting is over that one incidence on the gather network state, so the lemmas that read that
 state alone -- `mem_correct`, `mem_dominatedBy`, `correct_filter_dominatedBy`, `sum_dominatedBy` --
 are the ones of `ABA/Gather/MessagesAndCommonCore.lean`, applied to `networkOf`.
 
-`bindAbove` is the write-once witness the refinement carries: the coordinates holding a
-committed `BIND` payload above a given set. It is blind to the corrupted set and monotone
-(`bindVal_mono`, `bindAbove_mono`), so it survives every transition and every corruption.
+## The witness held after the first return
+
+`withoutBindAbove s C` is the set of processes outside `F` whose sent set holds no `BIND` payload
+containing `C`. The first return writes the core `C`. Its returner has received `BIND` payloads
+from `n − f` senders, and each of them outside `F` has sent a `BIND` payload containing `C`, so
+the set has at most `f` members (`coreOf_recorded`). Along every transition `F` and every sent set
+only grow, so the set only loses members (`withoutBindAbove_step`, `withoutBindAbove_corruptAll`).
+At a later return, the `n − f` senders of the returner's received `BIND` payloads include at least
+`n − 3f ≥ 1` processes outside `F` and outside the set (`exists_correct_bindAbove_of_quorum`).
+Such a process has sent exactly one `BIND` payload, and that payload contains `C`.
 -/
 
 namespace PLTS
@@ -162,18 +170,17 @@ theorem exists_dominators {s : StateOverBroadcastSpecification P.n X} (hInv : In
 open scoped Classical in
 omit [DecidableEq X] in
 /-- **The transfer.** A sender outside `F` with at least `f + 1` dominators has
-its `ECHO` payload below every committed `BIND` payload of a process outside
-`F`: the dominators meet that payload's backing `VOTE` quorum of `n − f`, and
-the meeting process's write-once `VOTE` payload lies above the `ECHO` payload
+its `ECHO` payload below every `BIND` payload in the sent set of a process
+outside `F`: the dominators meet that payload's backing `VOTE` quorum of `n − f`,
+and the meeting process's write-once `VOTE` payload lies above the `ECHO` payload
 and below the `BIND` payload. -/
 theorem transfer {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s) {j₀ : Fin P.n}
     (hj₀ : j₀ ∉ (gatherProgramsAndNetwork s).F) (hcnt : P.f + 1 ≤ (dominators (networkOf s)
       j₀).card)
     {k : Fin P.n} (hk : k ∉ (gatherProgramsAndNetwork s).F) {U : AcceptedPairs P.n X}
-    (hU : (bindBroadcasts s k).val = some U) :
+    (hU : Message.bind U ∈ (gatherProgramsAndNetwork s).sent k) :
     ∃ A, Message.echo A ∈ (gatherProgramsAndNetwork s).sent j₀ ∧ P.n - P.f ≤ A.card ∧ A ⊆ U := by
-  obtain ⟨V, hVc, hVm⟩ :=
-    hInv.bind_backed k hk U ((hInv.bindBroadcastVal_of_instanceInput k U hU).resolve_left hk)
+  obtain ⟨V, hVc, hVm⟩ := hInv.bind_backed k hk U (hInv.bind_confirmed k hk U hU)
   obtain ⟨q, hqK, hqV⟩ := InstanceState.exists_mem_inter_of_quorum hcnt hVc
   rw [dominators, Finset.mem_filter] at hqK
   obtain ⟨W, hWrecv, hWU⟩ := hVm q hqV
@@ -184,11 +191,11 @@ theorem transfer {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P
 open scoped Classical in
 omit [DecidableEq X] in
 /-- The core is the write-once `ECHO` payload of a sender outside `F` with at
-least `f + 1` dominators, as soon as some process outside `F` holds a committed
-`BIND` payload. -/
+least `f + 1` dominators, as soon as the sent set of some process outside `F`
+holds a `BIND` payload. -/
 theorem core_witness {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s)
     {k₀ : Fin P.n} (hk₀ : k₀ ∉ (gatherProgramsAndNetwork s).F) {U₀ : AcceptedPairs P.n X}
-    (hU₀ : (bindBroadcasts s k₀).val = some U₀) :
+    (hU₀ : Message.bind U₀ ∈ (gatherProgramsAndNetwork s).sent k₀) :
     ∃ j₁, j₁ ∉ (gatherProgramsAndNetwork s).F ∧ P.f + 1 ≤ (dominators (networkOf s) j₁).card ∧
       Message.echo (coreOfNetwork P (gatherProgramsAndNetwork s).2) ∈ (gatherProgramsAndNetwork
         s).sent j₁ ∧
@@ -209,15 +216,15 @@ theorem core_witness {s : StateOverBroadcastSpecification P.n X} (hInv : Invaria
     by rw [hcore]; exact hInv.echo_confirmed _ hj₁F A hA⟩
 
 omit [DecidableEq X] in
-/-- **The single core.** Once some process outside `F` holds a committed `BIND`
-payload, the core has at least `n − f` entries and lies below the committed
-`BIND` payload of every process outside `F`. -/
+/-- **The single core.** Once the sent set of some process outside `F` holds a
+`BIND` payload, the core has at least `n − f` entries and lies below every `BIND`
+payload in the sent set of a process outside `F`. -/
 theorem single_core {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s)
     {k₀ : Fin P.n} (hk₀ : k₀ ∉ (gatherProgramsAndNetwork s).F) {U₀ : AcceptedPairs P.n X}
-    (hU₀ : (bindBroadcasts s k₀).val = some U₀) :
+    (hU₀ : Message.bind U₀ ∈ (gatherProgramsAndNetwork s).sent k₀) :
     P.n - P.f ≤ (coreOfNetwork P (gatherProgramsAndNetwork s).2).card ∧
-      ∀ k ∉ (gatherProgramsAndNetwork s).F, ∀ U : AcceptedPairs P.n X, (bindBroadcasts s k).val =
-        some U →
+      ∀ k ∉ (gatherProgramsAndNetwork s).F, ∀ U : AcceptedPairs P.n X,
+        Message.bind U ∈ (gatherProgramsAndNetwork s).sent k →
         coreOfNetwork P (gatherProgramsAndNetwork s).2 ⊆ U := by
   obtain ⟨j₁, hj₁F, hcnt, hsent, hslot⟩ := core_witness hInv hk₀ hU₀
   refine ⟨hInv.echo_card j₁ hj₁F _ hslot, ?_⟩
@@ -235,7 +242,7 @@ omit [DecidableEq X] in
 `ECHO` field it comes from carrying only such entries. -/
 theorem single_core_approved {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s)
     {k₀ : Fin P.n} (hk₀ : k₀ ∉ (gatherProgramsAndNetwork s).F) {U₀ : AcceptedPairs P.n X}
-    (hU₀ : (bindBroadcasts s k₀).val = some U₀) :
+    (hU₀ : Message.bind U₀ ∈ (gatherProgramsAndNetwork s).sent k₀) :
     approved s (coreOfNetwork P (gatherProgramsAndNetwork s).2) := by
   obtain ⟨j₁, -, -, -, hslot⟩ := core_witness hInv hk₀ hU₀
   exact hInv.echo_approved j₁ _ hslot
@@ -243,91 +250,125 @@ theorem single_core_approved {s : StateOverBroadcastSpecification P.n X} (hInv :
 /-! ### The witness that the core is written once -/
 
 open scoped Classical in
-/-- The coordinates holding a committed `BIND` payload above `C`. The condition
-is blind to `F`. -/
-noncomputable def bindAbove (s : StateOverBroadcastSpecification P.n X) (C : AcceptedPairs P.n X) :
-    Finset (Fin P.n) :=
-  Finset.univ.filter (fun q => ∃ U, (bindBroadcasts s q).val = some U ∧ C ⊆ U)
+/-- The processes outside `F` whose sent set holds no `BIND` payload containing `C`. -/
+noncomputable def withoutBindAbove (s : StateOverBroadcastSpecification P.n X)
+    (C : AcceptedPairs P.n X) : Finset (Fin P.n) :=
+  Finset.univ.filter (fun d => d ∉ (gatherProgramsAndNetwork s).F ∧
+    ∀ U, Message.bind U ∈ (gatherProgramsAndNetwork s).sent d → ¬ C ⊆ U)
 
 open scoped Classical in
-theorem mem_bindAbove {s : StateOverBroadcastSpecification P.n X} {C : AcceptedPairs P.n X}
-    {q : Fin P.n} : q ∈ bindAbove s C ↔ ∃ U, (bindBroadcasts s q).val = some U ∧ C ⊆ U := by
-  rw [bindAbove, Finset.mem_filter]
+omit [DecidableEq X] in
+/-- A process is in `withoutBindAbove s C` exactly when it is outside `F` and no `BIND` payload in
+its sent set contains `C`. -/
+@[simp] theorem mem_withoutBindAbove {s : StateOverBroadcastSpecification P.n X}
+    {C : AcceptedPairs P.n X} {d : Fin P.n} :
+    d ∈ withoutBindAbove s C ↔ d ∉ (gatherProgramsAndNetwork s).F ∧
+      ∀ U, Message.bind U ∈ (gatherProgramsAndNetwork s).sent d → ¬ C ⊆ U := by
+  rw [withoutBindAbove, Finset.mem_filter]
   exact ⟨fun h => h.2, fun h => ⟨Finset.mem_univ _, h⟩⟩
 
-/-- A committed `BIND` payload is never rewritten. -/
-theorem bindVal_mono {s s' : StateOverBroadcastSpecification P.n X} {l : Label P.n X}
-    {μ : PMF (StateOverBroadcastSpecification P.n X)}
-    (hstep : AlgorithmOverBroadcastSpecification P s l μ) (hs' : s' ∈ μ.support) {q : Fin P.n}
-    {U : AcceptedPairs P.n X} (h : (bindBroadcasts s q).val = some U) :
-    (bindBroadcasts s' q).val = some U := by
-  cases hstep with
-  | commitBindEntry q' U' hv hm =>
-      rw [PMF.mem_support_pure_iff] at hs'; subst hs'
-      dsimp only [bindBroadcasts_setBindBroadcasts]
-      by_cases hq : q = q'
-      · subst hq; rw [hv] at h; exact absurd h (by simp)
-      · rw [Function.update_of_ne hq]; exact h
-  | bindCall j U' hin hvot hsnd happ hQ hb =>
-      rw [PMF.mem_support_pure_iff] at hs'; subst hs'
-      dsimp only [bindBroadcasts_setBindBroadcasts]
-      by_cases hq : q = j
-      · subst hq; rw [Function.update_self]; exact h
-      · rw [Function.update_of_ne hq]; exact h
-  | bindRet q' j U' hv hr =>
-      rw [PMF.mem_support_pure_iff] at hs'; subst hs'
-      dsimp only [bindBroadcasts_setBindBroadcasts]
-      by_cases hq : q = q'
-      · subst hq; rw [Function.update_self]; exact h
-      · rw [Function.update_of_ne hq]; exact h
-  | fail id =>
-      rw [PMF.mem_support_pure_iff] at hs'; subst hs'
-      dsimp only [bindBroadcasts_corruptAll]
-      rw [BRB.corrupt_val]; exact h
-  | _ => rw [PMF.mem_support_pure_iff] at hs'; subst hs'; exact h
+omit [DecidableEq X] in
+/-- A state whose corrupted set and sent sets contain those of `s` has a smaller
+`withoutBindAbove` set. -/
+theorem withoutBindAbove_subset_of_subset {s s' : StateOverBroadcastSpecification P.n X}
+    {C : AcceptedPairs P.n X}
+    (hF : (gatherProgramsAndNetwork s).F ⊆ (gatherProgramsAndNetwork s').F)
+    (hsent : ∀ d, (gatherProgramsAndNetwork s).sent d ⊆ (gatherProgramsAndNetwork s').sent d) :
+    withoutBindAbove s' C ⊆ withoutBindAbove s C := by
+  intro d hd
+  rw [mem_withoutBindAbove] at hd ⊢
+  exact ⟨fun h => hd.1 (hF h), fun U hU => hd.2 U (hsent d hU)⟩
 
-/-- **The witness is monotone.** The coordinates holding a committed `BIND`
-payload above `C` only accumulate, under every transition and every corruption. -/
-theorem bindAbove_mono {s s' : StateOverBroadcastSpecification P.n X} {l : Label P.n X}
+omit [DecidableEq X] in
+/-- A corruption grows `F` and leaves every sent set, so the `withoutBindAbove` set
+only loses members. -/
+theorem withoutBindAbove_corruptAll (s : StateOverBroadcastSpecification P.n X) (id : Fin P.n)
+    (cIn : BRB.SpecState P.n X → BRB.SpecState P.n X) (C : AcceptedPairs P.n X) :
+    withoutBindAbove (corruptAll P id cIn s) C ⊆ withoutBindAbove s C := by
+  refine withoutBindAbove_subset_of_subset ?_ (fun d m hm => ?_)
+  · rw [gatherProgramsAndNetwork_corruptAll]
+    exact InstanceState.corrupt_F_subset _ id
+  · rwa [gatherProgramsAndNetwork_corruptAll, InstanceState.corrupt_sent]
+
+/-- **The witness only loses members.** Along every transition the corrupted set
+and every sent set only grow, so the `withoutBindAbove` set only shrinks. -/
+theorem withoutBindAbove_step {s s' : StateOverBroadcastSpecification P.n X} {l : Label P.n X}
     {μ : PMF (StateOverBroadcastSpecification P.n X)}
     (hstep : AlgorithmOverBroadcastSpecification P s l μ) (hs' : s' ∈ μ.support)
-    (C : AcceptedPairs P.n X) : bindAbove s C ⊆ bindAbove s' C := by
-  intro q hq
-  rw [mem_bindAbove] at hq ⊢
-  obtain ⟨U, hU, hCU⟩ := hq
-  exact ⟨U, bindVal_mono hstep hs' hU, hCU⟩
+    (C : AcceptedPairs P.n X) : withoutBindAbove s' C ⊆ withoutBindAbove s C := by
+  cases hstep with
+  | fail id =>
+    rw [PMF.mem_support_pure_iff] at hs'
+    subst hs'
+    exact withoutBindAbove_corruptAll s id _ C
+  | _ =>
+    rw [PMF.mem_support_pure_iff] at hs'
+    subst hs'
+    refine withoutBindAbove_subset_of_subset (fun x hx => ?_) (fun d m hm => ?_)
+    · simpa using hx
+    · simp [InstanceState.mem_multicast_sent, hm]
 
-/-- **The core write.** At a state where an `n − f` quorum of coordinates holds
-committed `BIND` payloads, the core has at least `n − f` entries, its entries
-are committed input entries, and at least `f + 1` coordinates hold a committed
-`BIND` payload above it. The last is the witness that holds the returns
-after the first to this core: it is blind to `F` and monotone
-(`bindAbove_mono`), and an `n − f` return quorum meets it. -/
+omit [DecidableEq X] in
+/-- **The core write.** At a state where the returner `id` has received `BIND`
+payloads from an `n − f` quorum, the core has at least `n − f` entries, its
+entries are committed input entries, and at most `f` processes outside `F` have
+sent no `BIND` payload containing it. The last is the witness that holds the
+returns after the first: it only loses members (`withoutBindAbove_step`), and an
+`n − f` return quorum meets its complement outside `F`
+(`exists_correct_bindAbove_of_quorum`). -/
 theorem coreOf_recorded {s : StateOverBroadcastSpecification P.n X} (hInv : Invariant P s)
-    {Q : Finset (Fin P.n)} (hQc : P.n - P.f ≤ Q.card)
-    (hQm : ∀ q ∈ Q, ∃ U : AcceptedPairs P.n X, (bindBroadcasts s q).val = some U) :
-    P.n - P.f ≤ (coreOfNetwork P (gatherProgramsAndNetwork s).2).card ∧ approved s
-    (coreOfNetwork P (gatherProgramsAndNetwork s).2) ∧ P.f + 1 ≤
-    (bindAbove s (coreOfNetwork P (gatherProgramsAndNetwork s).2)).card := by
-  classical
+    {id : Fin P.n} {Q : Finset (Fin P.n)} (hQ : P.n - P.f ≤ Q.card)
+    (hrecv : ∀ q ∈ Q, ∃ U : AcceptedPairs P.n X,
+      Message.bind U ∈ (gatherProgramsAndNetwork s).received id q) :
+    P.n - P.f ≤ (coreOfNetwork P (gatherProgramsAndNetwork s).2).card ∧
+      approved s (coreOfNetwork P (gatherProgramsAndNetwork s).2) ∧
+      (withoutBindAbove s (coreOfNetwork P (gatherProgramsAndNetwork s).2)).card ≤ P.f := by
   have hF := hInv.F_card
   have hf := P.hResilience
-  have hH : P.f + 1 ≤ (Q \ (gatherProgramsAndNetwork s).F).card := by
-    have h1 := Finset.le_card_sdiff (gatherProgramsAndNetwork s).F Q
+  have hsent : ∀ q ∈ Q, ∃ U : AcceptedPairs P.n X,
+      Message.bind U ∈ (gatherProgramsAndNetwork s).sent q := fun q hq => by
+    obtain ⟨U, hU⟩ := hrecv q hq
+    exact ⟨U, hInv.received_subset_sent id q hU⟩
+  have hlt : (gatherProgramsAndNetwork s).F.card < Q.card := by
     omega
-  obtain ⟨H, hHsub, hHcard⟩ := Finset.exists_subset_card_eq hH
-  have hHQ : ∀ q ∈ H, q ∈ Q := fun q hq => (Finset.mem_sdiff.mp (hHsub hq)).1
-  have hHF : ∀ q ∈ H, q ∉ (gatherProgramsAndNetwork s).F := fun q hq => (Finset.mem_sdiff.mp (hHsub
-    hq)).2
-  have hHne : H.Nonempty := by
-    rw [← Finset.card_pos, hHcard]; omega
-  obtain ⟨q₀, hq₀⟩ := hHne
-  obtain ⟨U₀, hU₀⟩ := hQm q₀ (hHQ q₀ hq₀)
-  obtain ⟨hcard, hsub⟩ := single_core hInv (hHF q₀ hq₀) hU₀
-  refine ⟨hcard, single_core_approved hInv (hHF q₀ hq₀) hU₀, ?_⟩
-  refine le_trans (le_of_eq hHcard.symm) (Finset.card_le_card fun q hq => ?_)
-  obtain ⟨U, hU⟩ := hQm q (hHQ q hq)
-  exact mem_bindAbove.mpr ⟨U, hU, hsub q (hHF q hq) U hU⟩
+  obtain ⟨k₀, hk₀Q, hk₀F⟩ := InstanceState.exists_correct_of_card_lt hlt
+  obtain ⟨U₀, hU₀⟩ := hsent k₀ hk₀Q
+  obtain ⟨hcard, hsub⟩ := single_core hInv hk₀F hU₀
+  refine ⟨hcard, single_core_approved hInv hk₀F hU₀, ?_⟩
+  have hle : withoutBindAbove s (coreOfNetwork P (gatherProgramsAndNetwork s).2) ⊆ Qᶜ := by
+    intro d hd
+    rw [mem_withoutBindAbove] at hd
+    rw [Finset.mem_compl]
+    intro hdQ
+    obtain ⟨U, hU⟩ := hsent d hdQ
+    exact hd.2 U hU (hsub d hd.1 U hU)
+  have h1 := Finset.card_le_card hle
+  rw [Finset.card_compl, Fintype.card_fin] at h1
+  omega
+
+omit [DecidableEq X] in
+/-- **A correct sender above the core.** If at most `f` processes outside `F` have
+sent no `BIND` payload containing `C`, then every `n − f` quorum has a member
+outside `F` whose sent set holds a `BIND` payload containing `C`: the quorum has at
+least `n − 2f` members outside `F`, at most `f` of them in `withoutBindAbove s C`,
+and `n − 3f ≥ 1`. -/
+theorem exists_correct_bindAbove_of_quorum {s : StateOverBroadcastSpecification P.n X}
+    {C : AcceptedPairs P.n X} {Q : Finset (Fin P.n)}
+    (hF : (gatherProgramsAndNetwork s).F.card ≤ P.f) (hQ : P.n - P.f ≤ Q.card)
+    (hcard : (withoutBindAbove s C).card ≤ P.f) :
+    ∃ d ∈ Q, d ∉ (gatherProgramsAndNetwork s).F ∧
+      ∃ U, Message.bind U ∈ (gatherProgramsAndNetwork s).sent d ∧ C ⊆ U := by
+  have hf := P.hResilience
+  have h1 := Finset.le_card_sdiff (gatherProgramsAndNetwork s).F Q
+  have h2 := Finset.le_card_sdiff (withoutBindAbove s C) (Q \ (gatherProgramsAndNetwork s).F)
+  have hpos : 0 < ((Q \ (gatherProgramsAndNetwork s).F) \ withoutBindAbove s C).card := by
+    omega
+  obtain ⟨d, hd⟩ := Finset.card_pos.mp hpos
+  rw [Finset.mem_sdiff, Finset.mem_sdiff] at hd
+  obtain ⟨⟨hdQ, hdF⟩, hdJ⟩ := hd
+  refine ⟨d, hdQ, hdF, ?_⟩
+  by_contra hne
+  exact hdJ (mem_withoutBindAbove.mpr ⟨hdF, fun U hU hCU => hne ⟨U, hU, hCU⟩⟩)
 
 end Gather
 end ABA

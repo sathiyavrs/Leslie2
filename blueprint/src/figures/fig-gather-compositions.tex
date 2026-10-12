@@ -3,7 +3,7 @@
 % roundOverGatherSpecifications, GBCA.specInst).
 % The bottom composition is drawn open: n programs beside the round's network, in
 % parallel with two gather instances, each n programs beside the gather network
-% in parallel with 2n Bracha instances, so 4n + 2 networks in one round.
+% in parallel with n Bracha instances, so 2n + 2 networks in one round.
 \begin{tikzpicture}[
     >={Stealth[round]}, semithick,
     composition/.style={draw, rounded corners, align=center, font=\scriptsize,
@@ -18,7 +18,7 @@
       minimum width=0.55cm, minimum height=0.5cm, inner sep=1pt},
     lbl/.style={font=\scriptsize, align=left, fill=white, inner sep=1.5pt}]
   % ---- the bottom composition, drawn open
-  \draw[dashed, rounded corners] (-0.35,-5.75) rectangle (12.25,-0.15);
+  \draw[dashed, rounded corners] (-0.35,-5.15) rectangle (12.25,-0.15);
   \node[font=\scriptsize, anchor=west] at (-0.2,-0.45)
     {$\mathrm{roundOverBracha}(P,r)$: programs, the round's network, two gather instances, all concrete};
   % the round's programs and network
@@ -28,31 +28,28 @@
     {the round's network: no messages,\\ the round's bound bit (D29)};
   % the two gathers
   \foreach \x/\t in {0.05/{gather 1, payloads \textsf{Bool}}, 6.25/{gather 2, payloads \textsf{Option Bool}}} {
-    \draw[dashed, rounded corners] (\x,-4.95) rectangle ({\x+5.8},-1.75);
+    \draw[dashed, rounded corners] (\x,-4.35) rectangle ({\x+5.8},-1.75);
     \node[font=\scriptsize, anchor=north west] at ({\x+0.05},-1.8) {\t};
-    \node[prog, anchor=north west, text width=2.35cm] at ({\x+0.1},-2.15)
-      {gather programs $1 \cdots n$,\\ with their variables};
-    \node[prog, anchor=north west, text width=2.35cm] at ({\x+3.1},-2.15)
+    \node[prog, anchor=north west, text width=2.6cm] at ({\x+0.1},-2.15)
+      {gather programs\\ $1 \cdots n$, with\\ their variables};
+    \node[prog, anchor=north west, text width=2.6cm] at ({\x+3.0},-2.15)
       {the gather network:\\ $sent$, $F$, the core (D29)};
-    \node[brb, anchor=north west] at ({\x+0.15},-3.45) {$\mathrm{inputBroadcasts}\,1$};
-    \node[brbgap, anchor=north west] at ({\x+2.4},-3.45) {$\cdots$};
-    \node[brb, anchor=north west] at ({\x+3.1},-3.45) {$\mathrm{inputBroadcasts}\,n$};
-    \node[brb, anchor=north west] at ({\x+0.15},-4.1) {$\mathrm{bindBroadcasts}\,1$};
-    \node[brbgap, anchor=north west] at ({\x+2.4},-4.1) {$\cdots$};
-    \node[brb, anchor=north west] at ({\x+3.1},-4.1) {$\mathrm{bindBroadcasts}\,n$};
-    \node[font=\scriptsize, anchor=north west] at ({\x+0.05},-4.6)
-      {$2n$ Bracha instances};
+    \node[brbgap, anchor=north] at ({\x+2.9},-3.45) {$\cdots$};
+    \node[brb, anchor=north east] at ({\x+2.5},-3.45) {$\mathrm{inputBroadcasts}\,1$};
+    \node[brb, anchor=north west] at ({\x+3.3},-3.45) {$\mathrm{inputBroadcasts}\,n$};
+    \node[font=\scriptsize, anchor=north west] at ({\x+0.05},-3.98)
+      {$n$ Bracha instances};
   }
-  \node[font=\scriptsize, align=center, text width=11.6cm] at (5.95,-5.4)
-    {each Bracha instance $n$ programs beside its network; $4n + 2$ networks in one round};
+  \node[font=\scriptsize, align=center, text width=11.6cm] at (5.95,-4.8)
+    {each Bracha instance $n$ programs beside its network; $2n + 2$ networks in one round};
   % ---- the three compositions above it
-  \node[composition] (overbrb) at (5.95,-6.5)
+  \node[composition] (overbrb) at (5.95,-5.9)
     {$\mathrm{roundOverBroadcastSpecification}(P,r)$: each Bracha instance replaced by the BRB specification};
-  \node[composition] (overgather)  at (5.95,-7.7)
+  \node[composition] (overgather)  at (5.95,-7.1)
     {$\mathrm{roundOverGatherSpecifications}(P,r)$: each gather instance replaced by the gather specification};
-  \node[composition] (spec)  at (5.95,-8.9)
+  \node[composition] (spec)  at (5.95,-8.3)
     {$\mathrm{GBCA.specInst}(P,r)$: Transition System 2};
-  \draw[->] (5.95,-5.75) -- (overbrb.north)
+  \draw[->] (5.95,-5.15) -- (overbrb.north)
     node[lbl, midway, anchor=west, xshift=4pt]{$\mathrm{broadcastSubstitution}$, by congruence};
   \draw[->] (overbrb) -- (overgather)
     node[lbl, midway, anchor=west, xshift=4pt]{$\mathrm{gatherSubstitution}$, by congruence};

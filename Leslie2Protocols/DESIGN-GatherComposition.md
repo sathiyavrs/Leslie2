@@ -36,7 +36,7 @@ two-gather round and its three compositions (`ABA/GBCA/AFW/Counting.lean`,
 `ABA/AFW/SimulationOfEachTransition.lean`, `ABA/AFW/Simulation.lean`). The
 gather subsections of
 `blueprint/src/content.tex` are a condensation of this document; the deviations D24,
-D26–D30, D32 and D33 it realises are glossed in that file's registry, and the
+D26–D30 and D33 it realises are glossed in that file's registry, and the
 source-fidelity items it rests on are §§2, 5 and 6 of `NOTES-Fidelity.md`.
 
 ## Systems
@@ -55,9 +55,10 @@ programs and a network of its own.
 
 ```
 BRB.brachaInstance P ldr M     -- n programs beside the instance's network (ReliableBroadcast/Bracha/Composition.lean)
-Gather.instanceOverBroadcasts P X BIn BBind
+Gather.instanceOverBroadcasts P X BIn
                          -- n gather programs beside the gather network, in parallel with
-                         -- 2n broadcast instances, each read along a pullback naming it
+                         -- n broadcast instances carrying the inputs, each read along the
+                         -- pullback inputBroadcastLabelMap naming it
                          -- (Gather/Composition.lean); instanceOverBracha plugs in Bracha,
                          -- instanceOverBroadcastSpecification the
                          -- broadcast specifications
@@ -134,18 +135,18 @@ A program reads no neighbouring component. What a sub-protocol has returned to a
 process is therefore written into that process's own variables, on the return
 event, and read there.
 
-A gather program's variables (`Gather.ProcessVariables`) extend `BaseProcessVariables` with two
-returned values: `inputBroadcastReturned k`, the value the input-broadcast instance `k` has returned here,
-and `bindBroadcastReturned q`, the payload the bind-broadcast instance `q` has returned here. The
-return of an instance is a hidden event of the gather composition
-(`Gather.GatherEvent.inputBroadcastRet`, `bindRet`), on which that instance takes its own return
-transition and the receiving program records the returned value. The four transitions that read what
-has been returned — `sendEcho`, `sendVote`, `bindCall` and `ret` — read the returned values through
-`Gather.ProcessVariables.accepted`, `holdsInputBroadcastReturn`, `holdsBindBroadcastReturn` and
-`approvedBy`, in the same shape at both gather compositions. The tie between a returned value and
-the instance it records is an invariant clause of `Gather.Conformance` (`inputBroadcastReturned_val`,
-`bindBroadcastReturned_val`): a returned value is the instance's committed value, established at the
-return event and kept by the write-once commit.
+A gather program's variables (`Gather.ProcessVariables`) extend `BaseProcessVariables` with the
+returned values `inputBroadcastReturned k`, the value the input-broadcast instance `k` has returned
+here. The return of an instance is a hidden event of the gather composition
+(`Gather.GatherEvent.inputBroadcastRet`), on which that instance takes its own return transition and
+the receiving program records the returned value. The four transitions that read what has been
+returned — `sendEcho`, `sendVote`, `sendBind` and `ret` — read the returned values through
+`Gather.ProcessVariables.accepted`, `holdsInputBroadcastReturn` and `approvedBy`, in the same shape
+at both gather compositions. The `BIND` payloads a program reads are gather messages, filed in its
+received sets by delivery as `ECHO` and `VOTE` are. The tie between a returned value and the
+instance it records is the invariant clause `inputBroadcastReturned_val` of `Gather.Conformance`: a
+returned value is the instance's committed value, established at the return event and kept by the
+write-once commit.
 
 A round program's variables (`GBCA.ByAFW.ProcessVariables`) hold the process's input, its
 candidate, whether it has called the second gather, its graded outcome and its
@@ -194,29 +195,34 @@ reading the same sum by columns (`sum_dominatedBy`) gives a column `j₀` outsid
 `n − f − |F| ≥ f + 1` under `n > 3f` and `|F| ≤ f`. The core is `j₀`'s `ECHO`
 payload, whose own send guard gives it `n − f` entries.
 
-**The transfer.** Take a committed `BIND` payload `U` of a process outside `F`. It is that process's
-contributed payload, multicast above `n − f` delivered `VOTE` payloads. Those `n − f` senders meet
-the `f + 1` dominators of `j₀` in a process `q`, whose write-once `VOTE` payload lies above the core
-by domination and below `U` by the bind guard, so `coreOf P w ⊆ U` (`transfer`, `single_core`).
+**The transfer.** Take a `BIND` payload `U` that a process outside `F` has multicast. It is that
+process's write-once `BIND` field (`bind_confirmed`), multicast above `n − f` delivered `VOTE`
+payloads (`bind_backed`). Those `n − f` senders meet the `f + 1` dominators of `j₀` in a process
+`q`, whose write-once `VOTE` payload lies above the core by domination and below `U` by the guard of
+`sendBind`, so `coreOf P w ⊆ U` (`transfer`, `single_core`, `core_witness`).
 Every `ECHO` field holds entries of what the sender's input instance returned, and a returned value
 is a committed value, so the core's entries are committed entries (`single_core_approved`), which is
 `bindCore`'s other guard.
 
-**The witness that the core is written once.** `coreOf_recorded` packages the three facts with the count the simulation
-carries along the run: at least `f + 1` coordinates hold a committed `BIND` payload above the core
-(`Gather.bindAbove`). That count is blind to `F` and monotone under every transition (`bindAbove_mono`),
-so it survives every later corruption, and it is what holds the returns after the first to the set
-the first one wrote. A returner's quorum of `n − f` returned payloads is a quorum of committed
-payloads, it meets the `f + 1` witnessed coordinates, and BRB values are functional, so the returned
-map lies above the recorded core.
+**The witness that the core is written once.** Write `Gather.withoutBindAbove s C` for the
+processes outside `F` whose sent set holds no `BIND` payload containing `C`. `coreOf_recorded`
+packages the three facts with the bound the simulation carries along the run. At the first return
+the returner has received `BIND` payloads from a quorum `Q` of `n − f` senders, each member of `Q`
+outside `F` has sent a `BIND` payload containing the core by the transfer, and so
+`withoutBindAbove` of the core has at most `n − |Q| ≤ f` members. Along every transition `F` and
+every sent set only grow, so the set only loses members (`withoutBindAbove_step`,
+`withoutBindAbove_corruptAll`), and the bound survives every later send and corruption. At a later
+return, the returner's `n − f` senders hold at most `f` members of `F` and at most `f` members of
+the set, so `n − 3f ≥ 1` of them lie outside both (`exists_correct_bindAbove_of_quorum`). Such a
+sender holds a `BIND` payload above the core, and the payload the returner received from it is that
+one, so the returned map lies above the recorded core (`subMap_of_withoutBindAbove_card`).
 
-**Why the counting closes here.** `BIND` payloads are sent by reliable broadcast
-rather than on the gather network, so a committed payload is write-once
-whatever happens to its sender afterwards, where a multicast payload is fixed
-only by its sender's correctness and D1 withdraws that at any moment. A gather
-instance holds one bind-broadcast instance per process, and the `BIND` send is
-that instance's call, a hidden event of the composition (D32), which is what
-makes the objects the witness counts stable.
+**Why the counting closes here.** A process outside `F` holds exactly one `BIND` payload in its
+sent set: every `BIND` it has multicast is its write-once `BIND` field (`bind_confirmed`). The
+witness counts processes outside `F`, and a corruption removes a process from that count, so
+a payload a corrupted sender multicasts afterwards never enters it. The received set is a subset
+of the sent set (`received_subset_sent`), so the `BIND` a returner received from a sender outside
+`F` is that sender's single one.
 
 ## The commit splits (D26, D27)
 
@@ -295,9 +301,9 @@ survives parallel composition in either position, the synchronised product of a 
 hiding and restriction, and two simulations compose. Every substitution inside a composition of the
 stack is proved that way and nothing else:
 
-- `Gather.broadcastSubstitution` lifts `BRB.brachaRefinesSpecification` at each of the `2n`
+- `Gather.broadcastSubstitution` lifts `BRB.brachaRefinesSpecification` at each of the `n`
   broadcast coordinates along the pullback naming the coordinate (`ForwardSimulation.mapIdle`),
-  through the two synchronised products, the parallel composition with the gather programs and
+  through the synchronised product, the parallel composition with the gather programs and
   network held, the hiding and the restriction; its relation
   `Gather.BroadcastSubstitutionRelation` is the gather programs and network held equal beside
   `BRB.SpecificationRelation` at every coordinate
@@ -383,8 +389,9 @@ the others out.
 Three things separate the implementation's round from the composed system's, and all
 three are forced by the shape of the implementation.
 
-- **The tagged sent set.** A round of `AFW.composed` carries `4n + 2` network components — one per
-  gather instance, one per Bracha instance. The implementation's network carries one sent-set family
+- **The tagged sent set.** A round of `AFW.composed` carries `2n + 2` network components — one per
+  gather instance, carrying that gather's `ECHO`, `VOTE` and `BIND` messages, and one per Bracha
+  instance. The implementation's network carries one sent-set family
   per round, so `AFW.Message n` tags each message with the network it belongs to, and for a Bracha
   message with the instance, whose index is its leader. The sender index stays the sender, so a
   threshold still counts distinct senders (D5). No new adversary transitions are needed: recording
@@ -393,25 +400,25 @@ three are forced by the shape of the implementation.
 - **The transposition.** The composed system indexes local states by instance
   and then by process. A program must hold its own data and no one else's, so
   `AFW.RoundVariables n` is process-major: process `j`'s local state in each gather
-  instance, and its local state in each of the `n` instances of each broadcast family.
+  instance, and its local state in each of the `n` instances of each input-broadcast family.
   Nothing is lost, because every guard of the gather-based implementation
   reads the acting process's own local states and the networks, and the two transitions that
   read a network — the adversary's delivery and its Byzantine injection —
   belong to the adversary either way.
 - **The calls and returns of the sub-protocols.** An implementation program takes one transition per
-  statement of the pseudocode, so thirteen transitions are the calls and the returns of the round's
+  statement of the pseudocode, so nine transitions are the calls and the returns of the round's
   sub-protocols: the graded-agreement call, the first gather's return, the second gather's call, the
   second gather's return, the round's own return, the call of the process's own input-broadcast
-  instance and of its own bind-broadcast instance in each of the two gathers, and the return of each
-  of the four broadcast families. The graded-agreement call and the round's own return are the
-  visible `callG` and `retG`. The other eleven carry a `gbcaRoundEvent` label, one for each of the
-  eleven constructors of `AFW.RoundEvent`, a synchronisation the network moves on and the protocol
-  reads as `τ`. The four broadcast calls are the round events
-  `AFW.RoundEvent.firstGatherInputBroadcastCall`, `.firstGatherBindBroadcastCall`,
-  `.secondGatherInputBroadcastCall` and `.secondGatherBindBroadcastCall`. None of the thirteen sends
-  a message. Each broadcast call is followed by the `⟨INIT, ·⟩` of the instance it calls, sent on the
-  round's send label `gbcaSend` by `AFW.RoundStep.firstGatherInputBroadcastInit` or one of its three
-  siblings.
+  instance in each of the two gathers, and the return of each of the two input-broadcast families.
+  The graded-agreement call and the round's own return are the visible `callG` and `retG`. The other
+  seven carry a `gbcaRoundEvent` label, one for each of the seven constructors of `AFW.RoundEvent`,
+  a synchronisation the network moves on and the protocol reads as `τ`. The two broadcast calls are
+  the round events `AFW.RoundEvent.firstGatherInputBroadcastCall` and
+  `.secondGatherInputBroadcastCall`. None of the nine sends a message. Each broadcast call is
+  followed by the `⟨INIT, ·⟩` of the instance it calls, sent on the round's send label `gbcaSend`
+  by `AFW.RoundStep.firstGatherInputBroadcastInit` or `AFW.RoundStep.secondGatherInputBroadcastInit`.
+  The `BIND` of either gather is a `gbcaSend` of the tagged gather message, as its `ECHO` and
+  `VOTE` are.
 
 `AFW.ProtocolRelation` has five conjuncts. The round loop, the common coin and the ABA network are
 shared objects, and the round family is *computed* from the implementation's state by

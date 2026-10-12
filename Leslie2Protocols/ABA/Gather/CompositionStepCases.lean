@@ -11,18 +11,18 @@ import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 /-!
 # The transitions of the gather composition, read off their labels
 
-The composition is `relabel ∘ abstract ∘ parallel` over three synchronised products. The
+The composition is `relabel ∘ abstract ∘ parallel` over two synchronised products. The
 lemmas here unfold that pipeline in both directions.
 
 `instanceOverBroadcasts_step_iff` splits a transition of the instance into a hidden gather
 event and an interface label. Over the instance-internal alphabet, a visible label moves all
-four factors — the gather programs, the gather network, the input instances and the bind
-instances — and the product distribution is their Dirac product. A silent label moves exactly
-one of the gather network, one input instance or one bind instance.
+three factors — the gather programs, the gather network and the input instances — and the
+product distribution is their Dirac product. A silent label moves exactly one of the gather
+network or one input instance.
 `instanceOverBroadcastsExtended_synchronised_cases` and
 `instanceOverBroadcastsExtended_tau_cases` read a synchronised step that way, and the `_step`
-lemmas build one from the factors' transitions. The pullbacks `inputBroadcastLabelMap` and
-`bindBroadcastLabelMap` are computed label by label.
+lemmas build one from the factors' transitions. The pullback `inputBroadcastLabelMap` is
+computed label by label.
 
 `programStep_*` reads one gather program's transition off its label: the participant's transition
 as its guards together with the Dirac it produces, and the idle transition of a non-participant as
@@ -32,8 +32,7 @@ A synchronised step delivers a program function given pointwise, by its value at
 and its
 agreement with the old function elsewhere. `Function.eq_update_iff` identifies that function with
 the old one updated at the acting process, and the `stateOverBroadcasts_*` lemmas identify the state
-a transition writes with `setGatherProgramsAndNetwork`, `setCore`, `setInputBroadcasts`,
-`setBindBroadcasts` or
+a transition writes with `setGatherProgramsAndNetwork`, `setCore`, `setInputBroadcasts` or
 `corruptAll` applied to the old state.
 -/
 
@@ -45,21 +44,20 @@ variable {X : Type}
 
 /-! ### Reading and building instance transitions
 
-The pipeline is `relabel ∘ abstract ∘ parallel ∘ (synchronisedProduct, synchronisedProduct,
-synchronisedProduct)`; the lemmas below unfold it once and for all, in both
+The pipeline is `relabel ∘ abstract ∘ parallel ∘ (synchronisedProduct, synchronisedProduct)`;
+the lemmas below unfold it once and for all, in both
 directions. -/
 
 /-- The instance's step relation, unfolded to the hidden-event case and the
 interface-label case. -/
-theorem instanceOverBroadcasts_step_iff (P : Parameters) (X : Type) [DecidableEq X] {B B' : Type}
+theorem instanceOverBroadcasts_step_iff (P : Parameters) (X : Type) [DecidableEq X] {B : Type}
     (BIn : ∀ _ : Fin P.n, System B (BRB.InstanceLabel P.n X))
-    (BBind : ∀ _ : Fin P.n, System B' (BRB.InstanceLabel P.n (AcceptedPairs P.n X)))
-    (s : StateOverBroadcasts P.n X B B') (l : InstanceLabel P.n X)
-    (μ : PMF (StateOverBroadcasts P.n X B B')) :
-    (instanceOverBroadcasts P X BIn BBind).step s l μ ↔
+    (s : StateOverBroadcasts P.n X B) (l : InstanceLabel P.n X)
+    (μ : PMF (StateOverBroadcasts P.n X B)) :
+    (instanceOverBroadcasts P X BIn).step s l μ ↔
       (l = Sum.inl Label.tau ∧ ∃ e : GatherEvent P.n X,
-        (instanceOverBroadcastsExtended P X BIn BBind).step s (Sum.inr e) μ) ∨
-      (instanceOverBroadcastsExtended P X BIn BBind).step s (Sum.inl l) μ := by
+        (instanceOverBroadcastsExtended P X BIn).step s (Sum.inr e) μ) ∨
+      (instanceOverBroadcastsExtended P X BIn).step s (Sum.inl l) μ := by
   constructor
   · rintro (⟨hτ, l', ⟨e, rfl⟩, hstep⟩ | ⟨-, hstep⟩)
     · exact Or.inl ⟨Sum.inl_injective hτ, e, hstep⟩
@@ -112,71 +110,58 @@ theorem gatherProgramProduct_no_tau
   · exact programStep_no_tau hstep
 
 end GatherPrograms
-/-! ### The gather and the broadcast instances in parallel
+/-! ### The gather and the input instances in parallel
 
-A visible label moves all four factors — the programs, the gather network, the
-input instances and the bind instances — and the product distribution is their
-Dirac product. A silent label moves exactly one of the gather network, one
-input instance or one bind instance. -/
+A visible label moves all three factors — the programs, the gather network and
+the input instances — and the product distribution is their Dirac product. A
+silent label moves exactly one of the gather network or one input instance. -/
 
 section Factors
-variable [DecidableEq X] {P : Parameters} {B B' : Type}
+variable [DecidableEq X] {P : Parameters} {B : Type}
   {BIn : ∀ _ : Fin P.n, System B (BRB.InstanceLabel P.n X)}
-  {BBind : ∀ _ : Fin P.n, System B' (BRB.InstanceLabel P.n (AcceptedPairs P.n X))}
   {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables P.n X) (Message P.n X)}
-  {w w' : NetworkState P.n X} {a a' : ∀ _ : Fin P.n, B} {b b' : ∀ _ : Fin P.n, B'}
+  {w w' : NetworkState P.n X} {a a' : ∀ _ : Fin P.n, B}
   {L : GatherLabel P.n X}
 
-/-- **The synchronised cases.** A visible transition of the gather beside the broadcast instances:
+/-- **The synchronised cases.** A visible transition of the gather beside the input instances:
 every factor steps on the label, and the product distribution is their Dirac
 product. -/
 theorem instanceOverBroadcastsExtended_synchronised_cases (hIn : ∀ k, (BIn k).IsLTS)
-    (hBind : ∀ q, (BBind q).IsLTS) {μ : PMF (StateOverBroadcasts P.n X B B')}
+    {μ : PMF (StateOverBroadcasts P.n X B)}
     (hL : L ≠ (Silent.τ : GatherLabel P.n X))
-    (h : (instanceOverBroadcastsExtended P X BIn BBind).step ((u, w), (a, b)) L μ) :
+    (h : (instanceOverBroadcastsExtended P X BIn).step ((u, w), a) L μ) :
     ∃ (x : ∀ _ : Fin P.n,
-      LocalState P.n (ProcessVariables P.n X) (Message P.n X)) (w' : NetworkState P.n X) (a' : ∀ _ :
-        Fin P.n, B) (b' : ∀ _ : Fin P.n, B'),
-      μ = PMF.pure ((x, w'), (a', b')) ∧
+      LocalState P.n (ProcessVariables P.n X) (Message P.n X)) (w' : NetworkState P.n X)
+      (a' : ∀ _ : Fin P.n, B),
+      μ = PMF.pure ((x, w'), a') ∧
       (∀ i, ProgramStep P i (u i) L (PMF.pure (x i))) ∧ NetworkStep P w L (PMF.pure w') ∧
-      (∀ k, ((BIn k).mapIdle (inputBroadcastLabelMap P.n X k)).step (a k) L (PMF.pure (a' k))) ∧
-      (∀ q, ((BBind q).mapIdle (bindBroadcastLabelMap P.n X q)).step (b q) L (PMF.pure (b' q))) :=
-    by
+      (∀ k, ((BIn k).mapIdle (inputBroadcastLabelMap P.n X k)).step (a k) L (PMF.pure (a' k))) := by
   rw [instanceOverBroadcastsExtended, System.parallel_step] at h
-  rcases h with ⟨-, μ₁, μ₂, hga, hbr, rfl⟩ | ⟨hτ, -⟩ | ⟨hτ, -⟩
+  rcases h with ⟨-, μ₁, μ₂, hga, hi, rfl⟩ | ⟨hτ, -⟩ | ⟨hτ, -⟩
   · rw [gatherPrograms, System.parallel_step] at hga
     rcases hga with ⟨-, ν₁, ν₂, hs, hn, rfl⟩ | ⟨hτ, -⟩ | ⟨hτ, -⟩
     · obtain ⟨y, rfl, hall⟩ := gatherProgramProduct_cases hs
       obtain ⟨v, rfl⟩ := networkStep_dirac hn
-      rw [System.parallel_step] at hbr
-      rcases hbr with ⟨-, ρ₁, ρ₂, hi, hb, rfl⟩ | ⟨hτ, -⟩ | ⟨hτ, -⟩
-      · obtain ⟨c, rfl, hic⟩ := System.synchronisedProductMapIdle_cases hIn hL hi
-        obtain ⟨d, rfl, hbd⟩ := System.synchronisedProductMapIdle_cases hBind hL hb
-        exact ⟨y, v, c, d, by rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure],
-          hall, hn, hic, hbd⟩
-      · exact absurd hτ hL
-      · exact absurd hτ hL
+      obtain ⟨c, rfl, hic⟩ := System.synchronisedProductMapIdle_cases hIn hL hi
+      exact ⟨y, v, c, by rw [prodPMF_pure_pure, prodPMF_pure_pure], hall, hn, hic⟩
     · exact absurd hτ hL
     · exact absurd hτ hL
   · exact absurd hτ hL
   · exact absurd hτ hL
 
-/-- **The silent cases.** A silent transition of the gather beside the broadcast instances is an
-injection of the gather network, a silent step of one input instance, or a
-silent step of one bind instance: no gather program has a `τ` transition. -/
+/-- **The silent cases.** A silent transition of the gather beside the input instances is an
+injection of the gather network or a silent step of one input instance: no gather program has a
+`τ` transition. -/
 theorem instanceOverBroadcastsExtended_tau_cases (hIn : ∀ k, (BIn k).IsLTS)
-    (hBind : ∀ q, (BBind q).IsLTS) {μ : PMF (StateOverBroadcasts P.n X B B')}
-    (h : (instanceOverBroadcastsExtended P X BIn BBind).step ((u, w), (a, b))
+    {μ : PMF (StateOverBroadcasts P.n X B)}
+    (h : (instanceOverBroadcastsExtended P X BIn).step ((u, w), a)
       (Silent.τ : GatherLabel P.n X) μ) :
-    (∃ v, μ = PMF.pure ((u, v), (a, b)) ∧
+    (∃ v, μ = PMF.pure ((u, v), a) ∧
       NetworkStep P w (Silent.τ : GatherLabel P.n X) (PMF.pure v)) ∨
-    (∃ (k : Fin P.n) (c : B), μ = PMF.pure ((u, w), (Function.update a k c, b)) ∧
-      (BIn k).step (a k) (Silent.τ : BRB.InstanceLabel P.n X) (PMF.pure c)) ∨
-    (∃ (q : Fin P.n) (d : B'), μ = PMF.pure ((u, w), (a, Function.update b q d)) ∧
-      (BBind q).step (b q) (Silent.τ : BRB.InstanceLabel P.n (AcceptedPairs P.n X)) (PMF.pure d)) :=
-        by
+    (∃ (k : Fin P.n) (c : B), μ = PMF.pure ((u, w), Function.update a k c) ∧
+      (BIn k).step (a k) (Silent.τ : BRB.InstanceLabel P.n X) (PMF.pure c)) := by
   rw [instanceOverBroadcastsExtended, System.parallel_step] at h
-  rcases h with ⟨hτ, -⟩ | ⟨-, μ₁, hga, rfl⟩ | ⟨-, μ₂, hbr, rfl⟩
+  rcases h with ⟨hτ, -⟩ | ⟨-, μ₁, hga, rfl⟩ | ⟨-, μ₂, hi, rfl⟩
   · exact absurd rfl hτ
   · rw [gatherPrograms, System.parallel_step] at hga
     rcases hga with ⟨hτ, -⟩ | ⟨-, ν₁, hs, rfl⟩ | ⟨-, ν₂, hn, rfl⟩
@@ -184,78 +169,44 @@ theorem instanceOverBroadcastsExtended_tau_cases (hIn : ∀ k, (BIn k).IsLTS)
     · exact absurd hs gatherProgramProduct_no_tau
     · obtain ⟨v, rfl⟩ := networkStep_dirac hn
       exact Or.inl ⟨v, by rw [prodPMF_pure_pure, prodPMF_pure_pure], hn⟩
-  · rw [System.parallel_step] at hbr
-    rcases hbr with ⟨hτ, -⟩ | ⟨-, ρ₁, hi, rfl⟩ | ⟨-, ρ₂, hb, rfl⟩
-    · exact absurd rfl hτ
-    · obtain ⟨k, c, rfl, hstep⟩ :=
-        System.synchronisedProductMapIdle_tau_cases hIn
-          (fun k => inputBroadcastLabelMap_tau P.n X k) hi
-      exact Or.inr
-        (Or.inl ⟨k, c, by rw [prodPMF_pure_pure, prodPMF_pure_pure], hstep⟩)
-    · obtain ⟨q, d, rfl, hstep⟩ :=
-        System.synchronisedProductMapIdle_tau_cases hBind
-          (fun q => bindBroadcastLabelMap_tau P.n X q) hb
-      exact Or.inr
-        (Or.inr ⟨q, d, by rw [prodPMF_pure_pure, prodPMF_pure_pure], hstep⟩)
+  · obtain ⟨k, c, rfl, hstep⟩ :=
+      System.synchronisedProductMapIdle_tau_cases hIn
+        (fun k => inputBroadcastLabelMap_tau P.n X k) hi
+    exact Or.inr ⟨k, c, by rw [prodPMF_pure_pure], hstep⟩
 
-/-- Build a visible transition of the gather programs and network beside the broadcast
-instances from the four factors' Dirac steps. -/
+/-- Build a visible transition of the gather programs and network beside the input instances
+from the three factors' Dirac steps. -/
 theorem instanceOverBroadcastsExtended_label_step (hL : L ≠ (Silent.τ : GatherLabel P.n X))
     (hproc : ∀ i, ProgramStep P i (u i) L (PMF.pure (x i))) (hnet : NetworkStep P w L (PMF.pure w'))
-    (hin : ∀ k, ((BIn k).mapIdle (inputBroadcastLabelMap P.n X k)).step (a k) L (PMF.pure (a' k)))
-    (hbind : ∀ q, ((BBind q).mapIdle (bindBroadcastLabelMap P.n X q)).step (b q) L
-      (PMF.pure (b' q)))
-    :
-    (instanceOverBroadcastsExtended P X BIn BBind).step ((u, w), (a, b)) L
-    (PMF.pure ((x, w'), (a', b'))) := by
+    (hin : ∀ k, ((BIn k).mapIdle (inputBroadcastLabelMap P.n X k)).step (a k) L (PMF.pure (a' k))) :
+    (instanceOverBroadcastsExtended P X BIn).step ((u, w), a) L (PMF.pure ((x, w'), a')) := by
   rw [instanceOverBroadcastsExtended, System.parallel_step]
-  refine Or.inl ⟨hL, PMF.pure (x, w'), PMF.pure (a', b'), ?_, ?_,
+  refine Or.inl ⟨hL, PMF.pure (x, w'), PMF.pure a', ?_,
+    System.synchronisedProductMapIdle_pure hL hin, (prodPMF_pure_pure _ _).symm⟩
+  rw [gatherPrograms, System.parallel_step]
+  exact Or.inl ⟨hL, PMF.pure x, PMF.pure w', gatherProgramProduct_pure hL hproc, hnet,
     (prodPMF_pure_pure _ _).symm⟩
-  · rw [gatherPrograms, System.parallel_step]
-    exact Or.inl ⟨hL, PMF.pure x, PMF.pure w', gatherProgramProduct_pure hL hproc, hnet,
-      (prodPMF_pure_pure _ _).symm⟩
-  · rw [System.parallel_step]
-    exact Or.inl ⟨hL, PMF.pure a', PMF.pure b', System.synchronisedProductMapIdle_pure hL hin,
-      System.synchronisedProductMapIdle_pure hL hbind, (prodPMF_pure_pure _ _).symm⟩
 
-/-- Build a silent transition of the gather programs and network beside the broadcast
+/-- Build a silent transition of the gather programs and network beside the input
 instances from an injection of the gather network. -/
 theorem instanceOverBroadcastsExtended_tau_network
     (hn : NetworkStep P w (Silent.τ : GatherLabel P.n X) (PMF.pure w')) :
-    (instanceOverBroadcastsExtended P X BIn BBind).step ((u, w), (a, b))
-    (Silent.τ : GatherLabel P.n X) (PMF.pure ((u, w'), (a, b))) := by
+    (instanceOverBroadcastsExtended P X BIn).step ((u, w), a)
+    (Silent.τ : GatherLabel P.n X) (PMF.pure ((u, w'), a)) := by
   rw [instanceOverBroadcastsExtended, System.parallel_step]
   refine Or.inr (Or.inl ⟨rfl, PMF.pure (u, w'), ?_, (prodPMF_pure_pure _ _).symm⟩)
   rw [gatherPrograms, System.parallel_step]
   exact Or.inr (Or.inr ⟨rfl, PMF.pure w', hn, (prodPMF_pure_pure _ _).symm⟩)
 
-/-- Build a silent transition of the gather programs and network beside the broadcast
+/-- Build a silent transition of the gather programs and network beside the input
 instances from a silent step of one input instance. -/
 theorem instanceOverBroadcastsExtended_tau_input {k : Fin P.n} {c : B}
     (h : (BIn k).step (a k) (Silent.τ : BRB.InstanceLabel P.n X) (PMF.pure c)) :
-    (instanceOverBroadcastsExtended P X BIn BBind).step ((u, w), (a, b))
-    (Silent.τ : GatherLabel P.n X) (PMF.pure ((u, w), (Function.update a k c, b))) := by
+    (instanceOverBroadcastsExtended P X BIn).step ((u, w), a)
+    (Silent.τ : GatherLabel P.n X) (PMF.pure ((u, w), Function.update a k c)) := by
   rw [instanceOverBroadcastsExtended, System.parallel_step]
-  refine Or.inr (Or.inr ⟨rfl, PMF.pure (Function.update a k c, b), ?_,
-    (prodPMF_pure_pure _ _).symm⟩)
-  rw [System.parallel_step]
-  exact Or.inr (Or.inl ⟨rfl, PMF.pure (Function.update a k c),
+  exact Or.inr (Or.inr ⟨rfl, PMF.pure (Function.update a k c),
     System.synchronisedProductMapIdle_tau_step (inputBroadcastLabelMap_tau P.n X k) h,
-      (prodPMF_pure_pure _ _).symm⟩)
-
-/-- Build a silent transition of the gather programs and network beside the broadcast
-instances from a silent step of one bind instance. -/
-theorem instanceOverBroadcastsExtended_tau_bind {q : Fin P.n} {d : B'}
-    (h : (BBind q).step (b q) (Silent.τ : BRB.InstanceLabel P.n (AcceptedPairs P.n X)) (PMF.pure d))
-    :
-    (instanceOverBroadcastsExtended P X BIn BBind).step ((u, w), (a, b))
-    (Silent.τ : GatherLabel P.n X) (PMF.pure ((u, w), (a, Function.update b q d))) := by
-  rw [instanceOverBroadcastsExtended, System.parallel_step]
-  refine Or.inr (Or.inr ⟨rfl, PMF.pure (a, Function.update b q d), ?_,
-    (prodPMF_pure_pure _ _).symm⟩)
-  rw [System.parallel_step]
-  exact Or.inr (Or.inr ⟨rfl, PMF.pure (Function.update b q d),
-    System.synchronisedProductMapIdle_tau_step (bindBroadcastLabelMap_tau P.n X q) h,
       (prodPMF_pure_pure _ _).symm⟩)
 
 /-- A hidden event is a silent transition of the instance. -/
@@ -263,27 +214,21 @@ theorem instanceOverBroadcasts_event_step (e : GatherEvent P.n X)
     (hproc : ∀ i, ProgramStep P i (u i) (Sum.inr e) (PMF.pure (x i)))
     (hnet : NetworkStep P w (Sum.inr e) (PMF.pure w'))
     (hin : ∀ k,
-      ((BIn k).mapIdle (inputBroadcastLabelMap P.n X k)).step (a k) (Sum.inr e) (PMF.pure (a' k)))
-    (hbind : ∀ q, ((BBind q).mapIdle (bindBroadcastLabelMap P.n X q)).step (b q) (Sum.inr e)
-      (PMF.pure (b' q))) :
-    (instanceOverBroadcasts P X BIn BBind).step ((u, w), (a, b)) (Sum.inl Label.tau)
-      (PMF.pure ((x, w'), (a', b'))) :=
-  (instanceOverBroadcasts_step_iff P X BIn BBind _ _ _).mpr
-    (Or.inl ⟨rfl, e, instanceOverBroadcastsExtended_label_step (by simp) hproc hnet hin hbind⟩)
+      ((BIn k).mapIdle (inputBroadcastLabelMap P.n X k)).step (a k) (Sum.inr e) (PMF.pure (a' k))) :
+    (instanceOverBroadcasts P X BIn).step ((u, w), a) (Sum.inl Label.tau)
+      (PMF.pure ((x, w'), a')) :=
+  (instanceOverBroadcasts_step_iff P X BIn _ _ _).mpr
+    (Or.inl ⟨rfl, e, instanceOverBroadcastsExtended_label_step (by simp) hproc hnet hin⟩)
 
 /-- A visible interface label is a transition of the instance. -/
 theorem instanceOverBroadcasts_label_step {l : InstanceLabel P.n X} (hl : l ≠ Sum.inl Label.tau)
     (hproc : ∀ i, ProgramStep P i (u i) (Sum.inl l) (PMF.pure (x i)))
     (hnet : NetworkStep P w (Sum.inl l) (PMF.pure w'))
     (hin : ∀ k, ((BIn k).mapIdle (inputBroadcastLabelMap P.n X k)).step (a k) (Sum.inl l)
-      (PMF.pure (a' k)))
-    (hbind : ∀ q, ((BBind q).mapIdle (bindBroadcastLabelMap P.n X q)).step (b q) (Sum.inl l)
-      (PMF.pure (b' q)))
-    :
-    (instanceOverBroadcasts P X BIn BBind).step ((u, w), (a, b)) l (PMF.pure ((x, w'), (a', b'))) :=
-    by
-  refine (instanceOverBroadcasts_step_iff P X BIn BBind _ _ _).mpr (Or.inr
-    (instanceOverBroadcastsExtended_label_step ?_ hproc hnet hin hbind))
+      (PMF.pure (a' k))) :
+    (instanceOverBroadcasts P X BIn).step ((u, w), a) l (PMF.pure ((x, w'), a')) := by
+  refine (instanceOverBroadcasts_step_iff P X BIn _ _ _).mpr (Or.inr
+    (instanceOverBroadcastsExtended_label_step ?_ hproc hnet hin))
   rw [gatherLabel_tau]
   simpa using hl
 
@@ -291,35 +236,25 @@ theorem instanceOverBroadcasts_label_step {l : InstanceLabel P.n X} (hl : l ≠ 
 instance. -/
 theorem instanceOverBroadcasts_tau_network
     (hn : NetworkStep P w (Silent.τ : GatherLabel P.n X) (PMF.pure w')) :
-    (instanceOverBroadcasts P X BIn BBind).step ((u, w), (a, b)) (Sum.inl Label.tau)
-    (PMF.pure ((u, w'), (a, b))) :=
-  (instanceOverBroadcasts_step_iff P X BIn BBind _ _ _).mpr (Or.inr
+    (instanceOverBroadcasts P X BIn).step ((u, w), a) (Sum.inl Label.tau)
+    (PMF.pure ((u, w'), a)) :=
+  (instanceOverBroadcasts_step_iff P X BIn _ _ _).mpr (Or.inr
     (instanceOverBroadcastsExtended_tau_network hn))
 
 /-- A silent step of one input instance is a silent transition of the
 instance. -/
 theorem instanceOverBroadcasts_tau_input {k : Fin P.n} {c : B}
     (h : (BIn k).step (a k) (Silent.τ : BRB.InstanceLabel P.n X) (PMF.pure c)) :
-    (instanceOverBroadcasts P X BIn BBind).step ((u, w), (a, b)) (Sum.inl Label.tau)
-      (PMF.pure ((u, w), (Function.update a k c, b))) :=
-  (instanceOverBroadcasts_step_iff P X BIn BBind _ _ _).mpr (Or.inr
+    (instanceOverBroadcasts P X BIn).step ((u, w), a) (Sum.inl Label.tau)
+      (PMF.pure ((u, w), Function.update a k c)) :=
+  (instanceOverBroadcasts_step_iff P X BIn _ _ _).mpr (Or.inr
     (instanceOverBroadcastsExtended_tau_input h))
-
-/-- A silent step of one bind instance is a silent transition of the
-instance. -/
-theorem instanceOverBroadcasts_tau_bind {q : Fin P.n} {d : B'}
-    (h : (BBind q).step (b q) (Silent.τ : BRB.InstanceLabel P.n (AcceptedPairs P.n X)) (PMF.pure d))
-      :
-    (instanceOverBroadcasts P X BIn BBind).step ((u, w), (a, b)) (Sum.inl Label.tau)
-      (PMF.pure ((u, w), (a, Function.update b q d))) :=
-  (instanceOverBroadcasts_step_iff P X BIn BBind _ _ _).mpr (Or.inr
-    (instanceOverBroadcastsExtended_tau_bind h))
 
 end Factors
 /-! ### The pullbacks, label by label -/
 
 section Pullbacks
-variable {n : ℕ} (X : Type) (k q id j q' k' i : Fin n)
+variable {n : ℕ} (X : Type) (k id j k' i : Fin n)
 
 @[simp] theorem inputBroadcastLabelMap_call (x : X) :
     inputBroadcastLabelMap n X k (Sum.inl (Sum.inl (.call id x))) = none := rfl
@@ -340,34 +275,6 @@ variable {n : ℕ} (X : Type) (k q id j q' k' i : Fin n)
 @[simp] theorem inputBroadcastLabelMap_inputBroadcastRet (v : X) :
     inputBroadcastLabelMap n X k (Sum.inr (.inputBroadcastRet k' j v)) =
       if k = k' then some (Sum.inl (.ret j v)) else none := rfl
-@[simp] theorem inputBroadcastLabelMap_bindCall (U : AcceptedPairs n X) :
-    inputBroadcastLabelMap n X k (Sum.inr (.bindCall j U)) = none := rfl
-@[simp] theorem inputBroadcastLabelMap_bindRet (U : AcceptedPairs n X) :
-    inputBroadcastLabelMap n X k (Sum.inr (.bindRet q' j U)) = none := rfl
-
-@[simp] theorem bindBroadcastLabelMap_call (x : X) :
-    bindBroadcastLabelMap n X q (Sum.inl (Sum.inl (.call id x))) = none := rfl
-@[simp] theorem bindBroadcastLabelMap_fail :
-    bindBroadcastLabelMap n X q (Sum.inl (Sum.inl (Label.fail (X := X) id))) = some (Sum.inl (.fail
-      id)) := rfl
-@[simp] theorem bindBroadcastLabelMap_ret (g : Fin n → Option X) (C : AcceptedPairs n X) :
-    bindBroadcastLabelMap n X q (Sum.inl (Sum.inl (.ret id g C))) = none := rfl
-@[simp] theorem bindBroadcastLabelMap_callLoop (x : X) :
-    bindBroadcastLabelMap n X q (Sum.inl (Sum.inr (.callLoop id x))) = none := rfl
-@[simp] theorem bindBroadcastLabelMap_send (m : Message n X) :
-    bindBroadcastLabelMap n X q (Sum.inr (.send j m)) = none := rfl
-@[simp] theorem bindBroadcastLabelMap_deliver (m : Message n X) :
-    bindBroadcastLabelMap n X q (Sum.inr (.deliver i j m)) = none := rfl
-@[simp] theorem bindBroadcastLabelMap_inputBroadcastCall (x : X) :
-    bindBroadcastLabelMap n X q (Sum.inr (.inputBroadcastCall j x)) = none := rfl
-@[simp] theorem bindBroadcastLabelMap_inputBroadcastRet (v : X) :
-    bindBroadcastLabelMap n X q (Sum.inr (.inputBroadcastRet k' j v)) = none := rfl
-@[simp] theorem bindBroadcastLabelMap_bindCall (U : AcceptedPairs n X) :
-    bindBroadcastLabelMap n X q (Sum.inr (.bindCall j U)) =
-      if q = j then some (Sum.inl (.call U)) else none := rfl
-@[simp] theorem bindBroadcastLabelMap_bindRet (U : AcceptedPairs n X) :
-    bindBroadcastLabelMap n X q (Sum.inr (.bindRet q' j U)) =
-      if q = q' then some (Sum.inl (.ret j U)) else none := rfl
 
 end Pullbacks
 /-! ### One gather program's transitions, by label class
@@ -407,7 +314,7 @@ theorem programStep_ret_own {g : Fin P.n → Option X} {C : AcceptedPairs P.n X}
     p.processVariables.input ≠ none ∧ p.processVariables.sentBind ≠ none ∧
       (∀ k x, g k = some x → holdsInputBroadcastReturn p.processVariables k x) ∧
       (∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
-        ∀ q ∈ Q, ∃ U, holdsBindBroadcastReturn p.processVariables q U ∧ AcceptedPairs.subMap U g) ∧
+        ∀ q ∈ Q, ∃ U, Message.bind U ∈ p.received q ∧ AcceptedPairs.subMap U g) ∧
       p.processVariables.returned = false ∧ ν = PMF.pure
         (p.setProcessVariables { p.processVariables with returned := true }) := by
   cases h
@@ -447,6 +354,19 @@ theorem programStep_send_vote_own {U : AcceptedPairs P.n X}
         (p.setProcessVariables { p.processVariables with sentVote := some U }) := by
   cases h
   case sendVote =>
+    exact ⟨by assumption, by assumption, by assumption, by assumption, by assumption, rfl⟩
+  case sendIdle => exact absurd rfl ‹_ ≠ j›
+
+theorem programStep_send_bind_own {U : AcceptedPairs P.n X}
+    (h : ProgramStep P j p (Sum.inr (.send j (.bind U))) ν) :
+    p.processVariables.input ≠ none ∧ p.processVariables.sentVote ≠ none ∧ approvedBy
+      p.processVariables U ∧
+      (∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
+        ∀ q ∈ Q, ∃ W, Message.vote W ∈ p.received q ∧ approvedBy p.processVariables W ∧ W ⊆ U) ∧
+      p.processVariables.sentBind = none ∧ ν = PMF.pure
+        (p.setProcessVariables { p.processVariables with sentBind := some U }) := by
+  cases h
+  case sendBind =>
     exact ⟨by assumption, by assumption, by assumption, by assumption, by assumption, rfl⟩
   case sendIdle => exact absurd rfl ‹_ ≠ j›
 
@@ -496,41 +416,6 @@ theorem programStep_inputBroadcastRet_notOwn {k i : Fin P.n} {v : X} (hi : i ≠
   case inputBroadcastRetReceive => exact absurd rfl hi
   case inputBroadcastRetIdle => rfl
 
-theorem programStep_bindCall_own {U : AcceptedPairs P.n X}
-    (h : ProgramStep P j p (Sum.inr (.bindCall j U)) ν) :
-    p.processVariables.input ≠ none ∧ p.processVariables.sentVote ≠ none ∧
-      p.processVariables.sentBind = none ∧
-      approvedBy p.processVariables U ∧
-      (∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
-        ∀ q ∈ Q, ∃ W, Message.vote W ∈ p.received q ∧ approvedBy p.processVariables W ∧ W ⊆ U) ∧
-      ν = PMF.pure (p.setProcessVariables { p.processVariables with sentBind := some U }) := by
-  cases h
-  case bindCall =>
-    exact ⟨by assumption, by assumption, by assumption, by assumption, by assumption, rfl⟩
-  case bindCallIdle => exact absurd rfl ‹_ ≠ j›
-
-theorem programStep_bindCall_notOwn {i : Fin P.n} {U : AcceptedPairs P.n X} (hi : i ≠ j)
-    (h : ProgramStep P j p (Sum.inr (.bindCall i U)) ν) : ν = PMF.pure p := by
-  cases h
-  case bindCall => exact absurd rfl hi
-  case bindCallIdle => rfl
-
-theorem programStep_bindRet_own {q : Fin P.n} {U : AcceptedPairs P.n X}
-    (h : ProgramStep P j p (Sum.inr (.bindRet q j U)) ν) :
-    ν = PMF.pure
-      (p.setProcessVariables { p.processVariables with
-        bindBroadcastReturned :=
-          Function.update p.processVariables.bindBroadcastReturned q (some U) }) := by
-  cases h
-  case bindRetReceive => rfl
-  case bindRetIdle => exact absurd rfl ‹_ ≠ j›
-
-theorem programStep_bindRet_notOwn {q i : Fin P.n} {U : AcceptedPairs P.n X} (hi : i ≠ j)
-    (h : ProgramStep P j p (Sum.inr (.bindRet q i U)) ν) : ν = PMF.pure p := by
-  cases h
-  case bindRetReceive => exact absurd rfl hi
-  case bindRetIdle => rfl
-
 end ProgramStepCases
 /-! ### The gather network's transitions, by label class -/
 
@@ -571,14 +456,6 @@ theorem networkStep_inputBroadcastRet {k j : Fin P.n} {v : X}
     (h : NetworkStep P w (Sum.inr (.inputBroadcastRet k j v)) μ) : μ = PMF.pure w := by
   cases h; rfl
 
-theorem networkStep_bindCall {j : Fin P.n} {U : AcceptedPairs P.n X}
-    (h : NetworkStep P w (Sum.inr (.bindCall j U)) μ) : μ = PMF.pure w := by
-  cases h; rfl
-
-theorem networkStep_bindRet {q j : Fin P.n} {U : AcceptedPairs P.n X}
-    (h : NetworkStep P w (Sum.inr (.bindRet q j U)) μ) : μ = PMF.pure w := by
-  cases h; rfl
-
 theorem networkStep_tau (h : NetworkStep P w (Sum.inl (Sum.inl .tau)) μ) :
     ∃ (j : Fin P.n) (m : Message P.n X), j ∈ w.network.F ∧
       μ = PMF.pure { w with network := w.network.recordSent j m } := by
@@ -600,53 +477,45 @@ section Writes
 
 section
 
-variable {P : Parameters} {B B' : Type}
+variable {P : Parameters} {B : Type}
   {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables P.n X) (Message P.n X)}
-  {w : NetworkState P.n X} {a : ∀ _ : Fin P.n, B} {b : ∀ _ : Fin P.n, B'}
+  {w : NetworkState P.n X} {a : ∀ _ : Fin P.n, B}
 
 /-- A write to the variables of one program, with the network state untouched. -/
 theorem stateOverBroadcasts_setProcessVariables {j : Fin P.n} {pr : ProcessVariables P.n X}
     (hj : x j = (u j).setProcessVariables pr) (hne : ∀ i, i ≠ j → x i = u i) :
-    (((x, w), (a, b)) : StateOverBroadcasts P.n X B B') = setGatherProgramsAndNetwork ((u, w), (a,
-      b))
-    (InstanceState.setProcessVariables (gatherProgramsAndNetwork ((u, w), (a, b))) j pr) := by
+    (((x, w), a) : StateOverBroadcasts P.n X B) = setGatherProgramsAndNetwork ((u, w), a)
+    (InstanceState.setProcessVariables (gatherProgramsAndNetwork ((u, w), a)) j pr) := by
   rw [Function.eq_update_iff.mpr ⟨hj, hne⟩]; rfl
 
 /-- The programs remain unchanged and the network state is untouched. -/
 theorem stateOverBroadcasts_idle (hall : ∀ i, x i = u i) :
-    (((x, w), (a, b)) : StateOverBroadcasts P.n X B B') = ((u, w), (a, b)) := by
+    (((x, w), a) : StateOverBroadcasts P.n X B) = ((u, w), a) := by
   rw [funext hall]
 
 /-- A return: the returner's flag and the instance's core. -/
 theorem stateOverBroadcasts_ret {id : Fin P.n} {pr : ProcessVariables P.n X} {C : AcceptedPairs P.n
   X}
     (hj : x id = (u id).setProcessVariables pr) (hne : ∀ i, i ≠ id → x i = u i) :
-    (((x, { w with core := some C }), (a, b)) : StateOverBroadcasts P.n X B B') = setCore
-    (setGatherProgramsAndNetwork ((u, w), (a, b)) (InstanceState.setProcessVariables
-      (gatherProgramsAndNetwork ((u, w), (a, b)))
+    (((x, { w with core := some C }), a) : StateOverBroadcasts P.n X B) = setCore
+    (setGatherProgramsAndNetwork ((u, w), a) (InstanceState.setProcessVariables
+      (gatherProgramsAndNetwork ((u, w), a))
       id pr))
     (some C) := by
   rw [Function.eq_update_iff.mpr ⟨hj, hne⟩]; rfl
 
-/-- Corruption is the network state's own write beside the broadcast
-coordinates' (D1). -/
-theorem stateOverBroadcasts_corrupt {id : Fin P.n} {cIn : B → B} {cBind : B' → B'} (hall : ∀ i,
+/-- Corruption is the network state's own write beside the input instances'
+(D1). -/
+theorem stateOverBroadcasts_corrupt {id : Fin P.n} {cIn : B → B} (hall : ∀ i,
     x i = u i) : (((x, { w with network := w.network.corrupt P id }),
-        ((fun k => cIn (a k)), fun q => cBind (b q))) : StateOverBroadcasts P.n X B B') =
-      corruptAll P id cIn cBind ((u, w), (a, b)) := by
+        (fun k => cIn (a k))) : StateOverBroadcasts P.n X B) =
+      corruptAll P id cIn ((u, w), a) := by
   rw [funext hall]; rfl
 
 /-- A write at one input instance. -/
 theorem stateOverBroadcasts_setInputBroadcasts {k : Fin P.n} {c : B} :
-    (((u, w), (Function.update a k c, b)) : StateOverBroadcasts P.n X B B') =
-      setInputBroadcasts ((u, w), (a, b)) (Function.update (inputBroadcasts ((u, w), (a,
-        b))) k c) := rfl
-
-/-- A write at one bind instance. -/
-theorem stateOverBroadcasts_setBindBroadcasts {q : Fin P.n} {d : B'} :
-    (((u, w), (a, Function.update b q d)) : StateOverBroadcasts P.n X B B') =
-      setBindBroadcasts ((u, w), (a, b)) (Function.update (bindBroadcasts ((u, w), (a,
-        b))) q d) := rfl
+    (((u, w), Function.update a k c) : StateOverBroadcasts P.n X B) =
+      setInputBroadcasts ((u, w), a) (Function.update (inputBroadcasts ((u, w), a)) k c) := rfl
 
 end
 
@@ -654,35 +523,34 @@ end
 
 section
 
-variable [DecidableEq X] {P : Parameters} {B B' : Type}
+variable [DecidableEq X] {P : Parameters} {B : Type}
   {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables P.n X) (Message P.n X)}
-  {w : NetworkState P.n X} {a : ∀ _ : Fin P.n, B} {b : ∀ _ : Fin P.n, B'}
+  {w : NetworkState P.n X} {a : ∀ _ : Fin P.n, B}
 
 /-- A write to the variables of one program together with the network state recording the
 message that write multicasts. -/
 theorem stateOverBroadcasts_setProcessVariables_recordSent {j : Fin P.n} {pr : ProcessVariables P.n
   X}
     {m : Message P.n X} (hj : x j = (u j).setProcessVariables pr) (hne : ∀ i, i ≠ j → x i = u i) :
-    (((x, { w with network := w.network.recordSent j m }), (a, b)) : StateOverBroadcasts P.n X B B')
-    = setGatherProgramsAndNetwork ((u, w), (a, b))
-    ((InstanceState.setProcessVariables (gatherProgramsAndNetwork ((u, w), (a, b))) j pr).multicast
+    (((x, { w with network := w.network.recordSent j m }), a) : StateOverBroadcasts P.n X B)
+    = setGatherProgramsAndNetwork ((u, w), a)
+    ((InstanceState.setProcessVariables (gatherProgramsAndNetwork ((u, w), a)) j pr).multicast
       j m) := by
   rw [Function.eq_update_iff.mpr ⟨hj, hne⟩]; rfl
 
 /-- A delivery: the receiver files the message under the sender it came from. -/
 theorem stateOverBroadcasts_deliver {i k : Fin P.n} {m : Message P.n X}
     (hi : x i = (u i).deliverTo k m) (hne : ∀ i', i' ≠ i → x i' = u i') :
-    (((x, w), (a, b)) : StateOverBroadcasts P.n X B B') = setGatherProgramsAndNetwork ((u, w), (a,
-      b))
-    (InstanceState.receiveMessage (gatherProgramsAndNetwork ((u, w), (a, b))) i k m) := by
+    (((x, w), a) : StateOverBroadcasts P.n X B) = setGatherProgramsAndNetwork ((u, w), a)
+    (InstanceState.receiveMessage (gatherProgramsAndNetwork ((u, w), a)) i k m) := by
   rw [Function.eq_update_iff.mpr ⟨hi, hne⟩]; rfl
 
 /-- A Byzantine injection: the network state records a message under a
 corrupted sender. -/
 theorem stateOverBroadcasts_recordSent {k : Fin P.n} {m : Message P.n X} :
-    (((u, { w with network := w.network.recordSent k m }), (a,
-      b)) : StateOverBroadcasts P.n X B B') = setGatherProgramsAndNetwork ((u, w), (a,
-        b)) (InstanceState.multicast (gatherProgramsAndNetwork ((u, w), (a, b))) k m) := rfl
+    (((u, { w with network := w.network.recordSent k m }), a) : StateOverBroadcasts P.n X B) =
+      setGatherProgramsAndNetwork ((u, w), a)
+        (InstanceState.multicast (gatherProgramsAndNetwork ((u, w), a)) k m) := rfl
 
 end
 

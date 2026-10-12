@@ -1743,7 +1743,7 @@ Membership of a decision trace in $\operatorname{ATD}(\abdy{\mathrm{protocol}}\ 
 Transition System~2 has a second verified implementation.
 Attiya, Flam and Welch~\cite{AFW25} build graded agreement from two calls to a \emph{gather} sub-protocol and local counting, and the source blueprint carries the matching material: the gather specification (Transition System~4), a gather implementation over reliable broadcast (its Algorithm~4, the binding form of Algorithm~5 of~\cite{AFW25}, displayed as Algorithm~\ref{alg:gather-brb} below), and Bracha's reliable broadcast (Transition System~6 and its Algorithm~6, from~\cite{Bra87}, displayed as Algorithm~\ref{alg:brb}).
 The two-gather core itself is displayed as Algorithm~\ref{alg:gbca-gather}.
-This section carries the construction to implementation level in full, as a composition at every level: a round is $n$ graded-agreement programs beside the round's own network, in parallel with two gather instances, each $n$ programs beside the gather network in parallel with $2n$ Bracha instances carrying the inputs and the $\mathrm{BIND}$ payloads, each of those $n$ programs beside the instance's network.
+This section carries the construction to implementation level in full, as a composition at every level: a round is $n$ graded-agreement programs beside the round's own network, in parallel with two gather instances, each $n$ programs beside the gather network in parallel with $n$ Bracha instances carrying the inputs, each of those $n$ programs beside the instance's network.
 The round interface $\mathrm{callG}/\mathrm{retG}$, Transition System~2 and every statement downstream of it are those of the sections above, so the two implementations differ only in the system at the bottom of the chain.
 
 The verification is organised as substitutions inside the round.
@@ -1784,10 +1784,8 @@ A system of this section therefore carries the name of its counterpart in the se
       binding form: the $\mathrm{ECHO}$, $\mathrm{VOTE}$ and $\mathrm{BIND}$
       sends and the return are that algorithm's phases~2, 3 and~4 and its
       output, where the non-binding form stops one phase earlier.
-      $n$ reliable-broadcast instances carry the inputs, and the encoding
-      sends the $\mathrm{BIND}$ payload by a second broadcast per process
-      rather than on the network, which is what fixes a committed payload
-      against a sender corrupted later.
+      $n$ reliable-broadcast instances carry the inputs; $\mathrm{ECHO}$,
+      $\mathrm{VOTE}$ and $\mathrm{BIND}$ are sent to all.
       A set of (process, payload) pairs is \emph{approved} when every pair is
       a delivered broadcast.
       Each send waits for the sender's own send at the level below, which is
@@ -1804,9 +1802,9 @@ A system of this section therefore carries the name of its counterpart in the se
         \State \textbf{upon} approved $\langle \mathrm{ECHO}, AP_j \rangle$
           from $n - f$ senders, having sent $\mathrm{ECHO}$ and no $\mathrm{VOTE}$ sent: send $\langle \mathrm{VOTE}, \bigcup_j AP_j \rangle$ to all
         \State \textbf{upon} approved $\langle \mathrm{VOTE}, AP_j \rangle$
-          from $n - f$ senders, having sent $\mathrm{VOTE}$ and no $\mathrm{BIND}$ sent: broadcast $\bigcup_j AP_j$ as the $\mathrm{BIND}$ payload
-        \State \textbf{upon} $n - f$ delivered $\mathrm{BIND}$ payloads,
-          having broadcast $\mathrm{BIND}$: \textbf{return} their union
+          from $n - f$ senders, having sent $\mathrm{VOTE}$ and no $\mathrm{BIND}$ sent: send $\langle \mathrm{BIND}, \bigcup_j AP_j \rangle$ to all
+        \State \textbf{upon} approved $\langle \mathrm{BIND}, AP_j \rangle$
+          from $n - f$ senders, having sent $\mathrm{BIND}$: \textbf{return} $\bigcup_j AP_j$
     \end{algorithmic}
 \end{algorithm}
 
@@ -1880,15 +1878,17 @@ Write $w$ for the network state of the implementation, that is, the per-sender s
 A correct sender's $\mathrm{VOTE}$ payload lies above an $\mathrm{ECHO}$ payload of each of $n - f$ senders, its own wait condition, so for every $q \notin F$ at least $n - f$ senders are dominated by $q$ in the sense that every $\mathrm{VOTE}$ of $q$ lies above one of their $\mathrm{ECHO}$ payloads.
 Summing that bound over the senders outside $F$ and exchanging the order of summation gives a sender $j_0 \notin F$ dominated by at least $n - f - |F|$ of those senders, and $n - f - |F| \ge f + 1$ at $3f < n$.
 The core is $j_0$'s $\mathrm{ECHO}$ payload, and its $n - f$ entries are $j_0$'s own wait condition.
-Every correct committed $\mathrm{BIND}$ payload contains it: the payload is backed by an $n - f$ $\mathrm{VOTE}$ quorum, which meets the $f{+}1$ dominating senders in a process whose write-once $\mathrm{VOTE}$ payload lies above the core and below the payload.
-The witness that holds the returns after the first to the core that first return writes is the count of coordinates holding a committed $\mathrm{BIND}$ payload above it, which reaches $f + 1$ at the first return and is blind to $F$ and monotone.
-Sending the $\mathrm{BIND}$ payload by reliable broadcast rather than on the network is what makes ``committed'' mean anything under dynamic corruption: a broadcast value is write-once whatever later happens to its sender, where a network multicast from a sender corrupted later fixes nothing.
-The commit split of D26 is the per-entry form of the same reading.
+Every $\mathrm{BIND}$ payload multicast by a process outside $F$ contains it: the payload is backed by an $n - f$ $\mathrm{VOTE}$ quorum, which meets the $f{+}1$ dominating senders in a process whose write-once $\mathrm{VOTE}$ payload lies above the core and below the payload.
+The witness that holds the returns after the first to the core that first return writes is the set of processes outside $F$ whose sent set holds no $\mathrm{BIND}$ payload containing the core.
+At the first return it has at most $f$ members, since each of the returner's $n - f$ senders outside $F$ has multicast a $\mathrm{BIND}$ payload containing the core, so the set lies in the complement of those senders.
+Along every transition $F$ and every sent set only grow, so the set only loses members.
+At a later return, the $n - f$ senders of the returner's received $\mathrm{BIND}$ payloads include at least $n - 3f \ge 1$ processes outside $F$ and outside the set.
+Such a process has a single $\mathrm{BIND}$ payload in its sent set, so the payload received from it contains the core.
 
-The implementation is a composition: $n$ gather programs beside the gather network, which holds the core, in parallel with $2n$ reliable-broadcast instances read along pullbacks naming them, the instance's own events hidden.
+The implementation is a composition: $n$ gather programs beside the gather network, which holds the core, in parallel with $n$ reliable-broadcast instances carrying the inputs, read along a pullback naming them, the instance's own events hidden.
 A program keeps its own variables holding what the broadcast instances have returned to it, written on the return events, and its guards read those variables and nothing of any other component.
 The implementation is verified in two substitutions.
-Gather over the broadcast specifications places the $2n$ broadcast specifications in the broadcast slots and is carried to Transition System~4 by the core refinement, whose returns are matched by one weak run --- the abstract commits, the write of the core where the specification holds none, the return --- with the core read off the gather network's own state.
+Gather over the broadcast specifications places the $n$ broadcast specifications in the broadcast slots and is carried to Transition System~4 by the core refinement, whose returns are matched by one weak run --- the abstract commits, the write of the core where the specification holds none, the return --- with the core read off the gather network's own state.
 Gather over Bracha places a Bracha instance in each slot and is carried to gather over the broadcast specifications by congruence, the broadcast refinement lifted along the pullback naming each instance and through the operators the instance is built from.
 See \leanmodule{Leslie2Protocols/ABA/Gather/Specification},
 \leanmodule{Leslie2Protocols/ABA/Gather/SpecificationSafety},
@@ -1953,8 +1953,8 @@ See \leanmodule{Leslie2Protocols/ABA/GBCA/AFW/Counting},
 \input{nodes/def-aba-round-over-bracha}
 
 \blueprintfig{fig-gather-compositions}{One round of the gather-based implementation, \leandecl{PLTS.ABA.GBCA.ByAFW.roundOverBracha}, drawn open, and the three substitutions that carry it to Transition System~2.
-A round is $n$ graded-agreement programs beside the round's own network, which holds the bound bit and nothing else, in parallel with two gather instances of the binding form (D33), one over the input bits and one over the candidates; each gather is $n$ programs beside the gather network, which holds the core, in parallel with $2n$ Bracha instances.
-That is $4n + 2$ networks in a single round --- $2n$ broadcasts for the inputs and $2n$ for the $\mathrm{BIND}$ payloads (D32, D33), beside the two gather networks --- which is the count the implementation collapses into one tagged sent-set family.
+A round is $n$ graded-agreement programs beside the round's own network, which holds the bound bit and nothing else, in parallel with two gather instances of the binding form (D33), one over the input bits and one over the candidates; each gather is $n$ programs beside the gather network, which holds the core, in parallel with $n$ Bracha instances carrying the inputs.
+That is $2n + 2$ networks in a single round, $2n$ broadcasts for the inputs beside the two gather networks, which is the count the implementation collapses into one tagged sent-set family.
 The three systems that carry one round, from the two gather specifications down to Bracha, replace one component at a time: \leandecl{PLTS.ABA.GBCA.ByAFW.broadcastSubstitution} replaces each Bracha instance by the BRB specification, by congruence, \leandecl{PLTS.ABA.GBCA.ByAFW.gatherSubstitution} each gather instance by the gather specification, by congruence, and \leandecl{PLTS.ABA.GBCA.ByAFW.refinesSpecification} reads the grade off the two cores, each written once, and the exclusion set off the round's bound bit.
 In each of the three the round's own network holds that bound bit, written at the first gather's first return and untouched by either substitution.
 Each is a plain forward simulation, so the three compose.}
@@ -1978,9 +1978,9 @@ The predicate sits on the return labels of a trace, and each refinement above is
 
 
 Beneath the composed system is the protocol that runs.
-It is Definition~\ref{def:aba-implementation} a second time, at the gather-based implementation: the same round loop, the same DECIDED sets, the same call and return of the coin, the same corruption discipline and the same pipeline, over a graded-agreement component that is the two gather instances and the $4n$ Bracha instances beneath them.
+It is Definition~\ref{def:aba-implementation} a second time, at the gather-based implementation: the same round loop, the same DECIDED sets, the same call and return of the coin, the same corruption discipline and the same pipeline, over a graded-agreement component that is the two gather instances and the $2n$ Bracha instances beneath them.
 Three things separate that component from the composed system's, and all three are forced by what the implementation is.
-A round of the composed system carries $4n+2$ networks, one per sub-protocol instance, while the adversary of the implementation carries one sent-set family per round; a round message therefore carries a tag naming the network it belongs to, and for a broadcast message the instance, whose index is its leader.
+A round of the composed system carries $2n+2$ networks, one per sub-protocol instance, while the adversary of the implementation carries one sent-set family per round; a round message therefore carries a tag naming the network it belongs to, and for a broadcast message the instance, whose index is its leader.
 The sender index stays the sender, so a threshold still counts distinct senders (D5).
 And the composed system indexes the local states by instance and then by process, while a program must hold its own data and no one else's; the round variables are therefore transposed, holding one process's local state in every instance.
 And a program of the implementation takes one transition per statement of the pseudocode: the graded-agreement call records the round's input, the call of a broadcast instance and the leader's multicast of $\langle\mathrm{INIT}, x\rangle$ that follows it are two, a gather's return and the call that follows it are two, and a broadcast instance's return is the transition that writes what it returned.
@@ -2016,7 +2016,7 @@ See \leanmodule{Leslie2Protocols/ABA/AFW/System},
 
 \blueprintfig{fig-afw-protocol}{The gather-based protocol \leandecl{PLTS.ABA.AFW.protocol}: the $n$ programs beside the one network and the common coin, under the two hidings of Definition~\ref{def:aba-implementation}.
 The shape is that of Definition~\ref{def:aba-implementation}, and two things distinguish it from ABDY22's instantiation.
-The adversary holds a single sent-set family per round over the tagged message type \leandecl{PLTS.ABA.AFW.Message}, whose tag names the network state a message belongs to and, for a broadcast message, the instance; the composed system of the same round carries $4n + 2$ separate network states.
+The adversary holds a single sent-set family per round over the tagged message type \leandecl{PLTS.ABA.AFW.Message}, whose tag names the network state a message belongs to and, for a broadcast message, the instance; the composed system of the same round carries $2n + 2$ separate network states.
 And a program's variables are process-major: process $j$ holds its own local state in every instance, where the composed system indexes the local states by instance and then by process.
 The adversary further holds the ghost of each round, \leandecl{PLTS.ABA.AFW.Ghost}: the two gathers' cores and the round's bound bit, each written once (D30).
 Assembling the composed state from the implementation's undoes both rearrangements, which is what \leandecl{PLTS.ABA.AFW.roundProjection} does --- projecting the one sent-set family onto the network states, transposing the variables back, and reading the two cores and the bound bit off that ghost.}
@@ -2046,7 +2046,7 @@ See \leanmodule{Leslie2Protocols/ABA/AFW/Composition} and
 \blueprintfig{fig-afw-composed}{The gather-based composed system \leandecl{PLTS.ABA.AFW.composed} and its three-stage substitution.
 Component for component this is the composed system of Definition~\ref{def:aba-composed}: the same $n$ round loops, the same ABA network carrying the DECIDED sets and the corrupted set with its budget, the same lifted common coin, under the same two hidings.
 What differs is the refinable position, and that it is replaced three times rather than once.
-The position holds \leandecl{PLTS.ABA.AFW.roundFamilyOverBracha}, one composed round of Definition~\ref{def:aba-round-composition} per $r \in \mathbb{N}$, each carrying $4n + 2$ networks, and the substitution runs in three stages rather than one: the Bracha instances, then the gather instances, then the counting onto Transition System~2.
+The position holds \leandecl{PLTS.ABA.AFW.roundFamilyOverBracha}, one composed round of Definition~\ref{def:aba-round-composition} per $r \in \mathbb{N}$, each carrying $2n + 2$ networks, and the substitution runs in three stages rather than one: the Bracha instances, then the gather instances, then the counting onto Transition System~2.
 The intermediate systems are $\afw{\mathrm{composed}}_{\mathrm{BRB}\,\mathrm{spec}}(P)$ and $\afw{\mathrm{composed}}_{\mathrm{Gather}\,\mathrm{spec}}(P)$, and the third stage lands on $\mathrm{hybrid}(P)$ itself, where the two chains meet.
 The other three components stand unchanged throughout.}
 

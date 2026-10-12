@@ -24,8 +24,8 @@ follows the source blueprint; where the source blueprint departs from a paper th
 encoding inherits the departure, except at the items of §1.
 
 **The D-registry is elsewhere.** The catalogued deviations — D1, D4, D5, D8, D9, D11–D19, D21–D24,
-D26, D27, D29–D36, with D12 refined to D12′ and D10 and D28 retired, a retired number not being
-reused — are cited at the point of use in the ABA module
+D26, D27, D29–D31, D33–D36, with D12 refined to D12′ and D10, D28 and D32 retired, a retired
+number not being reused — are cited at the point of use in the ABA module
 docstrings and glossed one by one in the blueprint chapter (the Deviations paragraph of
 `blueprint/src/content.tex`), which is the registry of record.
 
@@ -95,8 +95,8 @@ carries a correct echo of `m` back to `ldr ∈ F ∨ input ldr = some m`.
 
 **The gather transitions follow AFW25's Algorithm 5.** Its main thread sends phase 2, waits, sends phase 3,
 waits, sends phase 4, waits and returns (lines 10–20), and the transitions carry that order:
-`Gather.ProgramStep.sendVote` requires the sender's own `ECHO`, `bindCall` requires its own `VOTE`
-and no earlier bind call, and `ret` requires the returner's own bind call, which the write-once
+`Gather.ProgramStep.sendVote` requires the sender's own `ECHO`, `sendBind` requires its own `VOTE`,
+and `ret` requires the returner's own `BIND`, which the write-once
 field `Gather.BaseProcessVariables.sentBind` holds. Line 9 of the same algorithm sets the `ECHO`
 payload to the sender's accepted-pair set, and `ProcessVariables.accepted` — the entries of what the
 sender's input instance returned — is that payload. Algorithm 4 of the source blueprint states the
@@ -136,10 +136,10 @@ bind it and leave it unused, discharging the grade-1 return's specification guar
 
 **Unions read as bounds.** Algorithm 4's sends are unions: on `n − f` approved echoes a
 process sends `⟨vote, ⋃ AP_id⟩`, and likewise at the BIND and return steps. The gather
-transitions (`Gather.AlgorithmOverBroadcastSpecification.vote`, `bindCall`, `ret`, and their
-`AlgorithmOverBracha` counterparts) read each union as a bound instead: any approved set
+transitions (`Gather.AlgorithmOverBroadcastSpecification.vote`, `bind`, `ret`, and their
+`AlgorithmOverBracha` counterparts) read each union as a bound: any approved set
 containing the `n − f` collected payloads may be sent, and any map dominating the `n − f`
-committed BIND payloads and contained in the committed inputs may be returned. The union is
+received BIND payloads and contained in the committed inputs may be returned. The union is
 one such choice, so the reading widens the implementation's nondeterminism; every guard the
 proofs consume is monotone in the chosen set, and the refinements hold for the wider
 reading, hence for the union.
@@ -258,8 +258,8 @@ included, and at
   **upon** handler of Algorithm 6's lines 5–7, which multicasts `ECHO`, so a process may
   reach that block and send its `VOTE` with its own `ECHO` still pending. The gather
   programs carry the same chain: `Gather.ProgramStep.sendVote` requires the sender's own
-  `ECHO`, `Gather.ProgramStep.bindCall` requires its own `VOTE` and no earlier bind call,
-  and `Gather.ProgramStep.ret` requires the returner's own bind call (D35).
+  `ECHO`, `Gather.ProgramStep.sendBind` requires its own `VOTE`,
+  and `Gather.ProgramStep.ret` requires the returner's own `BIND` (D35).
 - **The denials of the higher cases.** Each transition carries the denials of the cases above
   it in its own block. In a return block the `⊥` transition denies its block's case (a) at
   either bit
@@ -394,16 +394,17 @@ repaired at the transition; the seventh entry is a cross-reference.
   guard `hcard` of `Gather.Step.bindCore` and domination as the return's, and
   `ABA/Gather/CommonCoreCounting.lean` discharges both from the prefix: the core is the
   `ECHO` payload of a sender outside `F` dominated by `f + 1` processes outside `F`, a
-  counting argument over the sent sets locates such a sender, and
-  BIND-by-reliable-broadcast is what keeps the payloads the witness counts write-once
-  under D1's adaptive corruption. The two guards of `bindCore` are needed together. `S` is
+  counting argument over the sent sets locates such a sender, and the witness
+  `Gather.withoutBindAbove` — the processes outside `F` whose sent set holds no `BIND`
+  above the core — holds the returns after the first to it under D1's adaptive corruption,
+  since corruption and sends only remove members. The two guards of `bindCore` are needed together. `S` is
   a set of pairs, so `hcard : P.n - P.f ≤ S.card` counts entries and not identifiers;
   `hval`, which is `AcceptedPairs.subMap S s.val`, holds `S` below the write-once map `val` and so
   forces the first components apart, and `AcceptedPairs.card_le_domainCount` is the step from the
   two to
-  `n − f` distinct identifiers. That broadcast of the `BIND` payloads is D32, and the
-  binding form of both of the round's gathers, which is what makes the second gather's
-  core a history variable rather than the prophecy variable of Remark 22, is D33.
+  `n − f` distinct identifiers. The binding form of both of the round's gathers, which is
+  what makes the second gather's core a history variable rather than the prophecy variable of
+  Remark 22, is D33.
   `DESIGN-GatherComposition.md` carries the counting argument in full.
 
 ## 6. Scope boundaries
