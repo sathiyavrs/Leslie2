@@ -5,9 +5,8 @@ The registry of deviations from the source blueprint exists once per edition:
 deviations.tex in the default edition, deviations-full.tex in the full one.
 Each file opens with an overview table, written by hand, of the labels in use
 and a headline each, followed by a deviations environment whose entries are
-\\deviation{label}{headline} and the entry's fields. The default edition carries
-the fields \\departure and \\reason, the full edition \\departure, \\reason and
-\\following. A closing sentence lists the labels not in use.
+\\deviation{label}{headline} and the entry's fields \\departure, \\reason and
+\\following, in both editions. A closing sentence lists the labels not in use.
 
 The table is a second copy of the labels and headlines, and the full edition a
 second copy of the registry, so nothing but this check keeps them in step. It
@@ -15,7 +14,9 @@ asserts, per file, that the table rows equal the entries in order, that every
 entry carries exactly its edition's fields with non-empty arguments, that the
 environment holds entries alone and no blank line, and that the entry labels
 and the closing sentence's labels cover D1 to D36 exactly; across the files, it
-asserts that the labels and headlines agree.
+asserts that the labels and headlines agree and that the \\following field of
+every entry reads the same in both, the \\reason being the field whose length
+the editions may differ in.
 
 Usage: python3 scripts/check-deviations-sync.py
 Exits 0 and prints "N/N entries in sync" when every check passes, else lists
@@ -29,7 +30,7 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT = os.path.join(REPO, 'blueprint', 'src', 'deviations.tex')
 FULL = os.path.join(REPO, 'blueprint', 'src', 'deviations-full.tex')
 
-FIELDS = {DEFAULT: ['departure', 'reason'],
+FIELDS = {DEFAULT: ['departure', 'reason', 'following'],
           FULL: ['departure', 'reason', 'following']}
 LABEL = re.compile(r"D\d+|D12\$'\$")
 LABEL_RANGE = range(1, 37)
@@ -199,8 +200,6 @@ def check_file(path, drifts):
         for f, arg in fields:
             if not arg:
                 drifts.append('%s: %s: empty \\%s' % (name, lab, f))
-    if path == DEFAULT and re.search(r'\\following(?![A-Za-z])', strip_comments(text)):
-        drifts.append('%s: \\following in the default edition' % name)
     unused = closing_labels(text, drifts, name)
     unused_numbers = [number(x) for x in unused]
     entry_numbers = [number(x) for x in labels]
@@ -230,6 +229,9 @@ def main():
             if la == lb and ha != hb:
                 drifts.append('%s: headline "%s" in the default edition, "%s" in the full one'
                               % (la, ha, hb))
+        for (la, _, fa), (lb, _, fb) in zip(default, full):
+            if la == lb and dict(fa).get('following') != dict(fb).get('following'):
+                drifts.append('%s: \\following differs between the editions' % la)
     if drifts:
         for d in drifts:
             print(d)

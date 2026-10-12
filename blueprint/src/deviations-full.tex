@@ -1,7 +1,8 @@
 % The registry of deviations from the source blueprint, full edition.
 % The default edition's registry is deviations.tex.
 % The overview table is written by hand.
-% scripts/check-deviations-sync.py checks the table against the entries below and against the default edition.
+% scripts/check-deviations-sync.py checks the table against the entries below and against the default edition,
+% whose entries carry the same labels, headlines and closing fields.
 
 Each departure from~\cite{LeslieBP} carries a label, cited at the point where it applies.
 At the gather-based round, which~\cite{LeslieBP} does not contain, the source is Algorithm~4 of~\cite{AFW25}, and D24 and D33 are departures from it.
@@ -74,7 +75,7 @@ D36 & the input-enabledness loop guarded on its variables \\
   The uncalled process and the caller quorum are Transition System~2's, and the guard is what discharges that quorum: the correct senders of an $n-f$ quorum of received $\mathrm{INPUT}$ messages are callers.
   Without the guard the source's Algorithm~2 does not refine the source's Transition System~2: at $n = 4$, $f = 1$, with $p_1$ called with $b$ and $p_4$ corrupted and injecting $\mathrm{INPUT}\,b$, the uncalled $p_2$ and $p_3$ relay on $f{+}1$ received messages and the round reaches a grade-2 return of $b$, where Transition System~2 cannot bind, since $|\{p_1\} \cup \{p_4\}| = 2 < n - f$.
   The guard holds across the gather layer of both chains, and Bracha's rounds carry none, since only the leader is called.}
-\following{Under the source's other reading, in which the handlers of Algorithm~2 run at an uncalled process, the source's Algorithm~2 and its Transition System~2 are inconsistent, as the trace above shows.
+\following{Under the source's other reading, in which the handlers of Algorithm~2 run at an uncalled process, the source's Algorithm~2 and its Transition System~2 are inconsistent, the round reaching a grade-2 return where Transition System~2 cannot bind.
   Following that reading means restating Transition System~2's guard to count participants, at the specification and along the refinement.}
 \deviation{D9}{$0$-based round indexing}
 \departure{$0$-based round indexing.}
