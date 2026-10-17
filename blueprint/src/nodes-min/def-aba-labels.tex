@@ -2,6 +2,6 @@
   \label{def:aba-labels}
   \lean{PLTS.ABA.Label}\lean{PLTS.ABA.Label.hiddenAPI}\leanok
   \uses{def:aba-parameters}
-  One label type carries the ABA interface, the round-tagged GBCA and WCC interfaces, the corruption broadcast and $\tau$, and the two sub-protocol interfaces make up the hidden alphabet of every composed system: \leandecl{PLTS.ABA.Label} and \leandecl{PLTS.ABA.Label.hiddenAPI}.
-  A graded-agreement return $\mathrm{retG}(r,id,out,bnd)$ names the round, the process answered, the graded outcome it receives and the round's bound bit; the outcome is program data and the bit is a ghost output, which no program reads (D29).
+  One label type carries the ABA interface, the round-tagged GBCA and WCC interfaces, the announcement of a round's bound bit, the corruption broadcast and $\tau$, and the labels that carry a round make up the hidden alphabet of every composed system: \leandecl{PLTS.ABA.Label} and \leandecl{PLTS.ABA.Label.hiddenAPI}.
+  A graded-agreement return $\mathrm{retG}(r,id,out)$ names the round, the process it returns to and the graded outcome that process receives, which is program data; the round's bound bit is announced by $\mathrm{boundG}(r,b)$, a ghost output no program reads (D29).
 \end{definition}

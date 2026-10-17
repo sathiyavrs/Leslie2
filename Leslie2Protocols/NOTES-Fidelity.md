@@ -23,11 +23,11 @@ file are the source blueprint's. The encoding
 follows the source blueprint; where the source blueprint departs from a paper the
 encoding inherits the departure, except at the items of §1.
 
-**The D-registry is elsewhere.** The catalogued deviations — D1, D4, D5, D8, D9, D11–D19, D21–D24,
-D26, D27, D29–D31, D33–D36, with D12 refined to D12′ and D10, D28 and D32 retired, a retired
-number not being reused — are cited at the point of use in the ABA module
-docstrings and glossed one by one in the blueprint chapter (the Deviations paragraph of
-`blueprint/src/content.tex`), which is the registry of record.
+**The D-registry is elsewhere.** The catalogued deviations — D1, D4, D5, D8, D9, D11, D12′,
+D13–D19, D21–D24, D26, D27, D29–D31 and D33–D37 — are cited at the point of use in the ABA module
+docstrings and stated one by one in the registry of record, `blueprint/src/deviations.tex`, the
+Deviations section of the blueprint chapter: under each label the departure, its reason, and what
+following the source would take.
 
 ## 1. Where the encoding follows a paper against the source blueprint
 
@@ -69,14 +69,14 @@ from [ABDY22]" with no such note.
 On the specification the matching item is **D19**. TS 2's bound value `bind ∈ {0,1,⊥}` is replaced
 by the exclusion set `excluded : Finset Bool`, the bits the instance can no longer return
 (`GBCA/Specification.lean`). The exclude fires under the guard `excluded = ∅`, so reachable states
-are exactly `excluded ∈ {∅, {b}}` (`GBCASafety.excluded_card_le_one`) and the bound value embeds
+are exactly `excluded ∈ {∅, {b}}` (`GBCA.excluded_card_le_one`) and the bound value embeds
 onto them — `bind = ⊥` as `excluded = ∅`, `bind = b` as `excluded = {!b}`. The two state shapes
 therefore differ in the guards rather than in the cardinality. `excluded` is monotone and written
 once, so Graded Agreement is the return guard pair `v ∉ excluded ∧ !v ∈ excluded` and Binding is the
-guard `(!bnd) ∈ excluded` every return carries for the bit `bnd` it announces, both proved from
-monotonicity alone in `GBCA/SpecificationSafety.lean` (`retG_value_agree`, `specInst_binding`,
-`retGrade0_excluded_nonempty`) with no auxiliary invariant; the same file carries Validity's safety
-half (`specInst_validity`, `specInst_no_retGrade0`).
+guard `(!b) ∈ excluded` of the announcement `boundG r b` of the bound bit, which every return
+enables (D29), both proved from monotonicity alone in `GBCA/SpecificationSafety.lean`
+(`retG_value_agree`, `specInst_binding`, `retGrade0_excluded_nonempty`) with no auxiliary invariant;
+the same file carries Validity's safety half (`specInst_validity`, `specInst_no_retGrade0`).
 
 A transcription question of ABDY22's own: the prose preceding Algorithm 6 says "upon
 receiving `echo4` messages from `2t + 1` parties" where the pseudocode's lines 19–20 say
@@ -128,8 +128,8 @@ once". `Algorithm.retGrade1` reads this as *from at least one sender*: `honce : 
 Message.echo5 (some v) ∈ s.received id k`, not as a cardinality constraint of exactly one received
 message. The
 hypothesis is a genuine part of the transition, carried through the protocol's rendering by
-`ABDY.RoundStep.retGGrade1` and through the round instance's Byzantine return transition
-`GBCAProgramStep.byzantineRetGrade1`, but no proof consumes it: the refinement's `retGrade1`
+`ABDY.RoundStep.retGGrade1` and through the round instance's `GBCAProgramStep.retGrade1`, but no
+proof consumes it: the refinement's `retGrade1`
 transitions
 bind it and leave it unused, discharging the grade-1 return's specification guards from the `f
 + 1` received `BIND v` messages and `hval` instead. Either reading supports the same theorems.
@@ -156,7 +156,7 @@ D-number (D31), glossed in the blueprint registry: the threshold counts callers 
 callers included, where TS 3 counts the corrupted set beside them. The reason is Definition 2.1
 of ABDY22, which defines unpredictability by accesses: the output is unpredictable "until at
 least d + 1 parties have accessed the coin". A corrupted process reaches the instance as a caller
-through its Byzantine call, and a corruption is no access.
+through its call `byzantineCallW`, which the network outputs (D11), and a corruption is no access.
 
 **The coin's `⊤` outcome answered at the return.** Three of the four outcomes fix what every
 caller receives. `CoinValue.top` fixes nothing: `WCC.Step.ret`'s guard
@@ -187,17 +187,20 @@ own.) At the protocol, returning and terminating are two fields and two transiti
 `ABDY.RoundVariablesMap.terminated`, whose sole writer is `Implementation.ProgramStep.terminate`, records that the
 process has stopped participating (D22, §6).
 
-**The announced values on the return labels (D29).** The source blueprint puts the binding
-content on the return label at both levels. Its TS 2 returns `bind` beside the graded
-outcome and its TS 4 returns the core beside the map, and its pseudocode writes the same
-two returns as `Response((v, g), _bound-value)` and `Response(S, _S^C)` — the second
-component of each a value the caller is not handed. The encoding follows that reading.
-`Label.retG r id out β` announces the round's bound bit and `Gather.Label.ret id g C`
-announces the instance's core, in each case the value the specification holds as state,
-written once by an internal transition and read by no program of either algorithm.
+**The announced values (D29).** The source blueprint puts the binding content on the return
+label at both levels. Its TS 2 returns `bind` beside the graded outcome and its TS 4 returns the
+core beside the map, and its pseudocode writes the same two returns as
+`Response((v, g), _bound-value)` and `Response(S, _S^C)` — the second component of each a value
+the caller is not handed. The encoding announces each value by an event of its own and puts the
+returned value alone on the return label: `Label.boundG r b` announces the round's bound bit and
+`Gather.Label.core C` the instance's core, in each case the value the specification holds as
+state, written once by an internal transition and read by no program of either algorithm. In an
+implementation the network computes the value, and a value on the return label would have the
+network fix it on a label a program outputs.
 
 The two announced values differ from the sources in what they are guaranteed to be. The bound bit is
-a `Bool` under the single guard `(!β) ∈ excluded`, which is D19's reading of `bind = some β`; a
+a `Bool` announced under the single guard `(!β) ∈ excluded`, which is D19's reading of
+`bind = some β`; a
 reachable state excludes at most one bit, so the guard determines it. The core is a payload set of
 at least `n − f` entries below the returned map, where TS 4's own bind transition imposes no size bound at
 all (§5); the encoding's `Gather.Step.bindCore` carries the size as a guard, and
@@ -207,12 +210,12 @@ the round's network state, the core by the gather instance's network state — s
 either, and the announcement is what makes binding a property of a single trace
 (`GBCA.specInst_binding`, `Gather.specInst_core`), carried to each implementation by its own
 refinement (`GBCA.ByABDY.composition_binding`, `GBCA.roundOverBracha_binding`;
-`Gather.instanceOverBroadcastSpecification_core`, `Gather.instanceOverBracha_core`). The transitions that
-do read a ghost — the implementation's two graded-agreement returns — read it for the value they
-announce and not for whether they fire, the read admitting a bit at every state (`ghostOutput_total`).
-For the bound bit at the implementation that inertness is a theorem: `ABDY.protocol_ghostRemoval` and
-`AFW.protocol_ghostRemoval` equate the achievable trace distributions of each protocol with those of the
-same protocol over a one-element ghost whose returns announce any bit.
+`Gather.instanceOverBroadcastSpecification_core`, `Gather.instanceOverBracha_core`). The one
+transition that reads a ghost is the network's announcement, a self-loop enabled when the ghost
+holds the value. For the bound bit at the implementation that inertness is a theorem:
+`ABDY.protocol_ghostRemoval` and `AFW.protocol_ghostRemoval` equate the achievable trace
+distributions of each protocol with those of the same protocol over a one-element ghost, whose
+network announces nothing.
 
 ## 3. A network-model artifact
 
@@ -242,7 +245,7 @@ in the specification, and whether that placement was chosen or forced.
 
 **Carried by the implementation's transitions** — `GBCA.ByABDY.Algorithm`
 (`ABA/GBCA/ABDY/Algorithm.lean`), mirrored transition for transition at
-`GBCA.GBCAProgramStep` (`ABA/GBCA/ABDY/Components.lean`), Byzantine call and return transitions
+`GBCA.ByABDY.GBCAProgramStep` (`ABA/GBCA/ABDY/Components.lean`), a corrupted process's call
 included, and at
 `ABDY.RoundStep` (`ABA/ABDY/System.lean`) with the reads taken through
 `p.roundVariables r`.
@@ -276,34 +279,30 @@ included, and at
   carried from the sends over to the returns: a process that was never called does not
   return from the round.
 - **The protocol's participation guards.** `Implementation.ProgramStep.ret` and
-`Implementation.ProgramStep.decidedRelay` require `c.processVariables.input ≠ none`, and
-`ABDY.RoundStep.gbcaCallLoop` requires `(p.roundVariables r).processVariables.input ≠ none`. `gbcaCallLoop`
-deliberately carries no termination guard, so a process that has terminated at phase `toCallG` over
-round variables holding no call has a transition on neither call label and takes no further
-round-loop step. That
-excluded region is accepted rather than repaired: a terminated process is one whose own return has
-already fired, and no statement of the development is about what it does afterwards.
+  `Implementation.ProgramStep.decidedRelay` require `c.processVariables.input ≠ none`, and
+  `ABDY.RoundStep.callGLoop` requires `(p.roundVariables r).processVariables.input ≠ none`.
+  `callGLoop` carries no termination guard, so a process that has terminated at phase `toCallG` over
+  round variables holding no call has no transition on its call label and takes no further
+  round-loop step. No statement of the development is about that region: a terminated process is one whose own
+  return has already fired, and no statement is about what it does afterwards.
 
-**Absent from the specifications.** Four of the placements below are chosen and two are
-forced by where the authorisation of a Byzantine call and return transition sits (D11), which cannot be
-repaired at the transition; the seventh entry is a cross-reference.
+**Absent from the specifications.** Five of the placements below are chosen and one follows the
+source; the seventh entry is a cross-reference.
 
-- **`GBCASpec.Step`, every transition (chosen).** No transition of the graded-agreement specification
+- **`GBCA.Step`, every transition (chosen).** No transition of the graded-agreement specification
   requires a send at the level below, denies a higher case, or guards a return on a call.
   The specification abstracts the patterns of received messages into `excluded` and `grade` (D19),
   and its return guards are that pair; supplying them from the received messages is exactly the work of
   `GBCA.ByABDY.refinesSpecification`.
-- **`WCC.Step.ret` without `called` (forced).** `WCC.SpecState` carries a `called` field
-  and the return transition does not read it. The Byzantine coin label `byzantineRetW` moves no
-  program at the process it names — `RoundLoopStep.byzantineRetWIdle` stands idle at every
-  process — and
-  `coinLabelMap` maps that label onto `retW`, so the coin instance answers it alone. A `called`
-  guard there would leave the transition unanswerable. This is a consequence of the
-  authorisation placement, not a preference.
-- **`Algorithm.callLoop` and `GBCAProgramStep.callLoop` (forced).** Both are unguarded
-  self-loops. `specificationLabelMap` maps `byzantineCallGLoop` onto `callG`,
-  `GBCANetworkStep.byzantineCallGLoop` carries no `k ∈ F`, and the named process's transition is
-  idle, so the call loop must accept every call label whatever the variables hold.
+- **`WCC.Step.ret` without `called` (following the source).** `WCC.SpecState` carries a `called`
+  field and the return transition does not read it, as TS 3's return does not. The return is the
+  coin's output, and a round loop takes a return it does not wait for on `retWLoop`, a replaced
+  one on `corruptedIdle` (`DESIGN-InputOutput.md` §2).
+- **`GBCA.Step.callLoop` unguarded (chosen).** The specification's loop accepts its call label at
+  every state, so every call is enabled. The implementation's `Algorithm.callLoop` and
+  `GBCAProgramStep.callLoop` fire at `input ≠ none` alone, beside `call` at `input = none`, and the
+  specification's unguarded loop matches them; the guard on the implementation's side makes its
+  transition on a call a function of its state (D36).
 - **`RoundLoopStep`'s DECIDED transitions (chosen).** `RoundLoopStep.ret` and
   `RoundLoopStep.decidedRelay` read the counts of received messages alone, without the `input ≠ none`
   guard their `Implementation.ProgramStep` counterparts carry. The composed system is the abstraction
@@ -335,7 +334,7 @@ repaired at the transition; the seventh entry is a cross-reference.
   (D36).
 - **The `2f + 1` commit read as a relay threshold (cross-reference).**
   `Implementation.ProgramStep.terminate` reads `2f + 1` received DECIDED messages where the paper's condition is
-  that the process may stop without delaying another. That delta is the third D22
+  that the process may stop without delaying another. That delta is the second D22
   residue of §6, and is not restated here.
 
 ## 5. Source defects the encoding does not reproduce
@@ -469,20 +468,19 @@ for Unpredictability, inexpressible once the guess is dropped.
   belongs here is what the shape leaves uncovered. A process's variables hold its variables in every
   round it has touched, in a `Finmap` read through `ABDY.RoundVariablesMap.roundVariables`; each
   round transition reads and writes the variables of the round its own label tags, under an
-  instance-local guard and no round guard; and the round advance, `Implementation.ProgramStep.retW`, and
-  the DECIDED send, `Implementation.ProgramStep.decidedSend`, reset nothing. A process therefore answers prior-round messages and
-  files deliveries of any round. `Implementation.ProgramStep.terminate` is the terminating step. It fires when
-  the process's own return has fired and DECIDED messages from `2f + 1` distinct senders have been
-  received, and it writes `terminated` alone, so the round variables stay as they are. Three
-  residues remain.
+  instance-local guard and no round guard; and the round advance, `Implementation.ProgramStep.retW`,
+  and the DECIDED send, `Implementation.ProgramStep.decidedSend`, reset nothing. A process therefore
+  takes the messages of earlier rounds and records deliveries of any round.
+  `Implementation.ProgramStep.terminate` is the terminating step. It fires when the process's own
+  return has fired and DECIDED messages from `2f + 1` distinct senders have been received, and it
+  writes `terminated` alone, so the round variables stay as they are. A round delivery at a process
+  that has terminated is taken and ignored: `ABDY.RoundStep.gbcaDeliverReceive` carries `hterm :
+  p.terminated = false`, and `ABDY.RoundStep.deliverLoop` takes the delivery at a terminated program
+  and leaves its variables where they stand. Two residues remain.
     - The amplification transition `ABDY.RoundStep.gbcaSendRelay` is guarded by the process holding an
       input in that round's variables (`hin : (p.roundVariables r).processVariables.input ≠ none`, D8, and
       `Algorithm.relay` carries the same guard one level down), where lines 3–4 of ABDY22's
       Algorithm 6 guard the relay on the count of received messages alone.
-    - A round delivery at a process that has terminated is disabled rather than ignored.
-      `ABDY.RoundStep.gbcaDeliverReceive` carries `hterm : p.terminated = false` and
-      `Implementation.ProgramStep.gbcaDeliverIdle` demands a different receiver, so the adversary has no
-      composite step delivering a round message there at all.
     - The `2f + 1` count of received DECIDED messages of `Implementation.ProgramStep.terminate` is the
       encoding's commit point. At most `f` senders are corrupted, so `2f + 1` received messages
       have `f + 1`
@@ -490,23 +488,24 @@ for Unpredictability, inexpressible once the guess is dropped.
       reads; the paper's own condition is that the process may stop without delaying
       any other.
 - **The scope of `terminate`.** The flag is read by the round transitions and by nothing else:
-  `callG_call`, the three `retG_*`, `gbcaSendRelay`, `gbcaSendEcho`, the six level transitions
-  `gbcaSendVoteBit` through `gbcaSendEcho5Bot`, `gbcaDeliverReceive`, and `terminate` itself;
-  `gbcaCallLoop` is the round transition that does not read it (§4). A process that has terminated still
+  `callG_call`, the three returns `retGGrade2`, `retGGrade1` and `retGGrade0`, `gbcaSendInput`,
+  `gbcaSendRelay`, `gbcaSendEcho`, the six level transitions `gbcaSendVoteBit` through
+  `gbcaSendEcho5Bot`, `gbcaDeliverReceive` and `deliverLoop`, and `terminate` itself; `callGLoop`
+  is the round transition that does not read it (§4). A process that has terminated still
   finishes a pending coin call with its return (`callW`, `retW`), sends `⟨DECIDED, b⟩` on a grade-2
   outcome (`decidedSend`), and both relays and receives DECIDED (`decidedRelay`, `decidedDeliverReceive`).
   That placement is the design and not an oversight: what the flag records is that the process has
   stopped participating in graded agreement, and the D12′ broadcast it keeps carrying is what lets
   the processes still running cross the relay threshold without it.
 
-The returner axis carries no divergence. The ABA interface is modelled for a corrupted
-process at every level of the chain (D23). At the protocol and in the composed system, a
-corruption replaces the process's program: the correct transitions are guarded by the replacement
-flag, the replaced program self-loops on `callABA` and `retABA`, and the network's own
-`retByzantine` transition authorises the return under `k ∈ F` with none of the received DECIDED
-messages `Implementation.ProgramStep.ret` demands. At the specification the same behaviour is `SpecStep.callByzantine`,
-which records a bit unrelated to the one its label declares, and `SpecStep.retByzantine`, which
-returns any bit at any time without moving the state.
+The returner axis carries no divergence. The ABA interface is modelled for a corrupted process at
+every level of the chain (D23). At the protocol and in the composed system, a corruption replaces
+the process's program: the correct transitions are guarded by the replacement flag, the replaced
+program self-loops on every label outside `actsAt`, outputting `retABA` at either bit with none of
+the received DECIDED messages `Implementation.ProgramStep.ret` demands, and the network takes the
+return on one unguarded transition. At the specification the same behaviour is
+`SpecStep.callByzantine`, which records a bit unrelated to the one its label declares, and
+`SpecStep.retByzantine`, which returns any bit at any time without moving the state.
 
 `ValidityTrace` and `AgreementTrace` are accordingly read at never-corrupted returners,
 which is the quantification of the source's own contracts ("if a correct process returns
@@ -520,14 +519,14 @@ produces must itself be never corrupted, not merely a member of a support set a 
 `fail` could invalidate, and the call it produces is that caller's first `callABA` of the
 trace, the event that carries the caller's input.
 
-One level down the interface binds corrupted returners too. At the composed system
-`GBCAProgramStep.byzantineRetGrade2`, `byzantineRetGrade1` and `byzantineRetGrade0` repeat the
-guards of the transitions for correct processes, and `GBCA.specificationLabelMap` sends the Byzantine
-return onto `GBCA.Step.retGrade2`, `retGrade1` and `retGrade0`, which carry no exemption for correct
-processes. `GBCA.specInst_binding`, `retG_value_agree` and `specInst_validity` therefore quantify
-over every returner of a round, where ABDY22's Definition 3.2 quantifies over the non-faulty
-parties. A corrupted process's graded return is held to the guards a correct one's is held to, so
-the round's contract is the stronger of the two and the theorems above it lose nothing.
+One level down the interface binds corrupted returners too. A return to a corrupted process is the
+output of the round instance that computes it, on its own return label, under the guards of a
+correct return: `GBCAProgramStep.retGrade2`, `retGrade1` and `retGrade0` at the composed system, and
+`GBCA.Step.retGrade2`, `retGrade1` and `retGrade0` at the specification, which carry no exemption
+for correct processes (D11). `GBCA.specInst_binding`, `retG_value_agree` and `specInst_validity`
+therefore quantify over every returner of a round, where ABDY22's Definition 3.2 quantifies over the
+non-faulty parties. A corrupted process's graded return is held to the guards a correct one's is
+held to, so the round's contract is the stronger of the two and the theorems above it lose nothing.
 
 ## 7. An adjacent open item
 

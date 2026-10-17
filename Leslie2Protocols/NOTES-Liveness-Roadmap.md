@@ -167,9 +167,9 @@ Ordered by expected value-for-effort:
    has to be carried down all three, the composition inclusion (`ABDY.protocolSimulation`,
    `ABA/ABDY/Simulation.lean`) included. That inclusion imposes no constraint on the
    amplification axis. Under D22 a process retains its variables in every round it has touched
-   and answers that round's messages under an instance-local guard, whichever round its loop is in,
+   and takes the deliveries of that round under an instance-local guard, whichever round its loop is in,
    which is the behaviour ABDY22's Lemmas 4.6 and E.5 are stated under; and
-   `ABAProgramStep.terminate` fires only once the process's own return has fired and `2f + 1`
+   `Implementation.ProgramStep.terminate` fires only once the process's own return has fired and `2f + 1`
    DECIDED messages have been received, so the concrete stopping point is a terminate in the paper's
    sense — the endpoint a fairness marking would stop at. Nothing in the development says when that
    step fires, or that it ever does: the marking itself and every statement about it are what a
@@ -281,7 +281,7 @@ correct processes take part then all correct processes eventually return" — wo
 the specification itself, and no marking at the implementation could repair it.
 
 The `excluded = ∅` guard removes those states rather than the obligation. Every reachable state
-has `excluded ∈ {∅, {b}}` (`GBCASafety.excluded_card_le_one`), the bit not excluded stays outside `excluded`, and
+has `excluded ∈ {∅, {b}}` (`GBCA.excluded_card_le_one`), the bit not excluded stays outside `excluded`, and
 the grade-2 guard still admits grade-2 and grade-1 returns. The resolution is structural, so no
 marking has anything to decide here. The same holds of TS 1's flip (§5), where the one-shot guard
 and the absorbing `ControlMode.noTransitionEnabled` settle the question in the step relation rather
@@ -300,10 +300,10 @@ and `retGrade0` stay disabled forever — each asks `f + 1` at the dissenting bi
 bits — and no grade-0 return can arise, so `retGrade2 v` is enabled at every un-returned process for
 the rest of the run and the round decides. This is the near-unanimous case: under unanimous
 correct input the count is capped by the corruption budget outright
-(`GBCASafety.support_le_of_unanimous`). If the count does reach `f + 1`, then from that point
+(`GBCA.support_le_of_unanimous`). If the count does reach `f + 1`, then from that point
 `retGrade1 v` is enabled at every un-returned process, whatever the grade, since `retGrade1`
 reads no grade. Either way each un-returned process has a return enabled from some point on
-and permanently, so a fair scheduler answers it. Nothing in the sketch mentions the coin: it
+and permanently, so a fair scheduler fires it. Nothing in the sketch mentions the coin: it
 is a statement about one GBCA instance, and it is what item 1 of §4 would have to supply for
 the sub-protocol position.
 
@@ -327,3 +327,67 @@ the sub-protocol position.
   is computed from that component's own state.
 - Paper validation of fair AST for this protocol family: `Papers/consensus-src` (Ben-Or +
   graded consensus, SMT-checked in Caesar)
+
+## 8. The fairness markings the input-output signatures imply
+
+Every transition system of LeslieBP carries the line "Fairness: all transitions are fair except
+those labelled by fail and the call loops". An execution is fair if it is finite and ends in a fair
+deadlock, or if it contains infinitely many fair transitions. In the simulations paper the fair
+transitions are a subset `Fair ⊆ T`, and a transition of a composition is fair if and only if the
+transitions beneath it are (Definition 2).
+
+`DESIGN-InputOutput.md` §1 gives every component its outputs and its inputs. In that reading the
+marking falls on the transitions a component controls: its outputs and its silent transitions. An
+input transition fires when the component that outputs its label fires, so it is no obligation of
+the component that takes it, and inputs are unfair. A synchronised step is then fair exactly when
+the transition of the component that outputs the label is fair. Definition 2's conjunction agrees with this marking
+when the input transitions other than the loops count as fair, which is the form of LeslieBP's
+line; the two differ only at a step on which a loop takes the input, which the conjunction makes
+unfair. Read this way, the source's line marks every output
+and every silent transition fair except `fail`, and the call loops, which are inputs, unfair. The
+call itself is an input of a specification as well; its fairness is the caller's, whose output it
+is.
+
+Two kinds of transition are unfair whatever component takes them, because each is a self-loop that may fire
+forever: the loops that make an input enabled, and the announcements. A fair self-loop that stays
+enabled makes the execution repeating it forever fair, since it contains infinitely many fair
+transitions, while no other transition of the system fires. The announcements `boundG` and `core`
+are therefore unfair, and so are `inputLoop`, the called instance's `callLoop`, `retGLoop`, `retWLoop`,
+`deliverLoop`, `decidedDeliverLoop`, `firstGatherReturnLoop` and `secondGatherReturnLoop`. The
+caller's `callGLoop` is an output that moves the round loop, and it is fair.
+
+For the components of `DESIGN-InputOutput.md` §1 the fair outputs are these.
+
+- **Programs and round loops.** Every output of an unreplaced program is fair: the graded-agreement
+  call and return, the round's sends and events, the coin call, the DECIDED send and relay, the ABA
+  return and the silent `terminate`. The outputs of a replaced program, `retABA` and the DECIDED
+  relay on `corruptedIdle`, are unfair. The marking reads the program's own flag.
+- **The networks.** A delivery is fair when its receiver is outside `F`. `fail`, the Byzantine
+  calls, the injections `byzantineGBCA` and `byzantineDecided`, and the announcement are unfair.
+- **The coin.** The resolution is fair, and a return is fair at a process outside `F`.
+- **The round instances, the gathers and Bracha's instances.** A program's sends and returns are
+  fair at a process outside `F`. These programs hold no corrupted flag, so the marking reads the
+  corrupted set of the instance's network, or of the gathers inside a gather-based round. A
+  delivery is fair at a receiver outside `F`; an injection is unfair.
+- **The specifications.** Transition System 1: `ret` at a process outside `F`, `decide` and
+  `coinFlip` are fair; `retByzantine`, `callByzantine`, `callLoop` and `fail` are unfair. Transition
+  System 2: the three returns at a returner outside `F` and `bindUnset` are fair. Transition
+  System 3: `resolve`, and `ret` at a process outside `F`. Transition System 4: `ret` at a process
+  outside `F`, `commit` of a process outside `F`, and `bindCore`. The BRB specification: `ret`
+  at a process outside `F`, and `commit` when the leader is outside `F`.
+
+Every state-dependent case above is the corrupt-sender mismatch of §3, avoided at the marking. A
+transition of a specification that a corrupted process's messages alone can enable, such as the
+BRB specification's `commit` under a corrupted leader, is matched in an implementation only by the
+injections, which are unfair. Marked fair at the specification it would leave an implementation
+in a fair deadlock that the specification does not share, so it is fair only where a correct
+process enables it. §4's second item states the same requirement on `fair_labels`.
+
+One further case comes from the returns of Transition Systems 2 and 3, which, as the source's do,
+do not ask for the returner's call. A fair return may then fire at a process that stands at an
+earlier round. The caller's `retGLoop` or `retWLoop` takes it and the instance records the return,
+so the process, once it calls, awaits a return the instance does not offer again. A marking that
+makes such a return fair only at a process that has called avoids it, and so does a return guard
+that asks for the call, as the returns of the two graded-agreement implementations do.
+
+The markings above are prose. No marking is stated in Lean in this development.

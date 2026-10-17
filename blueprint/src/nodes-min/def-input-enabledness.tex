@@ -1,0 +1,7 @@
+\begin{definition}[Input-enabledness and compatibility]
+  \label{def:input-enabledness}
+  \lean{PLTS.System.InputEnabled}\lean{PLTS.InputOutputLabels}\lean{PLTS.InputOutputLabels.Compatible}\leanok
+  \uses{def:process-algebra, def:idle-family, def:synchronised-product}
+  A system is input-enabled on a set of labels when every label of the set has a transition at every state, and two components, each given by its input labels and its output labels, are compatible when they share no output label; these are the two conditions under which Section~1.3 of~\cite{LeslieBP} composes systems: \leandecl{PLTS.System.InputEnabled}, \leandecl{PLTS.InputOutputLabels} and \leandecl{PLTS.InputOutputLabels.Compatible}.
+  Idle padding, the partial label pullback, parallel composition, the full-synchronisation product and the instance family each carry input-enabledness from their components to the set of labels their lemma names: \leandecl{PLTS.System.InputEnabled.withIdle}, \leandecl{PLTS.System.InputEnabled.mapIdle}, \leandecl{PLTS.System.InputEnabled.parallel}, \leandecl{PLTS.System.InputEnabled.synchronisedProduct} and \leandecl{PLTS.System.InputEnabled.family}.
+\end{definition}

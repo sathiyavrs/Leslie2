@@ -1,12 +1,13 @@
 \begin{definition}[The implementation of a protocol]
   \label{def:aba-implementation}
-  \lean{PLTS.ABA.Implementation.NetworkEvent}\lean{PLTS.ABA.Implementation.actsAt}\lean{PLTS.ABA.Implementation.coinLabelMap}\lean{PLTS.ABA.Implementation.RoundVariablesMap}\lean{PLTS.ABA.Implementation.IsRoundVariables}\lean{PLTS.ABA.Implementation.NetworkState}\lean{PLTS.ABA.Implementation.roundOf}\lean{PLTS.ABA.Implementation.NetworkState.writeGhost}\lean{PLTS.ABA.Implementation.roundOwn}\lean{PLTS.ABA.Implementation.ProgramStep}\lean{PLTS.ABA.Implementation.NetworkStep}\lean{PLTS.ABA.Implementation.IsRoundStep}\lean{PLTS.ABA.Implementation.system}\leanok
-  \uses{def:aba-labels, def:aba-parameters, def:aba-round-loop-state, def:relabel, def:synchronised-product, def:process-algebra, def:idle-family}
+  \lean{PLTS.ABA.Implementation.NetworkEvent}\lean{PLTS.ABA.Implementation.actsAt}\lean{PLTS.ABA.Implementation.coinLabelMap}\lean{PLTS.ABA.Implementation.RoundVariablesMap}\lean{PLTS.ABA.Implementation.IsRoundVariables}\lean{PLTS.ABA.Implementation.NetworkState}\lean{PLTS.ABA.Implementation.NetworkState.recordStartedRound}\lean{PLTS.ABA.Implementation.roundOf}\lean{PLTS.ABA.Implementation.NetworkState.writeGhost}\lean{PLTS.ABA.Implementation.roundOwn}\lean{PLTS.ABA.Implementation.ProgramStep}\lean{PLTS.ABA.Implementation.NetworkStep}\lean{PLTS.ABA.Implementation.IsRoundStep}\lean{PLTS.ABA.Implementation.system}\leanok
+  \uses{def:aba-labels, def:aba-parameters, def:aba-round-loop-state, def:relabel, def:synchronised-product, def:process-algebra, def:idle-family, def:input-enabledness}
   A protocol as it runs: $n$ programs, one per process, beside one network and the common coin.
-  A program reads its own variables, its own received sets and its own replacement flag, and nothing else about corruption --- not the corrupted set, not the budget, not another process's status (D23) --- while the adversary holds the round-tagged message sets, the DECIDED sets and the corrupted set with its budget, and it alone has transitions on the Byzantine labels.
+  A program reads its own variables, its own received sets and its own replacement flag, and nothing else about corruption --- not the corrupted set, not the budget, not another process's status (D23).
+  The network holds the round-tagged message sets, the DECIDED sets, the corrupted set with its budget and the rounds a correct process has started (D37).
   The system is parametric in four things a graded-agreement implementation supplies: its round message type $M$, its round's own events $E$, its per-process per-round variables $S$ and its transitions, given as a relation embedded in one constructor of the program's transitions.
   A graded-agreement call, correct or Byzantine, sends nothing: every round message enters the sent sets by a round multicast or by a Byzantine injection.
-  What does not depend on them is written once --- the round loop, the DECIDED relay and its delivery, the coin's call and return, corruption, the adversary's transitions, the composition pipeline
+  What does not depend on them is written once --- the round loop, the DECIDED relay and its delivery, the coin's call and return, corruption, the network's transitions, the composition pipeline
   \[
     \mathrm{system} \;=\;
       \mathrm{abstract}_{\mathrm{hiddenAPI}}\Bigl(
@@ -14,19 +15,33 @@
           (\mathrm{synchronisedProduct}_{j \in [n]}\ \mathrm{program}(j)) \parallel (\mathrm{network} \parallel \mathrm{coinOverExtendedAlphabet}))\bigr)\Bigr),
   \]
   and the lemmas that determine a transition from its label.
-  Which transitions belong to the implementation is settled by the label: a program's transition is the implementation's business exactly when its label is one of $\mathrm{roundOwn}(j)$ --- the graded-agreement call and return at $j$, $j$'s own round multicast, a delivery addressed to $j$, $j$'s own round events, and $j$'s own call against round variables that already hold an input.
-  An implementation must supply four things about its transitions: that they carry such a label, that they fire only at an unreplaced program, that they are Dirac, and that a return transition takes the announced bit free, firing at every other bit with the same successor (D29).
-  That is \leandecl{PLTS.ABA.Implementation.IsRoundStep}; the lemmas that determine a transition from its label consume the first three, and Theorem~\ref{thm:aba-ghost-removal} the fourth.
+  Which transitions belong to the implementation is settled by the label: a program's transition is the implementation's business exactly when its label is one of $\mathrm{roundOwn}(j)$ --- the graded-agreement call and return at $j$, $j$'s own round multicast, a round delivery addressed to $j$ and $j$'s own round events.
+
+  Each label is the output of one component.
+  The program of $j$ outputs the labels of $\mathrm{actsAt}\,j$ --- its graded-agreement call and return, its round multicast, its round events, its coin call and its DECIDED send --- together with its DECIDED relay and its ABA return.
+  The network outputs the round delivery, the DECIDED delivery, $\mathrm{fail}$, the announcement $\mathrm{boundG}$, and a corrupted process's graded-agreement call $\mathrm{byzantineCallG}$ and coin call $\mathrm{byzantineCallW}$ (D11); its silent transitions are the two injections.
+  The common coin outputs its return $\mathrm{retW}$.
+  Every component takes every other non-silent label as an input at every state, and the outputs of two components are disjoint, the two conditions of Definition~\ref{def:input-enabledness}: \leandeclnamed{program_inputEnabled}{PLTS.ABA.Implementation.program_inputEnabled}, \leandeclnamed{network_inputEnabled}{PLTS.ABA.Implementation.network_inputEnabled}, \leandeclnamed{coin_inputEnabled}{PLTS.ABA.Implementation.coin_inputEnabled} and \leandeclnamed{systemExtended_compatible}{PLTS.ABA.Implementation.systemExtended_compatible}.
+  A guard on an output decides whether the component that outputs the label acts, and no component guards a label another component outputs.
+  The network takes each of its inputs on one unguarded transition.
+  A program takes an input its participant's transition refuses on a loop: the ABA call at a process holding an input on $\mathrm{inputLoop}$ (D36), the coin's return at a process not awaiting it on $\mathrm{retWLoop}$, and a DECIDED delivery of a payload already held from its sender on $\mathrm{decidedDeliverLoop}$.
+  An implementation must supply four things about its transitions: that they carry a label of $\mathrm{roundOwn}(j)$, that they fire only at an unreplaced program, that they are Dirac, and that they take every round delivery addressed to $j$ at an unreplaced program.
+  That is \leandecl{PLTS.ABA.Implementation.IsRoundStep}; the lemmas that determine a transition from its label consume the first three, and the input-enabledness of the program the fourth.
   The alphabet the components synchronise on is parametric in $M$ in its round multicast and its round delivery and in $E$ in its round event, a hidden synchronisation on which the network moves and sends nothing, and fixed in every other constructor, and is hidden before it leaves the composition, so two instantiations at the same protocol need not agree on it.
-  The adversary holds one thing more, the ghost, and an implementation supplies it too (D30).
-  For each round $r$ its state carries a ghost $ghost(r)$ of a type $G$ the implementation fixes.
+
+  The network's sent sets are finite maps over the rounds with an entry, read through the accessor $\mathit{sent}(r,j)$, which gives the empty set at a round with no entry.
+  The network records the rounds a correct process has started, writing $r$ at a graded-agreement call $\mathrm{callG}(r,id,b)$ with $id \notin F$, and its two outputs on a corrupted process's behalf and its round injection carry the guards $k \in F$ and $r \in \mathit{startedRounds}$ (D11, D37).
+  No transition of a program reads the started rounds.
+  The network holds one thing more, the ghost, and an implementation supplies it too (D30).
+  For each round $r$ its state carries a ghost $ghost(r)$ of a type $G$ the implementation fixes, in a finite map read through the accessor $ghost(r)$, which gives a default value at a round with no entry.
   The ghost belongs to the network: no program's transition reads it and no program's variables hold it.
   Two parameters carry it.
-  The first, $\mathrm{ghostStep}$, writes it: on every transition the ghost of the round the label names --- $\mathrm{roundOf}$ of that label --- is replaced by $\mathrm{ghostStep}$ of the label, the adversary's state and the ghost standing there, the ghosts of the other rounds are left where they stand, and a label naming no round leaves the whole ghost alone.
-  That is $\mathrm{writeGhost}$, and it sits on the successor of every transition of the adversary.
-  The second, $\mathrm{ghostOutput}$, reads it out: it is a relation between the adversary's state, the round, the process being answered, the graded outcome and a bit, and it guards the two graded-agreement return transitions, the correct $\mathrm{retG}$ and the Byzantine $\mathrm{byzantineRetG}$ at a replaced program, each of which fires only with the bound bit its label carries standing in the relation at the state before the transition.
-  An implementation that computes the announced bit writes the ghost at the first return of a round, from the sent sets and the corrupted set, reads the same ghost back at every later return of that round, and instantiates the relation as the equation between the announced bit and that ghost.
-  An implementation that leaves the announcement to the adversary instantiates the relation as the full one, and the bit is then unconstrained (Definition~\ref{def:aba-ghost-free}).
-  The content is the implementation's own, the two instantiations holding different ghosts and writing them at different transitions, which is why $G$, $\mathrm{ghostStep}$ and $\mathrm{ghostOutput}$ are parameters here as $M$, $S$ and the implementation's transitions are.
+  The first, $\mathrm{ghostStep}$, writes it: on every transition the ghost of the round the label names --- $\mathrm{roundOf}$ of that label --- is replaced by $\mathrm{ghostStep}$ of the label, the network's state and the ghost standing there, the ghosts of the other rounds are left where they stand, and a label naming no round leaves the whole ghost alone.
+  That is $\mathrm{writeGhost}$, and it sits on the successor of every transition of the network.
+  The second, $\mathrm{ghostBound}$, reads the bit the ghost of a round holds, if any.
+  The one transition whose guard reads the ghost is the announcement \leandeclnamed{announceBound}{PLTS.ABA.Implementation.NetworkStep.announceBound}, a Dirac self-loop on $\mathrm{boundG}(r,b)$ enabled exactly when $\mathrm{ghostBound}(ghost(r))$ is $b$, which may repeat (D29).
+  Each of the two implementations writes the round's bit at the round's first return and leaves it from then on, so the network announces one bit per round at every state from that return on.
+  An implementation whose ghost holds no bit never announces (Definition~\ref{def:aba-ghost-free}).
+  The content is the implementation's own, the two instantiations holding different ghosts and writing them at different transitions, which is why $G$, $\mathrm{ghostStep}$ and $\mathrm{ghostBound}$ are parameters here as $M$, $S$ and the implementation's transitions are.
   Full construction: \leandecl{PLTS.ABA.Implementation.system}.
 \end{definition}

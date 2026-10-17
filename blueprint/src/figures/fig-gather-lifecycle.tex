@@ -1,24 +1,26 @@
 % Gather specification instance (PLTS.ABA.Gather.Step). Automata style, two
 % bands separated by the dotted rule. Above, one process's entry: call records
 % the payload, commit writes val(k) once under k's own call or, once k is
-% corrupted, under any value (D26). Below, the instance: bindCore writes the
-% core once, no return is enabled before it, and every return label carries it
-% (D29). fail is omitted.
+% corrupted, under any value (D26); callLoop is enabled in every state. Below, the
+% instance: bindCore writes the core once, no return is enabled before it, a return
+% label carries the returned map alone, and announceCore announces the core on
+% core(C) at every state holding it (D29). fail is omitted.
 \begin{tikzpicture}[
     ->, >={Stealth[round]}, auto, semithick, on grid,
     every state/.style={draw, minimum size=1.3cm, align=center, font=\small},
-    lbl/.style={font=\footnotesize, align=center, fill=white, inner sep=1.5pt}]
+    lbl/.style={font=\footnotesize, align=flush center, fill=white, inner sep=1.5pt}]
   % ---- upper band: the lifecycle of one entry k
   \node[state, initial, initial text={}] (e) at (0,0.7)   {$call(k){=}\bot$};
   \node[state]                           (c) at (4.5,0.7) {$call(k){=}x$};
   \node[state]                           (w) at (9.2,0.7) {$val(k){=}v$};
   \path
     (e) edge node[lbl, above]{\texttt{call}\,$k\ x$} (c)
-    (c) edge node[lbl, above]{\texttt{commit}\,$k\ v$ $\to\tau$\\ $[\,call(k) = v\,]$} (w)
+    (c) edge node[lbl, above, text width=2.4cm]{\texttt{commit}\,$k\ v$ $\to\tau$\\ $[\,call(k) = v\,]$} (w)
     (e) edge[bend right=24] node[lbl, below, pos=0.5]
           {\texttt{commit}\,$k\ v$ $\to\tau$\ \ $[\,k \in F\,]$} (w)
-    (e) edge[loop above, looseness=6] node[lbl, above]{\texttt{callLoop}} (e)
-    (c) edge[loop above, looseness=6] node[lbl, above]{\texttt{callLoop}} (c);
+    (e) edge[loop above, looseness=6] node[lbl, above]{\texttt{callLoop}\,$k\ x$} (e)
+    (c) edge[loop above, looseness=6] node[lbl, above]{\texttt{callLoop}\,$k\ x'$} (c)
+    (w) edge[loop above, looseness=6] node[lbl, above]{\texttt{callLoop}\,$k\ x'$} (w);
   % ---- the divider; the explicit - stops it inheriting the picture's arrow tip
   \draw[dotted, -] (-1.7,-1.5) -- (11.0,-1.5);
   % ---- lower band: the instance
@@ -27,9 +29,11 @@
   \node[state]                           (b) at (6.0,-3.3) {$core{=}C$};
   \path
     (n) edge node[lbl, above]{\texttt{bindCore}\,$C$ $\to\tau$} (b)
-    (b) edge[loop right, looseness=5] node[lbl, right]{\texttt{ret}\,$id\ g\ C$} (b);
-  \node[font=\footnotesize, align=center] at (3.0,-4.6)
+    (b) edge[loop right, looseness=5] node[lbl, right, align=flush left, text width=2.9cm]
+      {\texttt{ret}\,$id\ g$\\ \texttt{announceCore}\,$C$} (b);
+  \node[font=\footnotesize, align=flush center, text width=5.4cm] at (3.0,-4.75)
     {$[\ C$'s entries are committed;\ \ $|C| \geq n{-}f\ ]$};
-  \node[font=\footnotesize, align=left, anchor=north west] at (7.5,-4.0)
-    {$[\ g$ a sub-map of $val$;\\ $C \subseteq g\ ]$};
+  \node[font=\footnotesize, align=flush left, text width=4.5cm, anchor=north west] at (7.4,-4.0)
+    {\texttt{ret}: $[\ g$ a sub-map of $val$; $C \subseteq g\ ]$\\
+     \texttt{announceCore}: on $\mathrm{core}(C)$};
 \end{tikzpicture}

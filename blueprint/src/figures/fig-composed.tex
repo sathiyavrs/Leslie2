@@ -1,61 +1,75 @@
 % The composed system and the substitution
-% (PLTS.ABA.composed, PLTS.ABA.GBCA.ByABDY.composition, PLTS.ABA.Composition.ABANetwork, PLTS.ABA.hybrid).
+% (PLTS.ABA.ABDY.composed, PLTS.ABA.GBCA.ByABDY.gbcaInstanceFamily, PLTS.ABA.GBCA.ByABDY.composition,
+% PLTS.ABA.Composition.roundLoopProgram, PLTS.ABA.Composition.ABANetwork, PLTS.ABA.hybrid).
+% Each component lists the labels it outputs; every other label is an input of the component,
+% taken at every state.
 \begin{tikzpicture}[
     >={Stealth[round]}, semithick,
-    prog/.style={draw, rounded corners, align=center, font=\scriptsize,
-      minimum width=1.6cm, minimum height=0.9cm, inner sep=2pt},
-    comp/.style={draw, rounded corners, align=center, font=\scriptsize,
-      minimum width=4.5cm, minimum height=1.0cm, text width=4.2cm, inner sep=3pt},
+    prog/.style={draw, rounded corners, align=flush center, font=\scriptsize,
+      minimum width=1.6cm, minimum height=0.9cm, text width=1.4cm, inner sep=2pt},
+    comp/.style={draw, rounded corners, align=flush left, font=\scriptsize,
+      text width=4.4cm, inner sep=3pt},
     lbl/.style={font=\scriptsize, fill=white, inner sep=1.5pt},
     ann/.style={font=\scriptsize, align=center, inner sep=1.5pt}]
-  % the outer hiding: the sub-protocol API hidden
-  \draw[dashed, rounded corners] (-1.1,-3.45) rectangle (11.3,3.9);
+  % the outer hiding: the sub-protocol interface hidden
+  \draw[dashed, rounded corners] (-1.1,-5.4) rectangle (11.3,3.9);
   \node[font=\footnotesize] at (8.6,3.6) {$\mathrm{abstract}\,\mathrm{hiddenAPI}$};
   % the inner hiding: the network events hidden
-  \draw[dashed, rounded corners] (-0.8,-3.2) rectangle (10.9,3.15);
+  \draw[dashed, rounded corners] (-0.8,-5.15) rectangle (10.9,3.15);
   \node[font=\footnotesize] at (7.6,2.87)
     {$\mathrm{relabel} \circ \mathrm{abstract}\,\mathrm{networkEventLabels}$};
   % the shared bus
   \draw[thick] (-0.5,2.3) -- (10.6,2.3);
   \node[ann, anchor=west] at (-0.55,2.6) {$\mathrm{ExtendedLabel}(n)$: every component steps};
   \draw[->] (10.6,2.3) -- (11.1,2.3) -- (11.1,4.1);
-  \node[ann, anchor=north east] at (11.25,4.55)
+  \node[ann, anchor=north east, text width=2.0cm, align=flush right] at (11.25,4.55)
     {visible $\mathrm{callABA}$,\\ $\mathrm{retABA}$, $\mathrm{fail}$};
-  % ---- component 1: the round instance, drawn open
-  \draw[dashed, rounded corners] (-0.4,-2.1) rectangle (5.5,1.6);
-  \node[font=\scriptsize, align=center] at (2.55,1.22)
-    {$\mathrm{composition}(P,r)$:\\ $\mathrm{relabel} \circ \mathrm{abstract}\,\mathrm{GBCAEvent}(n)$};
-  \node[prog] (s1) at (0.55,0.5) {GBCA\\ program $1$};
-  \node[prog] (sj) at (2.55,0.5) {GBCA\\ program $j$};
-  \node[prog] (sn) at (4.55,0.5) {GBCA\\ program $n$};
-  \node[font=\scriptsize] at (1.55,0.5) {$\cdots$};
-  \node[font=\scriptsize] at (3.55,0.5) {$\cdots$};
-  \node[draw, rounded corners, align=center, font=\scriptsize, inner sep=4pt,
-    minimum width=5.0cm, minimum height=0.8cm, anchor=north] (fab) at (2.55,-0.95)
-    {the round's network:\\ $sent(j)$, $F$, the round's bound bit (D29)};
-  \foreach \x in {0.55,2.55,4.55} \draw[<->] (\x,0.05) -- (\x,-0.95);
-  \node[ann, fill=white] at (2.55,-0.45)
+  % ---- component 1: the family of round instances, one instance drawn open
+  \draw[rounded corners] (-0.45,-4.9) rectangle (5.55,1.6);
+  \draw[dashed, rounded corners] (-0.3,-3.35) rectangle (5.4,1.0);
+  \node[font=\scriptsize, align=center] at (2.55,1.3)
+    {$\mathrm{gbcaInstanceFamily}(P)$, at round $r$:};
+  \node[font=\scriptsize, align=center] at (2.55,0.7)
+    {$\mathrm{composition}(P,r)$, $\mathrm{GBCAEvent}(n)$ hidden};
+  \node[prog] (s1) at (0.55,-0.05) {GBCA\\ program $1$};
+  \node[prog] (sj) at (2.55,-0.05) {GBCA\\ program $j$};
+  \node[prog] (sn) at (4.55,-0.05) {GBCA\\ program $n$};
+  \node[font=\scriptsize] at (1.55,-0.05) {$\cdots$};
+  \node[font=\scriptsize] at (3.55,-0.05) {$\cdots$};
+  \node[draw, rounded corners, align=flush left, font=\scriptsize, inner sep=3pt,
+    text width=5.2cm, anchor=north] (fab) at (2.55,-1.25)
+    {the round's network: $sent(j)$, $F$, $bound$\\
+     outputs $\mathrm{deliver}$;\\
+     $\mathrm{boundG}(r,b)$ under $bound = b$\\
+     silent: $\mathrm{byzantineGBCA}$ under $k \in F$\\
+     $\mathrm{retG}$ writes $bound$ at the first return};
+  \foreach \x in {0.55,2.55,4.55} \draw[<->] (\x,-0.5) -- (\x,-1.25);
+  \node[ann, fill=white] at (2.55,-0.88)
     {$\mathrm{send}(j,m)$, $\mathrm{deliver}(i,j,m) \to \tau$};
+  \node[font=\scriptsize, align=flush left, text width=5.6cm, anchor=north west] at (-0.3,-3.45)
+    {$\mathrm{InstanceFamilyState}$: the recorded broadcasts and a finite map of the rounds
+     touched; an untouched round reads the initial instance under the recorded broadcasts};
   \draw[->] (0.6,2.3) -- (0.6,1.6);
-  \node[ann, anchor=west, align=left] at (0.75,1.95)
-    {$\mathrm{callG}\,r$, $\mathrm{retG}\,r$,\\ round $r$'s Byzantine calls and returns};
-  \node[ann] at (2.55,-2.45)
-    {one instance per round $r \in \mathbb{N}$; $\mathrm{fail}$ broadcast to all};
+  \node[ann, anchor=west, align=flush left, text width=4.6cm] at (0.75,1.95)
+    {$\mathrm{callG}\,r$, $\mathrm{retG}\,r$, $\mathrm{boundG}\,r$,\\ $\mathrm{byzantineCallG}\,r$ to round $r$};
   % ---- components 2 to 4
-  \node[comp] (cores) at (8.55,1.1)
-    {the $n$ round loops\\ $\mathrm{synchronisedProduct}_{j}$\\ $\mathrm{roundLoopProgram}(P,j)$};
-  \node[comp] (anet) at (8.55,-0.7)
-    {$\mathrm{ABANetwork}(P)$: sent sets $decidedSent(j)$,\\
-     corrupted set $F$ with $|F| < f$,\\
-     the guard $k \in F$ of every Byzantine call and return};
-  \node[comp] (w) at (8.55,-2.5)
-    {$\mathrm{WCC.specFamily}(P)$ along $\mathrm{coinLabelMap}$\\
-     the one non-Dirac component};
-  \foreach \y in {1.1,-0.7,-2.5} \draw[<->] (5.95,2.3) -- (5.95,\y) -- (6.3,\y);
+  \node[comp, anchor=north west] (cores) at (6.2,1.75)
+    {the $n$ round loops\\ $\mathrm{synchronisedProduct}_{j}$\\ $\mathrm{roundLoopProgram}(P,j)$\\
+     outputs $\mathrm{callG}$, $\mathrm{callW}$, $\mathrm{decidedSend}$,\\
+     $\mathrm{decidedRelay}$ and $\mathrm{retABA}$ at $j$};
+  \node[comp, anchor=north west] (anet) at (6.2,-0.25)
+    {$\mathrm{ABANetwork}(P)$: $decidedSent(j)$,\\ $F$, $startedRounds$\\
+     outputs $\mathrm{decidedDeliver}$;\\ $\mathrm{fail}$ under $k \notin F$, $|F| < f$;\\
+     $\mathrm{byzantineCallG}$, $\mathrm{byzantineCallW}$\\ under $k \in F$, $r \in startedRounds$\\
+     silent: $\mathrm{byzantineDecided}$ under $k \in F$};
+  \node[comp, anchor=north west] (w) at (6.2,-3.05)
+    {$\mathrm{WCC.specFamily}(P)$\\ along $\mathrm{coinLabelMap}$\\
+     outputs $\mathrm{retW}$; the one non-Dirac component};
+  \foreach \c in {cores,anet,w} \draw[<->] (5.95,2.3) |- (\c.west);
   % ---- the substitution
-  \node[comp, minimum width=5.2cm] (spec) at (2.55,-4.45)
-    {$\mathrm{gbcaSpecificationFamily}(P)$: the round specifications};
-  \draw[->, dashed] (2.55,-3.45) -- (2.55,-3.95);
-  \node[lbl, anchor=west, align=left] at (2.8,-3.7)
+  \node[draw, rounded corners, font=\scriptsize, minimum width=5.2cm, minimum height=0.9cm]
+    (specification) at (2.55,-6.45) {$\mathrm{gbcaSpecificationFamily}(P)$: the round specifications};
+  \draw[->, dashed] (2.55,-5.4) -- (specification.north);
+  \node[lbl, anchor=west, align=left] at (2.8,-5.65)
     {this component alone is replaced};
 \end{tikzpicture}

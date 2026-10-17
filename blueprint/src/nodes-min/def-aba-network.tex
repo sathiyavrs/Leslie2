@@ -1,7 +1,7 @@
 \begin{definition}[The network]
   \label{def:aba-network}
-  \lean{PLTS.ABA.ABDY.NetworkState}\lean{PLTS.ABA.ABDY.NetworkState.corrupt}\lean{PLTS.ABA.ABDY.abdyGhostStep}\lean{PLTS.ABA.ABDY.abdyGhostOutput}\lean{PLTS.ABA.ABDY.NetworkStep}\lean{PLTS.ABA.ABDY.network}\leanok
+  \lean{PLTS.ABA.ABDY.NetworkState}\lean{PLTS.ABA.ABDY.NetworkState.corrupt}\lean{PLTS.ABA.ABDY.abdyGhostStep}\lean{PLTS.ABA.Implementation.NetworkStep.announceBound}\lean{PLTS.ABA.ABDY.NetworkStep}\lean{PLTS.ABA.ABDY.network}\leanok
   \uses{def:aba-programs, def:aba-labels, def:aba-parameters}
-  The one local state holding what no process may see: the per-sender sent sets of the round messages and of the DECIDED payloads, and the corrupted set with its budget, which guards its $\mathrm{fail}$ transition (D1) and authorises the five Byzantine call and return transitions (D11), the two injections and the Byzantine return $\mathrm{retByzantine}$ (D23): \leandecl{PLTS.ABA.ABDY.network}.
-  Its ghost for a round is one bit, the round's bound bit: a return records the bit its own label announces where the round holds none, and the two return transitions fire only with that bit equal to \leandecl{PLTS.ABA.ABDY.abdyGhostOutput}, which is the bit the round holds or \leandecl{PLTS.ABA.GBCA.ByABDY.boundOf} of the round's messages (D29, D30).
+  The one local state holding what no process may see: the per-sender sent sets of the round messages and of the DECIDED payloads, the corrupted set with its budget, which guards its $\mathrm{fail}$ transition (D1), and the rounds a correct process has started, which with $k \in F$ guard its two outputs on a corrupted process's behalf and its round injection (D11, D37): \leandecl{PLTS.ABA.ABDY.network}.
+  Its ghost for a round is one bit, the round's bound bit: the round's first return records \leandecl{PLTS.ABA.GBCA.ByABDY.boundOf} of the round's messages, a later return leaves it, and the network announces the bit it holds by \leandeclnamed{announceBound}{PLTS.ABA.Implementation.NetworkStep.announceBound}, its read of the ghost being the identity (D29, D30).
 \end{definition}

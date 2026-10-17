@@ -1,6 +1,6 @@
 \begin{definition}[The gather-based protocol]
   \label{def:aba-afw-protocol}
-  \lean{PLTS.ABA.AFW.Message}\lean{PLTS.ABA.AFW.RoundEvent}\lean{PLTS.ABA.AFW.RoundVariables}\lean{PLTS.ABA.AFW.RoundStep}\lean{PLTS.ABA.AFW.Ghost}\lean{PLTS.ABA.AFW.firstGatherOf}\lean{PLTS.ABA.AFW.secondGatherOf}\lean{PLTS.ABA.AFW.ghostStep}\lean{PLTS.ABA.AFW.ghostOutput}\lean{PLTS.ABA.AFW.protocolExtended}\lean{PLTS.ABA.AFW.protocolHidden}\lean{PLTS.ABA.AFW.protocol}\leanok
+  \lean{PLTS.ABA.AFW.Message}\lean{PLTS.ABA.AFW.RoundEvent}\lean{PLTS.ABA.AFW.RoundVariables}\lean{PLTS.ABA.AFW.RoundStep}\lean{PLTS.ABA.AFW.Ghost}\lean{PLTS.ABA.AFW.firstGatherOf}\lean{PLTS.ABA.AFW.secondGatherOf}\lean{PLTS.ABA.AFW.ghostStep}\lean{PLTS.ABA.AFW.ghostBound}\lean{PLTS.ABA.AFW.protocolExtended}\lean{PLTS.ABA.AFW.protocolHidden}\lean{PLTS.ABA.AFW.protocol}\leanok
   \uses{def:aba-implementation, def:aba-round-over-bracha, def:aba-gather-over-bracha, def:aba-gather-core}
   The implementation of Definition~\ref{def:aba-implementation} at the gather-based implementation, supplying the four things it requires: the tagged message type, the round's own events, the round variables and the round's transitions.
   The message type is tagged: a round of that implementation carries $2n+2$ network states --- one for each gather instance and one for each of the $2n$ Bracha instances --- and the tag names the network state a message belongs to, and for a Bracha message the instance, whose index is its leader.
@@ -11,13 +11,16 @@
   The transitions are those of the programs of $\mathrm{GBCA.ByAFW.roundOverBracha}$, its graded-agreement programs ($\mathrm{GBCA.ByAFW.ProgramStep}$), its gather programs ($\mathrm{Gather.ProgramStep}$) and the Bracha programs beneath them ($\mathrm{BRB.ProgramStep}$), written over the tagged message type, each the process's half of a step whose network half is a transition of the adversary: a send writes the sender's own variables and the network records the message, and a delivery files the message in the receiver's own local state, dispatched on the tag.
   Every call and every return of a sub-protocol is a transition of its own, as they are in the composed system.
   The call of a broadcast instance records the payload as the leader's input and sends nothing, and the leader's multicast of $\langle\mathrm{INIT}, x\rangle$ is a send of its own that follows the call.
+  The round's call label carries two transitions, the call recording the estimate as the first gather's input at a round whose first gather holds none and $\mathrm{callGLoop}$ moving the round loop alone at a round whose first gather holds one, as $\mathrm{input}$ and $\mathrm{inputLoop}$ take the ABA call (D36); a terminated program takes a round delivery on $\mathrm{deliverLoop}$ (D22).
   The ghost of a round is $\mathrm{Ghost}(n)$, the first gather's core, the second gather's core and the round's bound bit, each written once (D29, D30).
   $\mathrm{ghostStep}$ writes it.
-  The first gather's return writes the first core at $\mathrm{coreOf}$ of the round's first gather network state and the bound bit at $\mathrm{boundOfCore}$ of that core; the second gather's return writes the second core the same way, and so does a Byzantine graded return, at a process whose program has been replaced; every other label leaves the ghost where it stands.
-  The network state $\mathrm{coreOf}$ is read on is $\mathrm{firstGatherOf}$, the projection of the adversary's tagged sent sets onto the first gather beside its corrupted set, and $\mathrm{secondGatherOf}$ is the second's.
-  $\mathrm{coreOf}$ reads the sent sets and the corrupted set alone, which is what lets the adversary compute a core from its own state.
-  $\mathrm{ghostOutput}$ reads the bit back, and the two graded-agreement return transitions fire only with the bit their label carries equal to it.
-  It is total: where the ghost holds no bit it computes one from the first gather's core, and on a reachable state the returner's own first gather return has already written the bit.
-  The adversary needs no transitions beyond those of Definition~\ref{def:aba-implementation}: recording a multicast, checking a delivery and authorising a Byzantine call or return are the same at every message type.
+  The round's first $\mathrm{firstGatherReturn}$ event writes the first core at $\mathrm{coreOf}$ of the round's first gather network state, and the first $\mathrm{secondGatherReturn}$ event writes the second core the same way.
+  The round's first return $\mathrm{retG}$ writes the bit $\mathrm{boundOfCore}$ of the recorded first core; a process returns only after its own first gather has returned, so the core is recorded then, and a replaced program takes no transition on $\mathrm{retG}$, so that return is a return at an unreplaced program.
+  Every other label leaves the ghost where it stands.
+  The network state $\mathrm{coreOf}$ is read on is $\mathrm{firstGatherOf}$, the projection of the network's tagged sent sets onto the first gather beside its corrupted set, and $\mathrm{secondGatherOf}$ is the second's.
+  $\mathrm{coreOf}$ reads the sent sets and the corrupted set alone, which is what lets the network compute a core from its own state.
+  $\mathrm{ghostBound}$ reads the bit, and the network's announcement $\mathrm{boundG}(r,b)$ is enabled exactly when the round's ghost holds $b$, from the round's first return on.
+  The return label carries the graded outcome alone, and no program reads the ghost.
+  The network needs no transitions beyond those of Definition~\ref{def:aba-implementation}: recording a multicast, checking a delivery, recording a started round and outputting a corrupted process's call are the same at every message type.
   Full construction: \leandecl{PLTS.ABA.AFW.protocol}.
 \end{definition}

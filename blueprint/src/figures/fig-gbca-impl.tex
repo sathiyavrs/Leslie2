@@ -1,40 +1,48 @@
 % The round's graded-agreement composition (PLTS.ABA.GBCA.ByABDY.composition). Round automaton,
 % ABDY22 Algorithm 6 in full (D18): five message levels, the returns reading
-% ECHO5 quorums with f+1 BIND v as the grade-1 witness. Each return announces
-% the round's bound bit bnd, the bit the round holds or, where it holds none, the bit its
-% own outcome computes.
+% ECHO5 quorums with f+1 BIND v as the grade-1 witness. A return carries the
+% outcome alone; the round's network writes the field bound at the round's first
+% return and announces it on boundG (GBCANetworkStep.retG, GBCANetworkStep.announceBound).
 \begin{tikzpicture}[
     ->, >={Stealth[round]}, auto, semithick, on grid,
     every state/.style={draw, ellipse, minimum width=1.7cm, minimum height=0.9cm,
       inner sep=1pt, align=center, font=\small},
     ret/.style={draw, rounded corners, minimum width=1.5cm, minimum height=0.7cm,
-      align=center, font=\footnotesize, inner sep=2pt},
+      text width=2.3cm, align=flush center, font=\footnotesize, inner sep=2pt},
     lbl/.style={font=\scriptsize, fill=white, inner sep=1.2pt}]
-  \node[state, initial, initial text={}] (inp) at (0,0)    {INPUT\,$b$};
-  \node[state] (ech) at (3.0,0)  {ECHO\,$b$};
-  \node[state] (vot) at (6.0,0)  {VOTE\,$v$};
-  \node[state] (bnd) at (9.0,0)  {BIND\,$v$};
-  \node[state] (sea) at (9.0,-2.2) {ECHO5\,$v$};
-  \node[ret]   (ra)  at (11.3,-0.6)
-    {ret\,$(b,2)$\\[1pt]{\scriptsize $n{-}f$ ECHO5\,$b$}\\[1pt]{\scriptsize $bnd = b$}};
-  \node[ret]   (rb)  at (11.3,-2.2)
-    {ret\,$(b,1)$\\[1pt]{\scriptsize $f{+}1$ BIND\,$b$}\\[1pt]{\scriptsize $bnd = b$}};
-  \node[ret]   (rc)  at (11.3,-3.8)
-    {ret\,$(\bot,0)$\\[1pt]{\scriptsize $n{-}f$ ECHO5\,$\bot$}\\[1pt]{\scriptsize $bnd$ from the sent sets}};
+  \node[state, initial, initial text={\texttt{call}}] (inp) at (0,0) {INPUT\,$b$};
+  \node[state] (ech) at (2.6,0)  {ECHO\,$b$};
+  \node[state] (vot) at (5.2,0)  {VOTE\,$v$};
+  \node[state] (bind) at (7.8,0) {BIND\,$v$};
+  \node[state] (sea) at (7.8,-2.2) {ECHO5\,$v$};
+  \node[ret]   (ra)  at (10.2,-0.6)
+    {\texttt{retGrade2}: $(b,2)$\\[1pt]{\scriptsize $n{-}f$ ECHO5\,$b$}};
+  \node[ret]   (rb)  at (10.2,-2.2)
+    {\texttt{retGrade1}: $(b,1)$\\[1pt]{\scriptsize $f{+}1$ BIND\,$b$}};
+  \node[ret]   (rc)  at (10.2,-3.8)
+    {\texttt{retGrade0}: $(\bot,0)$\\[1pt]{\scriptsize $n{-}f$ ECHO5\,$\bot$}};
   \path
     (inp) edge node[lbl, above]{$n{-}f$} (ech)
     (ech) edge node[lbl, above]{$n{-}f$} (vot)
-    (vot) edge node[lbl, above]{$n{-}f$} (bnd)
-    (bnd) edge node[lbl, right]{$n{-}f$} (sea)
+    (vot) edge node[lbl, above]{$n{-}f$} (bind)
+    (bind) edge node[lbl, right]{$n{-}f$} (sea)
     (inp) edge[loop above, looseness=5]
       node[lbl, above]{relay $f{+}1$} (inp)
     (sea) edge (ra)
     (sea) edge (rb)
     (sea) edge (rc);
-  % D5 network node, below the message row
-  \node[draw, dashed, rounded corners, align=left, font=\footnotesize,
-        minimum width=8.2cm, inner sep=5pt] (net) at (3.4,-3.4)
-    {\textbf{D5 network} (per-sender sent/received sets):\ \ adversary $\mathrm{deliver}$,\ \ byzantine inject $j\in F$\\
-     the round's bound bit: a ghost, written at the first return (D29)};
-  \draw[dotted, ->] (net.north) -- (vot.south);
+  % the round's network (D5), below the message row
+  \node[draw, dashed, rounded corners, align=flush left, font=\scriptsize,
+        text width=7.6cm, inner sep=4pt, anchor=north west] (network) at (-1.3,-1.55)
+    {\textbf{the round's network} (D5): per-sender sent sets, $F$, $bound$\\
+     outputs $\mathrm{deliver}$ of a sent message;\\
+     $\mathrm{boundG}(r,b)$ under $bound = b$ (\texttt{announceBound}, D29)\\
+     silent: $\mathrm{byzantineGBCA}$ under $k \in F$\\
+     the first return writes $bound$ from the sent sets, $F$ and the outcome};
+  \draw[dotted, ->] (network.north -| vot) -- (vot.south);
+  \node[font=\scriptsize, align=flush left, text width=7.6cm, anchor=north west]
+    at ([yshift=-3pt]network.south west)
+    {a call is taken on \texttt{call} at a process holding no input and on
+     \texttt{callLoop} at one holding an input, a corrupted process's call on
+     \texttt{byzantineCall} and \texttt{byzantineCallLoop}};
 \end{tikzpicture}

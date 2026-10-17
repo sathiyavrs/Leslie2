@@ -3,11 +3,14 @@
   \lean{PLTS.ABA.GBCA.ByAFW.NetworkStep}\lean{PLTS.ABA.GBCA.ByAFW.GBCANetwork}\leanok
   \uses{def:aba-gather-spec, def:aba-labels}
   The network component of a gather-based round.
-  It exchanges no messages: the two gathers carry every message of the round inside their own networks, and what is left at the round's programs is the round's bound bit, which is the whole state of this component.
-  Three clauses give its transitions.
-  The first gather's return to a process writes the bit where the component holds none, as $\mathrm{boundOfCore}$ of the core that return carries, and leaves it alone where it holds one.
-  A graded return fires only with the bit its label carries equal to the bit the round holds, and moves nothing; where the round holds no bit the guard reads $\mathrm{boundOfCore}$ of the empty set.
-  Every other label leaves the component unchanged, corruption included: the corrupted set is held by the gather instances and in the ABA network, not here.
-  No program reads the bit and no transition of a program is guarded by it, so it is auxiliary state in the sense of~\cite{AL91} (D29), and the round announces it on every graded return.
+  It exchanges no messages: the two gathers carry every message of the round inside their own networks, and its state is the first gather's core it has recorded and whether the round has returned.
+  Four clauses give its transitions.
+  The first gather's announcement of its core, the round event $\mathrm{firstGatherCore}(C)$, records $C$ where the component holds no core and leaves the recorded core where it holds one.
+  The round's return $\mathrm{retG}(r,id,out)$ records that the round has returned.
+  The announcement \leandeclnamed{announceBound}{PLTS.ABA.GBCA.ByAFW.NetworkStep.announceBound} fires on $\mathrm{boundG}(r,\mathrm{boundOfCore}(C))$ once a core $C$ is recorded and the round has returned, a self-loop that may repeat.
+  Every other label of the round's interface moves nothing, the calls and the gathers' returns included.
+  Corruption has no image in the alphabet of the round's programs and network, so it leaves the component unchanged; the corrupted set is held by the gather instances and by the ABA network.
+  Inside the round the first gather's announcement and the round's first return occur in either order, and the announcement waits for both.
+  No program reads the state and no transition of a program is guarded by it, so it is auxiliary state in the sense of~\cite{AL91} (D29).
   Full construction: \leandecl{PLTS.ABA.GBCA.ByAFW.GBCANetwork}.
 \end{definition}

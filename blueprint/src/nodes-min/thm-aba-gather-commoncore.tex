@@ -2,7 +2,7 @@
   \label{thm:aba-gather-commoncore}
   \lean{PLTS.ABA.Gather.CoreTrace}\lean{PLTS.ABA.Gather.specInst_core}\lean{PLTS.ABA.Gather.instanceOverBroadcastSpecification_core}\lean{PLTS.ABA.Gather.instanceOverBracha_core}\leanok
   \uses{def:aba-gather-spec, def:aba-gather-over-broadcast-specification, def:aba-gather-over-bracha, thm:gather-core, thm:gather-broadcast-substitution, thm:trace-support}
-  Every trace of positive probability of the gather specification instance satisfies $\mathrm{CoreTrace}$: all its return labels carry one and the same payload set, that set has at least $n-f$ entries, and each returned map has every entry of it (\leandecl{PLTS.ABA.Gather.CoreTrace}, \leandecl{PLTS.ABA.Gather.specInst_core}).
+  Every trace of positive probability of the gather specification instance satisfies $\mathrm{CoreTrace}$: all its announcements $\mathrm{core}(C)$ name one and the same payload set, that set has at least $n-f$ entries, and each map the trace returns has every entry of it (\leandecl{PLTS.ABA.Gather.CoreTrace}, \leandecl{PLTS.ABA.Gather.specInst_core}).
   Both implementations inherit it along their refinements: \leandecl{PLTS.ABA.Gather.instanceOverBroadcastSpecification_core} and \leandecl{PLTS.ABA.Gather.instanceOverBracha_core}.
 \end{theorem}
 

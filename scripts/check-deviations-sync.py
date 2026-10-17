@@ -13,7 +13,7 @@ second copy of the registry, so nothing but this check keeps them in step. It
 asserts, per file, that the table rows equal the entries in order, that every
 entry carries exactly its edition's fields with non-empty arguments, that the
 environment holds entries alone and no blank line, and that the entry labels
-and the closing sentence's labels cover D1 to D36 exactly; across the files, it
+and the closing sentence's labels cover D1 to D37 exactly; across the files, it
 asserts that the labels and headlines agree and that the \\following field of
 every entry reads the same in both, the \\reason being the field whose length
 the editions may differ in.
@@ -33,7 +33,7 @@ FULL = os.path.join(REPO, 'blueprint', 'src', 'deviations-full.tex')
 FIELDS = {DEFAULT: ['departure', 'reason', 'following'],
           FULL: ['departure', 'reason', 'following']}
 LABEL = re.compile(r"D\d+|D12\$'\$")
-LABEL_RANGE = range(1, 37)
+LABEL_RANGE = range(1, 38)
 BEGIN = r'\begin{deviations}'
 END = r'\end{deviations}'
 ENTRY = re.compile(r'\\deviation(?![A-Za-z])')
@@ -207,8 +207,8 @@ def check_file(path, drifts):
     if 12 not in covered:
         covered.append(12)
     if sorted(covered) != list(LABEL_RANGE):
-        drifts.append('%s: entry labels, D12 and the labels not in use cover %s, not D1 to D36'
-                      % (name, sorted(covered)))
+        drifts.append('%s: entry labels, D12 and the labels not in use cover %s, not D%d to D%d'
+                      % (name, sorted(covered), LABEL_RANGE.start, LABEL_RANGE.stop - 1))
     return found
 
 

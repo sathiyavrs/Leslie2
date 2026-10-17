@@ -1,9 +1,16 @@
 \begin{definition}[Idle padding and instance families]
   \label{def:idle-family}
-  \lean{PLTS.System.withIdle}\lean{PLTS.System.family}\leanok
+  \lean{PLTS.System.withIdle}\lean{PLTS.InstanceFamilyState}\lean{PLTS.InstanceFamilyState.applyBroadcast}\lean{PLTS.System.family}\leanok
   \uses{def:process-algebra}
   Idle self-loops on the labels a component does not own make the full synchronisation of Definition~\ref{def:process-algebra} emulate sync-set composition.
-  The $\mathbb{N}$-indexed instance family moves one instance per owned or silent label, broadcasts corruption to all instances, and idles otherwise.
+  The $\mathbb{N}$-indexed family of instances $inst(r)$ runs on the state \leandecl{PLTS.InstanceFamilyState}, which holds the broadcast labels applied so far and a finite map of the instances the family has touched.
+  A round outside the map is untouched and reads as the initial instance under the recorded broadcasts, \leandecl{PLTS.InstanceFamilyState.untouchedInstance}, so a round first touched after a corruption starts from the initial instance with that corruption applied.
+  The family has four kinds of transition.
+  On $\tau$ the instance at one round of the map moves.
+  On a label a round owns the instance at that round moves, in the map or not, and the round enters the map.
+  On a broadcast label the broadcast is recorded and its action applied to every instance of the map, \leandecl{PLTS.InstanceFamilyState.applyBroadcast}, so the action reaches every round.
+  On every other label the family idles.
+  The silent transitions range over the rounds of the map, which are finitely many at every state.
   Full construction: \leandecl{PLTS.System.withIdle} and \leandecl{PLTS.System.family}.
   Families of LTS instances are LTS.\lean{PLTS.System.family_isLTS}\leanok
 \end{definition}

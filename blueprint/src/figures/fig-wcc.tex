@@ -18,10 +18,10 @@
     (b1)  edge[loop right, looseness=6] node[lbl, right]{\texttt{ret}\,$1$ (common)} (b1)
     (b0)  edge[loop right, looseness=6] node[lbl, right]{\texttt{ret}\,$0$ (common)} (b0)
     (top) edge[loop right, looseness=6]
-      node[lbl, right, align=left, text width=2.1cm]{\texttt{ret}\,$b$\\ (adv.-chosen)} (top);
+      node[lbl, right, align=flush left, text width=2.9cm]{\texttt{ret}\,$b$\\ (adversary-chosen)} (top);
   \node[right=0.55cm of undelivered, font=\footnotesize, align=left]
     {no \texttt{ret} enabled};
-  \node[font=\footnotesize, align=left, text width=3.8cm] at (0.2,-3.3)
+  \node[font=\footnotesize, align=flush left, text width=3.8cm] at (0.2,-3.3)
     {\texttt{resolve} is a silent transition, enabled at $val{=}\bot$
      once the callers number more than $f$};
 \end{tikzpicture}

@@ -1,6 +1,7 @@
 \begin{definition}[Idle padding and instance families]
   \label{def:idle-family}
-  \lean{PLTS.System.withIdle}\lean{PLTS.System.family}\leanok
+  \lean{PLTS.System.withIdle}\lean{PLTS.InstanceFamilyState}\lean{PLTS.InstanceFamilyState.applyBroadcast}\lean{PLTS.System.family}\leanok
   \uses{def:process-algebra}
-  Idle self-loops on the labels a component does not own make full synchronisation emulate sync-set composition, and the $\mathbb{N}$-indexed instance family moves one instance per owned or silent label, broadcasts corruption to all of them, and idles otherwise: \leandecl{PLTS.System.withIdle} and \leandecl{PLTS.System.family}.
+  Idle self-loops on the labels a component does not own make full synchronisation emulate sync-set composition: \leandecl{PLTS.System.withIdle}.
+  The $\mathbb{N}$-indexed instance family runs on a state that records the broadcasts applied and a finite map of the instances it has touched, a round outside the map reading as the initial instance under the recorded broadcasts; it moves one instance per owned label, and per silent label at a round of its map, applies a broadcast to every instance, and idles otherwise: \leandecl{PLTS.InstanceFamilyState} and \leandecl{PLTS.System.family}.
 \end{definition}

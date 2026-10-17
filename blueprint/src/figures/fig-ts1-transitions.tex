@@ -9,19 +9,21 @@
     every state/.style={draw, rectangle, rounded corners, minimum size=1.15cm,
       align=center, font=\small, inner sep=4pt},
     branch/.style={circle, draw, fill, inner sep=1.6pt},
-    lbl/.style={font=\footnotesize, align=center, fill=white, inner sep=1.5pt},
+    lbl/.style={font=\footnotesize, align=flush center, fill=white, inner sep=1.5pt},
     plbl/.style={font=\footnotesize, align=center, fill=white, inner sep=1.5pt}]
 
-  \node[state, initial, initial text={}] (idl) at (0,0)      {$flipEnabled$\\$val{=}\bot$};
+  \node[state, initial, initial text={}, text width=1.9cm, align=flush center] (idl) at (0,0)
+    {$flipEnabled$\\$val{=}\bot$};
   \node[branch]                          (br)  at (3.9,0)    {};
   \node[state]                           (dea) at (7.4,2.0)  {$noTransitionEnabled$};
   \node[state]                           (loc) at (7.4,-2.0) {$decisionEnabled$};
-  \node[state, accepting]                (dec) at (3.9,-4.5) {$flipEnabled$\\$val$ set};
+  \node[state, accepting, text width=1.9cm, align=flush center] (dec) at (3.9,-4.5)
+    {$flipEnabled$\\$val$ set};
 
   % self-loops
   \path
     (idl) edge[loop above, looseness=5]
-      node[lbl, above]{1 \texttt{callSet}\\2 \texttt{callLoop}} (idl)
+      node[lbl, above, text width=1.9cm]{1 \texttt{callSet}\\2 \texttt{callLoop}} (idl)
     (dec) edge[loop below, looseness=5]
       node[lbl, below]{5 \texttt{ret}} (dec);
 

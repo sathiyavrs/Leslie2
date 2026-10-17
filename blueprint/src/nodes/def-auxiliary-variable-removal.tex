@@ -1,23 +1,26 @@
 \begin{definition}[Auxiliary-variable removal]
   \label{def:auxiliary-variable-removal}
-  \lean{PLTS.AuxiliaryVariableRemoval}\lean{PLTS.System.LabelSaturated}\lean{PLTS.SeparatesSilent}\lean{PLTS.AuxiliaryVariableRemoval.achievableTraceDists_eq}\leanok
+  \lean{PLTS.AuxiliaryVariableRemoval}\lean{PLTS.System.LabelSaturated}\lean{PLTS.System.IdleOn}\lean{PLTS.SeparatesSilent}\lean{PLTS.AuxiliaryVariableRemoval.achievableTraceDists_eq}\leanok
   \uses{def:forwardsim, def:achievable, def:strongfunctional, thm:forward-sound}
-  Let $sys_A$ and $sys_0$ be systems over one alphabet, let $\pi : State_A \to State_0$ be a map on states and let $\varphi : Label \to Label$ be a map on labels.
-  An \emph{auxiliary-variable removal} of $sys_A$ onto $sys_0$ along $\pi$ and $\varphi$ is the conjunction of three conditions.
+  Let $sys_A$ and $sys_0$ be systems over one alphabet, let $\pi : State_A \to State_0$ be a map on states, let $\varphi : Label \to Label$ be a map on labels and let $K$ be a set of labels.
+  An \emph{auxiliary-variable removal} of $sys_A$ onto $sys_0$ along $\pi$, $\varphi$ and $K$ is the conjunction of five conditions.
   The first is that $\pi$ carries $sys_A.init$ to $sys_0.init$.
   The second is that $\varphi$ separates the silent label: $\varphi\,l = \varphi\,\tau$ holds only at $l = \tau$, so no external label carries the $\varphi$-image of $\tau$.
-  The third is a pair of clauses on transitions: every transition $s \xrightarrow{l} \mu$ of $sys_A$ is a transition $\pi\,s \xrightarrow{l} \mu.\mathrm{map}\,\pi$ of $sys_0$ on the same label, and every transition $\pi\,s \xrightarrow{l} \mu$ of $sys_0$ is met by a transition $s \xrightarrow{l'} \nu$ of $sys_A$ with $\varphi\,l' = \varphi\,l$ and $\mu = \nu.\mathrm{map}\,\pi$.
-  The component $\pi$ deletes therefore neither blocks a step nor adds one.
+  The third is that a transition $s \xrightarrow{l} \mu$ of $sys_A$ with $l \in K$ leaves the projection where it stands, $\mu.\mathrm{map}\,\pi = \delta_{\pi s}$.
+  The fourth is that a transition $s \xrightarrow{l} \mu$ of $sys_A$ with $l \notin K$ is a transition $\pi\,s \xrightarrow{l} \mu.\mathrm{map}\,\pi$ of $sys_0$ on the same label, or is silent and leaves the projection where it stands.
+  The fifth is that every transition $\pi\,s \xrightarrow{l} \mu$ of $sys_0$ is met by a transition $s \xrightarrow{l'} \nu$ of $sys_A$ with $\varphi\,l' = \varphi\,l$ and $\mu = \nu.\mathrm{map}\,\pi$.
+  The component $\pi$ deletes therefore adds no step outside $K$ and blocks no step of $sys_0$.
+  A transition on a label of $K$ may read the component to decide whether it fires, since it moves nothing that remains.
 
-  The two clauses of the third condition are not symmetric.
+  The fourth and the fifth conditions are not symmetric.
   A label of $sys_A$ may announce the value of the component $\pi$ deletes, and out of a state $s$ only the announcement $s$ carries is available, whereas $sys_0$ has nothing to announce from and offers every label with the $\varphi$-image of $l$.
   The projection is exact on labels for that reason, and only the matching transition is taken up to $\varphi$.
-  The projection clause is a functional strong matching in the sense of Lemma~\ref{def:strongfunctional}, so Theorem~\ref{thm:forward-sound} gives $\operatorname{ATD}(sys_A) \subseteq \operatorname{ATD}(sys_0)$.
-  At $\varphi = \mathrm{id}$ the second clause is exact on labels as well, hence the converse matching of the same lemma, and the two sets coincide.
-  A general $\varphi$ reaches that equality through hiding: once the set of hidden labels contains every label $\varphi$ identifies with a different label, the removal of the two abstractions stands at $\varphi = \mathrm{id}$.
+  When every label of $K$ is silent, a transition on a label of $K$ is matched by the empty weak transition of $sys_0$ and every other transition by the transition the fourth condition gives, so the graph of $\pi$ is a probabilistic forward simulation and Theorem~\ref{thm:forward-sound} gives $\operatorname{ATD}(sys_A) \subseteq \operatorname{ATD}(sys_0)$.
+  At $\varphi = \mathrm{id}$ the fifth condition is exact on labels as well, hence the converse matching of Lemma~\ref{def:strongfunctional}, and the two sets coincide.
+  Hiding reaches that case: once the set of hidden labels contains every label $\varphi$ identifies with a different label and every label of $K$, the removal of the two abstractions stands at $\varphi = \mathrm{id}$ with the empty set as its $K$.
 
-  A removal is carried through a composition by three congruences: parallel composition against a component saturated along $\varphi$ in either position, abstraction of a set of labels closed under $\varphi$, and restriction along the left embedding of an extended alphabet (Definition~\ref{def:relabel}).
-  A system is \emph{saturated along $\varphi$} when labels with the same $\varphi$-image have the same outgoing transitions, which is what lets a component accept whichever of those labels the system with the variable removed announces.
-  Saturation is preserved by parallel composition, by abstraction of a set of labels closed under $\varphi$, by the full-synchronisation product of a finite family, and by the partial label pullback.
-  Full definition: \leandecl{PLTS.AuxiliaryVariableRemoval}; the equality of achievable trace distributions is \leandecl{PLTS.AuxiliaryVariableRemoval.achievableTraceDists_eq}, saturation is \leandecl{PLTS.System.LabelSaturated} and the separation condition is \leandecl{PLTS.SeparatesSilent}.
+  A removal is carried through a composition by three congruences: parallel composition, in either position, against a component that is saturated along $\varphi$ and idle on $K$; abstraction of a set of labels closed under $\varphi$, which turns the transitions on the hidden labels of $K$ into silent transitions that leave the projection where it stands; and restriction along the left embedding of an extended alphabet (Definition~\ref{def:relabel}).
+  A system is \emph{saturated along $\varphi$} when labels with the same $\varphi$-image have the same outgoing transitions, which is what lets a component accept whichever of those labels the system with the variable removed announces, and it is \emph{idle on $K$} when each of its transitions on a label of $K$ is the Dirac self-loop on the state it leaves.
+  Saturation is preserved by parallel composition, by abstraction of a set of labels closed under $\varphi$, by the full-synchronisation product of a finite family and by the partial label pullback; being idle on $K$ is preserved by the product and by the pullback.
+  Full definition: \leandecl{PLTS.AuxiliaryVariableRemoval}; the equality of achievable trace distributions is \leandecl{PLTS.AuxiliaryVariableRemoval.achievableTraceDists_eq}, saturation is \leandecl{PLTS.System.LabelSaturated}, being idle on $K$ is \leandecl{PLTS.System.IdleOn} and the separation condition is \leandecl{PLTS.SeparatesSilent}.
 \end{definition}

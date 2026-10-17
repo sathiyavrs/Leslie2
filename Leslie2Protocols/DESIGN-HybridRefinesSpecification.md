@@ -24,16 +24,18 @@ target    : ProbabilisticForwardSimulation hybrid (ABA.spec P) hybridSpecificati
 The four components are the round specifications, the `n` round loops, the ABA network and the
 common coin, and their alphabet is the extended alphabet of the protocol; the labels the components
 synchronise on are hidden, the result is read back over `Label n`, and the sub-protocol API is
-hidden in turn (`Composition/Hybrid.lean`). Corrupted processes' calls and returns are covered by
-the Byzantine call and return transitions, authorised by `k ∈ F` at `ABANetwork` (D11). See
+hidden in turn (`Composition/Hybrid.lean`). A corrupted process's sub-protocol calls are
+outputs of `ABANetwork` on the labels `byzantineCallG` and `byzantineCallW`, under `k ∈ F` and at a
+started round (D11, D37), and a return to a corrupted process is the instance's own return. See
 `Vocabulary/RoundLoop.lean`'s module docstring for the per-process algorithm, the DECIDED send
 `decidedSend` of a grade-2 round taken after the coin return `retW`, and deviations D9, D11 and D12′
-(0-based rounds, the Byzantine call and return transitions, per-process DECIDED sets — see § D12′
-below).
+(0-based rounds, a corrupted process's calls output by the network, per-process DECIDED sets — see
+§ D12′ below).
 
-Concrete state: `(g, (C, (A, w)))` with `g : ℕ → GBCA.SpecState`, `C : ∀ j, RoundLoopVariables`, `A :
-ABANetworkState`, `w : ℕ → WCC.SpecState`. The two ABA components are read as one object `c :
-ABAState := (C, A)` through the accessors of `Composition/ABAState.lean` — `processes`,
+Concrete state: `(g, (C, (A, w)))` with `C : ∀ j, RoundLoopVariables` and `A : ABANetworkState`, and
+`g` and `w` the states of the two families, each an `InstanceFamilyState` read through its accessor
+as a function `ℕ → GBCA.SpecState` and `ℕ → WCC.SpecState`. The two ABA components are read as one
+object `c : ABAState := (C, A)` through the accessors of `Composition/ABAState.lean` — `processes`,
 `decidedSent`, `decidedReceived`, `F` — and every clause below names them, so the relation reads the
 hybrid state with no change of system. Abstract state: `a : ABA.SpecState`.
 
@@ -54,7 +56,7 @@ the first to the second at the visible `retABA` that opens phase 2.
 
 - `F_eq : a.F = c.F`
 - `ret_eq : ∀ id, a.ret id = (c.processes id).returned`
-- `mode_flipEnabled : a.mode = .idle` (the abstract state never fires `SpecStep.coinFlip`)
+- `mode_flipEnabled : a.mode = .flipEnabled` (the abstract state never fires `SpecStep.coinFlip`)
 - `input_sync : ∀ id, id ∉ c.F → a.input id = (c.processes id).input` — the ghost and
   the committed input agree at every correct process. The clause is an equality and it
   sits outside the phase disjunction, so it holds in both phases. At a corrupted process
@@ -103,7 +105,7 @@ what `Invariant.decided_source`, `Invariant.grade2_source` and phase 2 of `Abstr
 
 The witness form is stronger than the specification requires. `bindUnset`
 carries the guard `excluded = ∅`, so a round excludes at most once
-(`GBCASafety.excluded_card_le_one`) and `excluded = {0,1}` is unreachable: a guard pair
+(`GBCA.excluded_card_le_one`) and `excluded = {0,1}` is unreachable: a guard pair
 established by a return is in fact permanent, and pair-form invariants are maintainable.
 Trading the witnesses for the pair is therefore available as a simplification. It is
 recorded here as an option and is not scheduled work: the exchange would touch
@@ -160,15 +162,18 @@ Concrete steps are read through the Stage-A case lemmas of
 transition back through the two hidings to the transitions of its four components; each class
 is one case of `HybridRefinesSpecification/Simulation.lean`.
 
-Three of the four Stage-A lemmas — `hybrid_step_callABA`, `hybrid_step_retABA`, `hybrid_step_tau` —
-take I0 as a hypothesis. A round loop's transition is guarded by its own replacement flag and the
-ABA network's transition by the corrupted set; the two live in separate components, and I0 is what identifies
-them, so that what each lemma delivers is on `F` alone (D23). `corrupted_eq_false_iff` is the
-one-line form of that translation.
+The four Stage-A lemmas — `hybrid_step_callABA`, `hybrid_step_retABA`, `hybrid_step_fail`,
+`hybrid_step_tau` — take I0 as a hypothesis. A round loop's transition is guarded by its own
+replacement flag and the ABA network's transition by the corrupted set; the two live in separate
+components, and I0 is what identifies them, so that what each lemma delivers is on `F` alone (D23).
+`corrupted_eq_false_iff` is the one-line form of that translation. `hybrid_step_retABA` and
+`hybrid_step_tau` take I4' as well: a correct round loop's return and relay read its own record
+of its DECIDED sends, and I4' (`decidedSent_recorded`) identifies that record with the network's,
+so that the two lemmas state them on the network's record (D12′).
 
 | concrete transition | label | matching abstract run |
 |---|---|---|
-| every hidden call and return (`callG`/`retG`/`callW`/`retW`), `bindUnset`, the DECIDED send of a grade-2 round (`decidedSend`), the DECIDED relay, delivery and injection | τ | stutter (`AbstractState.unchangedBy`; only `Invariant` moves) |
+| every hidden call and return (`callG`/`retG`/`callW`/`retW`) and the announcement `boundG`, `bindUnset`, the DECIDED send of a grade-2 round (`decidedSend`), the DECIDED relay, delivery and injection | τ | stutter (`AbstractState.unchangedBy`; only `Invariant` moves) |
 | the resolution of `WCC_r`'s coin | τ | constant-coupled stutter via the generic `stutter_step` (`HybridRefinesSpecification/Simulation.lean`): coupling `Ω := μ_C.map (·, pure a)`, so `ω = pure (pure a)` and `ω.bind id = pure a` (the abstract state never flips, so every outcome of the draw lands on the same `a`) |
 | `callABA id b`, `id ∉ F`, the commit transition (`input = none`) | `callABA id b` | `SpecStep.callSet` (a first write at the empty ghost entry `input_sync` supplies; both systems commit `b`) |
 | `callABA id b`, `id ∉ F`, the concrete loop (`input ≠ none`) | `callABA id b` | `SpecStep.callLoop` (the filled ghost entry `input_sync` supplies; neither system moves) |
@@ -178,12 +183,11 @@ one-line form of that translation.
 | `retABA id b`, `id ∈ F` | `retABA id b` | `SpecStep.retByzantine` (D23): neither system moves, in either phase |
 | `fail id` | `fail id` | `SpecStep.fail` (same two guards via `F_eq`; robust in both phases) |
 
-A `retG` label carries the round's bound bit beside the graded outcome (D29). The whole alphabet
-the components synchronise on is hidden before the core simulation sees it, so that bit reaches the abstract system on no
-label, and the transition that reads it — the round instance's return — is a τ of `hybrid` matched by a
-stutter. `AbstractState` holds no field for it, and no invariant conjunct reads it: the round's
-binding content enters the core simulation through `(g r).excluded`, which the bit is a projection
-of.
+The round's bound bit is announced on `boundG r b` by the round's specification, a self-loop
+under `(!b) ∈ excluded` (D29). The sub-protocol interface is hidden before the core simulation
+sees it, so the announcement is a τ of `hybrid` that leaves its state where it stands, matched by a
+stutter. `AbstractState` holds no field for the bit, and no invariant conjunct reads it: the round's
+binding content enters the core simulation through `(g r).excluded`, which determines the bit.
 
 The single run is `decide_step` (`HybridRefinesSpecification/WeakTransitions.lean`), fired
 at the phase-1 `retABA`. `SpecStep.decide` is Dirac, so the run is one step; what the transition
@@ -191,8 +195,8 @@ supplies is its three guards, each computed from the concrete state at the round
 `Grade2Witness` derived from a never-corrupted DECIDED sender of `b`.
 
 - `hv : a.val = none` — phase 1 itself.
-- `hm : a.mode ≠ .terminal` — the `mode_flipEnabled` field: an abstract state that never flips
-  never reaches it.
+- `hm : a.mode ≠ .noTransitionEnabled` — the `mode_flipEnabled` field: an abstract state that never
+  flips never reaches it.
 - `hs : InputSupport P a b` — `inputSupport_of_roundLoopInputSupport`
   (`HybridRefinesSpecification/Relation.lean`) reads the concrete input-or-`F` sent set
   `Invariant.bind_support rA b` through phase 1's ghost sync.
@@ -254,7 +258,7 @@ What `Specifications/ABA.lean` carries:
   ghost entry. A fill transition would have to place its entries knowing which process is corrupted later,
   a prophecy no forward simulation has (§ Why this shape, item 6).
 
-The support invariant (`SpecSafety.SpecificationInvariant`), with
+The support invariant (`SpecificationInvariant`), with
 `InputSupport s v := f + 1 ≤ #{id | s.input id = some v ∨ id ∈ s.F}` (monotone in `F` and
 `input`, `InputSupport.mono`), in two clauses: `F_le`, the corrupted set within budget, and
 `val_support`, `val = some v → InputSupport s v`. The second is `SpecStep.decide`'s own guard at
@@ -263,7 +267,7 @@ the one transition that writes `val`; every transition that only grows the ghost
 it
 by `InputSupport.callByzantine`, the writer being counted through the `F` disjunct. Attribution of
 the ghost's entries to genuine trace events is the separate label-history invariant
-`SpecSafety.ValidityInvariant`, whose `input_source` clause the two correct `callABA` transitions restore
+`ValidityInvariant`, whose `input_source` clause the two correct `callABA` transitions restore
 by recording the bit their own label carries; `SpecStep.callByzantine` takes that clause's second
 disjunct, the corruption of its own entry. Validity endgame (the budget pigeonhole): at any `retABA
 _ v` by a never-corrupted returner, `val_support` gives `f + 1` supporters; they cannot all lie in
@@ -288,8 +292,8 @@ bit at a time, write-once per bit and `excluded` monotone.
   calls and `b ∉ excluded`;
 - `retGrade1 v` counts support for the dissenting bit `!v`, alongside the guard pair
   `v ∉ excluded ∧ (!v) ∈ excluded` for the bit it returns — the same pair `retGrade2 v` reads;
-- `retGrade0` returns no bit and reads no guard pair, only `(!bnd) ∈ excluded` for the bit
-  `bnd` it announces: it carries one such count for **each** bit — which is exactly what
+- `retGrade0` returns no bit and reads no guard pair, only `excluded ≠ ∅`: it carries one such
+  count for **each** bit — which is exactly what
   witnesses that no single bit is the right answer — plus the grade-0 guard
   enforcing grade-2 / grade-0 exclusivity.
 
@@ -333,7 +337,7 @@ monotone throughout. The derivation splits by D14 site.
   (`inputQuorum_of_receivedEchoQuorum`), whose correct senders hold an input
   (`input_called`, D8) — that is the quorum guard (`quorum_of_messageQuorum`) — and whose
   count feeds `Invariant.support_of_received_inputs` for the `f + 1` InputSupport count.
-- The `retGrade1`/`retGrade0` counts ride on the `|Valid| > 1` witness the returner itself holds:
+- The `retGrade1`/`retGrade0` counts come from the `|Valid| > 1` witness the returner itself holds:
   it is a quorum of `n − f ≥ f + 1` received `INPUT` messages for *each* bit, so
   `inputSupport_of_bothValid`
   closes both bits at once — which is what `retGrade0`'s two per-bit guards need, and what
@@ -348,7 +352,7 @@ Since the specification excludes by an internal τ-transition, an implementation
 meeting a specification state whose needed bit is not yet excluded is matched by the
 two-step weak run `bindUnset (!v) ; retGrade2 v` (resp. `; retGrade1 v`),
 `excludeThenRetGrade2_run`/`excludeThenRetGrade1_run`. `retGrade0` reads no guard pair, but it does
-need `1 ≤ excluded.card`, so it too takes the run (`excludeThenRetGrade0_run`) from a
+need `excluded ≠ ∅`, so it too takes the run (`excludeThenRetGrade0_run`) from a
 state with `excluded = ∅`; every return transition runs the same decidable case split on `excluded`.
 
 ### D12′ — the DECIDED equivocation gap
@@ -375,7 +379,7 @@ sent `b` carries the grade-2 witness that the phase-1 `SpecStep.decide` step and
 
 ## `Invariant`: the concrete invariant (`HybridRefinesSpecification/Relation.lean`)
 
-Forty fields, docstring-numbered I0–I30 (a few numbers cover a small group of
+Forty-one fields, docstring-numbered I0–I30 (a few numbers cover a small group of
 fields), grouped:
 
 - **The replacement flag against the corrupted set (I0)**: `corrupted_F`, the first field —
@@ -418,8 +422,9 @@ fields), grouped:
   only: `retGrade2` reads the guard pair, so a round graded `2` has a non-empty exclusion
   set — a grade-0 return reads no pair and constrains none), `grade2_source` and
   `decided_source` (both producing a `Grade2Witness`, the pair-free form),
-  `received_sound` (D12′ per-bit and correctness-free — see above), `bound_quorum` (a round with
-  a non-empty exclusion set has met the quorum).
+  `received_sound` (D12′ per-bit and correctness-free — see above), `decidedSent_recorded` (I4':
+  at a process outside `F` the round loop's own record of its DECIDED sends is the network's),
+  `bound_quorum` (a round with a non-empty exclusion set has met the quorum).
 - **Witnesses**: `excluded_support` (I28), `outcomeHolder_agree` (I29), `grade2Bound_agree` (I30)
   — the three conjuncts that state a round's value without the guard pair; see § Witnesses.
 - **Support sent sets**: `bind_support` (I26) — a round whose exclusion set names `!v` carries a
@@ -506,7 +511,7 @@ so on positive mass the abstract state could no longer match the `retABA` that a
    0` forces the correct entry 3 to mirror `0`; after `fail 3` the adversary amplifies `INPUT 1` to
    a `BIND 1` and a visible `retGrade2 0 1`, but the spec state has `#callers(1) = 1 < 2` and entry
    3 is *genuinely full* — no τ fills it, since a fill needs an *empty* `F`-field. The spec does
-   emit the trace, via a different run that answers `callG 3 0` with a loop and byzantine-fills
+   emit the trace, via a different run that takes `callG 3 0` on a loop and byzantine-fills
    entry 3 with `1` after `fail 3`; but that choice needs knowledge of the later `fail`, a prophecy
    out of reach of any forward simulation. So the tie to a correct input must be carried by `F`-blind *counts*
    (D14/`input_support`), not by specification fills — the sent set guards beat the fills.

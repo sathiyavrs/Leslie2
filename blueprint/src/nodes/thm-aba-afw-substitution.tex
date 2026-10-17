@@ -7,13 +7,13 @@
     \afw{\mathrm{composed}}(P) \;\sqsubseteq\; \afw{\mathrm{composed}}_{\mathrm{BRB}\,\mathrm{spec}}(P)
       \;\sqsubseteq\; \afw{\mathrm{composed}}_{\mathrm{Gather}\,\mathrm{spec}}(P) \;\sqsubseteq\; \mathrm{hybrid}(P).
   \]
-  Each stage is one substitution inside the round --- the broadcast substitution, the gather substitution, the counting refinement --- lifted to the $\mathbb{N}$-indexed family by the family congruence under the broadcast compatibility of each relation, and run under the composed system's own context through the four congruences of the pipeline.
+  Each stage is one substitution inside the round --- the broadcast substitution, the gather substitution, the counting refinement --- lifted to the $\mathbb{N}$-indexed family by the family congruence under the broadcast compatibility of each relation and its first step at an untouched round, and run under the composed system's own context through the four congruences of the pipeline.
   The third stage lands on $\mathrm{hybrid}(P)$ itself, the system the core simulation starts from, so the two implementation chains share every step from there up.
   Chaining the stages gives the simulation $\mathrm{substitutionSimulation}$, and chaining their soundness inclusions gives $\operatorname{ATD}(\afw{\mathrm{composed}}(P)) \subseteq \operatorname{ATD}(\mathrm{hybrid}(P))$.
 \end{theorem}
 
 \begin{proof}\leanok
   \uses{def:aba-afw-round-families, def:aba-hybrid, thm:gbca-round-substitutions, thm:gbca-round-refines-specification, thm:gbca-family-refines, thm:precong-parallel, thm:precong-abstract, thm:precong-relabel, thm:forward-sound}
-  Theorem~\ref{thm:mapidle-cong} lifts each per-round simulation along $\mathrm{specificationLabelMap}$; the family congruence of Theorem~\ref{thm:gbca-family-refines} lifts the result to the families, its broadcast hypothesis discharged by each relation's own corruption compatibility; and each family substitution runs under the syntactically identical context by $\mathrm{parallel\_right}$ followed by $\mathrm{abstract}$, $\mathrm{relabel}$ and $\mathrm{abstract}$, exactly as the substitution of Theorem~\ref{thm:aba-substitution} does.
+  The family congruence of Theorem~\ref{thm:gbca-family-refines} lifts each per-round simulation to the families, its broadcast hypothesis discharged by each relation's own corruption compatibility and its hypothesis at an untouched round by each round's first step, a call matched by a call; and each family substitution runs under the syntactically identical context by $\mathrm{parallel\_right}$ followed by $\mathrm{abstract}$, $\mathrm{relabel}$ and $\mathrm{abstract}$, exactly as the substitution of Theorem~\ref{thm:aba-substitution} does.
   The stages compose by Result~2, and the inclusion is the composite of the three stage inclusions.
 \end{proof}

@@ -1,38 +1,45 @@
-% GBCA instance forward simulation (PLTS.ABA.GBCA.ByABDY.refinesSpecification, specificationRelation).
+% GBCA instance forward simulation (PLTS.ABA.GBCA.ByABDY.refinesSpecification,
+% specificationRelation, specificationRelation_transition). The relation's clause
+% bound_excluded states excluded = excludedOf bound.
 \begin{tikzpicture}[
     >={Stealth[round]}, semithick, on grid,
-    conc/.style={draw, rounded corners, minimum height=0.85cm, align=center,
+    conc/.style={draw, rounded corners, minimum height=0.85cm, align=flush center,
       font=\footnotesize, inner sep=3pt},
-    every state/.style={draw, align=center, font=\small, inner sep=2pt,
-      text width=2.15cm, minimum size=2.5cm}]
-  % top row: implementation run phases
-  \node[conc] (t1) at (1.6,2.4) {input\\ (INPUT)};
-  \node[conc, text width=2.7cm] (t2) at (4.8,2.4)
-    {deliveries\\ relay/echo/vote/\\ bind/echo5\\ (incl.\ byzantine)};
-  \node[conc] (t3) at (8.2,2.4) {a return whose\\ exclusion is missing};
-  \node[conc] (t4) at (11.6,2.4){a return whose\\ exclusion has happened};
+    every state/.style={draw, align=flush center, font=\small, inner sep=2pt,
+      text width=2.3cm, minimum size=2.5cm}]
+  % top row: the transitions of the round's algorithm
+  \node[conc, text width=1.9cm] (t1) at (0.6,2.6) {\texttt{call},\\ \texttt{callLoop}};
+  \node[conc, text width=2.5cm] (t2) at (3.3,2.6)
+    {the sends, the deliveries, the injection};
+  \node[conc, text width=2.75cm] (t3) at (6.25,2.6) {a return whose\\ exclusion is missing};
+  \node[conc, text width=2.75cm] (t4) at (9.3,2.6) {a return whose\\ exclusion has happened};
+  \node[conc, text width=2.3cm] (t5) at (12.1,2.6) {\texttt{announceBound}\,$b$\\ at $bound = b$};
   % bottom row: specification-instance states
   \node[state, initial, initial text={}] (p1) at (1.6,0)
     {$excluded=\emptyset$\\ $call=input$};
-  \node[state, accepting] (p2) at (11.6,0)
-    {$1{-}bnd \in excluded$\\ grade guard};
+  \node[state, accepting] (p2) at (10.4,0)
+    {$excluded = \{1{-}b\}$\\ grade guard};
   \draw[->] (p1) to[loop below, looseness=5]
     node[below=2pt, font=\footnotesize]{stutter} (p1);
   \draw[->] (p2) to[loop below, looseness=5]
-    node[below=2pt, font=\footnotesize]{stutter} (p2);
+    node[below=2pt, font=\footnotesize, align=flush center, text width=2.6cm]
+      {stutter;\\ \texttt{announceBound}\,$b$} (p2);
   \draw[->, thick] (p1) -- (p2)
-    node[pos=0.5, below=4pt, font=\footnotesize, align=center, text width=6.8cm,
+    node[pos=0.5, below=4pt, font=\footnotesize, align=flush center, text width=6.0cm,
          fill=white, inner sep=1.5pt]
       {weak step \texttt{bindUnset};\,\texttt{ret}\\
        $f{+}1$ via $input\_support$, the excluded bit via the exclusion witness};
   % specificationRelation verticals
-  \draw[dashed, ->] (t1) -- (p1) node[pos=0.55, right=1pt, font=\scriptsize]{call};
-  \draw[dashed, ->] (t2.south) -- (3.1,0.3);
-  \draw[dashed, ->] (t3.south) -- (8.2,0.3)
+  \draw[dashed, ->] (t1) -- (0.6,1.05) node[pos=0.5, right=1pt, font=\scriptsize]{call};
+  \draw[dashed, ->] (t2.south) -- (2.7,0.6);
+  \draw[dashed, ->] (t3.south) -- (6.25,0.3)
     node[pos=0.45, right=1pt, font=\scriptsize]{run};
-  \draw[dashed, ->] (t4) -- (p2) node[pos=0.55, right=1pt, font=\scriptsize]{graded};
-  \node[font=\footnotesize, align=center] at (6.6,-3.1)
-    {dashed $=$ $\mathrm{specificationRelation}$; deliveries/relay/echo/vote/bind/echo5 $\mapsto$ stutter;\\
-     every return transition splits on $excluded$, grade-0 returns included;\\
-     $excluded$ is computed from the network state's bound bit};
+  \draw[dashed, ->] (t4.south) -- (9.6,1.15) node[pos=0.45, left=1pt, font=\scriptsize]{graded};
+  \draw[dashed, ->] (t5.south) -- (11.2,1.05)
+    node[pos=0.45, right=1pt, font=\scriptsize]{announce};
+  \node[font=\footnotesize, align=flush center, text width=12.6cm, anchor=north] at (6.2,-3.35)
+    {dashed $=$ $\mathrm{specificationRelation}$, whose clause $excluded = \mathrm{excludedOf}(bound)$
+     reads $\emptyset$ while $bound = \bot$ and $\{1{-}b\}$ once a return has written $bound = b$;\\
+     the sends, the deliveries and the injection $\mapsto$ stutter;
+     every return splits on $excluded$, grade-0 returns included};
 \end{tikzpicture}

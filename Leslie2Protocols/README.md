@@ -11,7 +11,7 @@ from the protocol as it runs to a small specification, by probabilistic forward
 simulation, with two verified implementations of its graded-agreement sub-protocol —
 one direct, one built over gather and reliable broadcast. Each is carried from the
 protocol as it runs, through one implementation shape written parametrically in the
-graded-agreement implementation and instantiated twice. 115 files, `ABA/Results.lean`
+graded-agreement implementation and instantiated twice. 121 files, `ABA/Results.lean`
 beside eleven content-themed sub-folders, given in import order in its own file guide,
 [`ABA/README.md`](ABA/README.md).
 The ABA guide, [`ABA/README.md`](ABA/README.md), states before its file tables what to expect of
@@ -22,30 +22,32 @@ words the tree uses.
 
 The protocol-independent combinators the case study composes with, and the couplings a
 Dirac-lifted relation admits. One of the combinators — restriction along the left summand of
-an extended alphabet — is a fourth precongruence, beside the three in the core. Eleven files,
+an extended alphabet — is a fourth precongruence, beside the three in the core. Twelve files,
 given in import order in its own file guide, [`Framework/README.md`](Framework/README.md).
 
 | file | lines | what it is |
 |---|---|---|
 | [`DiracRelationCoupling.lean`](Framework/DiracRelationCoupling.lean) | 57 | The couplings a Dirac-lifted relation admits: a Dirac source matched by a related target, and a source pushed forward along a map matched outcome by outcome. |
 | [`TraceDistributionSupport.lean`](Framework/TraceDistributionSupport.lean) | 569 | From trace-distribution support to genuine executions: the safety transfer, the invariant inductions, and the relabelling of a run. |
-| [`LoopsAndInstanceFamilies.lean`](Framework/LoopsAndInstanceFamilies.lean) | 218 | Idle padding, partial label pullbacks, and ℕ-indexed instance families with a broadcast disjunct. |
-| [`FamilySimulation.lean`](Framework/FamilySimulation.lean) | 375 | Forward simulation is a congruence for `System.family`: per-instance refinement lifts to the family. |
+| [`LoopsAndInstanceFamilies.lean`](Framework/LoopsAndInstanceFamilies.lean) | 432 | Idle padding, partial label pullbacks, and ℕ-indexed instance families over a finite map with the recorded broadcasts, a round never touched reading as the initial instance under them. |
+| [`FamilySimulation.lean`](Framework/FamilySimulation.lean) | 634 | Forward simulation is a congruence for `System.family`: per-instance refinement lifts to the family, the matching of a first step at an untouched round beginning with that step; with `AlterSeq.endState_cons` and `is_partial_exec_cons`, an execution with one step prepended, from which the weak runs of `WeakTransitionsFromChains.lean` and `Congruence.lean` are built. |
 | [`SynchronisedProduct.lean`](Framework/SynchronisedProduct.lean) | 185 | Full-synchronisation product of a finite family — a visible label moves every component, τ moves one. |
+| [`InputEnabledness.lean`](Framework/InputEnabledness.lean) | 173 | Input-enabledness and compatibility (LeslieBP §1.3, the simulations paper's Assumption 1 and Definition 2), preserved by idle padding, pullbacks, binary parallel, the full-synchronisation product and instance families. |
 | [`SynchronisedProductAlongPullbacks.lean`](Framework/SynchronisedProductAlongPullbacks.lean) | 161 | A family of components each read along its own pullback, under the synchronised product: the label with no image, the visible step, the silent step, and the family of Dirac steps at an update of one component. |
-| [`Relabel.lean`](Framework/Relabel.lean) | 472 | Extended alphabets and restriction along the left summand, with the precongruence for it. |
-| [`WeakTransitionsFromChains.lean`](Framework/WeakTransitionsFromChains.lean) | 196 | Weak runs from step chains: prepending a silent step, and the k-fold run — a chain of silent steps closed by one external step. |
-| [`FinerAlphabetCongruence.lean`](Framework/FinerAlphabetCongruence.lean) | 194 | Forward simulation is a congruence for reading both systems over a finer alphabet along a partial label map. |
-| [`Congruence.lean`](Framework/Congruence.lean) | 850 | Forward simulation is a congruence for the operators a composition is built from — binary parallel in either position, the full-synchronisation product of a finite family, hiding and restriction — with the weak-run splitting and mapping lemmas the four proofs share. |
-| [`AuxiliaryVariableRemoval.lean`](Framework/AuxiliaryVariableRemoval.lean) | 380 | Removal of a state component no transition's firing depends on: the projection and lift clauses, the equality of achievable trace distributions they give, and the congruences that carry a removal through composition, hiding and restriction. |
+| [`Relabel.lean`](Framework/Relabel.lean) | 473 | Extended alphabets and restriction along the left summand, with the precongruence for it. |
+| [`WeakTransitionsFromChains.lean`](Framework/WeakTransitionsFromChains.lean) | 173 | Weak runs from step chains: prepending a silent step, and the k-fold run — a chain of silent steps closed by one external step. |
+| [`FinerAlphabetCongruence.lean`](Framework/FinerAlphabetCongruence.lean) | 195 | Forward simulation is a congruence for reading both systems over a finer alphabet along a partial label map. |
+| [`Congruence.lean`](Framework/Congruence.lean) | 810 | Forward simulation is a congruence for the operators a composition is built from — binary parallel in either position, the full-synchronisation product of a finite family, hiding and restriction — with the weak-run splitting and mapping lemmas the four proofs share. |
+| [`AuxiliaryVariableRemoval.lean`](Framework/AuxiliaryVariableRemoval.lean) | 459 | Removal of a state component that no transition reads except to fix the value a label announces or to decide whether a transition on a label of a set `K` fires without moving the rest of the state: the projection and lift clauses, the forward simulation along the projection, the equality of achievable trace distributions once `K` is silent, and the congruences that carry a removal through composition, hiding and restriction. |
 
 ## Notes
 
 | file | what it is for |
 |---|---|
-| [`DESIGN-Decomposition.md`](DESIGN-Decomposition.md) | The five constraints the decomposition proofs impose on the gather-based chain's compositions — the loop label, the specification's call following the gather's variables, the grade dropped on return, the blocking of off-interface labels, a broadcast instance's return as a transition of the implementation — each with the statement that fails without it. |
-| [`DESIGN-Composition.md`](DESIGN-Composition.md) | Why the chains are cut where they are: what the composition gives, what each component owns and where it disappears, and what the DECIDED model already weakens. |
-| [`DESIGN-HybridRefinesSpecification.md`](DESIGN-HybridRefinesSpecification.md) | The narrative account of the core simulation `hybrid ⊑ ABA.spec` — the abstract state, the invariant, and the witnesses decided values ride on. |
+| [`DESIGN-Decomposition.md`](DESIGN-Decomposition.md) | The five constraints the decomposition proofs impose on the gather-based chain's compositions — a call that sends nothing, with its loop on the call label, the specification's call following the gather's variables, the grade dropped on return, the blocking of off-interface labels, a broadcast instance's return as a transition of the implementation — each with the statement that fails without it. |
+| [`DESIGN-InputOutput.md`](DESIGN-InputOutput.md) | The input-output discipline of the components: which component outputs each label, where each guard sits, which loop makes each input enabled, and the four parts of the model that come with it — the started rounds (D37), the announcements (D29, D30), the finite maps and the loops on the call labels — each with the statement that fails without it. |
+| [`DESIGN-Composition.md`](DESIGN-Composition.md) | Why the chains are cut where they are: what the composition gives, what each component holds and where it disappears, and what the DECIDED model already weakens. |
+| [`DESIGN-HybridRefinesSpecification.md`](DESIGN-HybridRefinesSpecification.md) | The narrative account of the core simulation `hybrid ⊑ ABA.spec` — the abstract state, the invariant, and the witnesses a decided value rests on. |
 | [`DESIGN-GBCARefinesSpecification.md`](DESIGN-GBCARefinesSpecification.md) | The narrative account of the per-instance GBCA refinement — exclude-on-demand, the witnesses on the pattern of received messages, and the run structure. |
 | [`DESIGN-GatherComposition.md`](DESIGN-GatherComposition.md) | The narrative account of the gather-based GBCA stack — the compositions at each level, the counting argument for the gather specification's core, the BIND payloads multicast on the gather network, the counting at the round over the gather specifications, the substitutions as congruence applications, and the implementation beneath the composed one. |
 | [`NOTES-Fidelity.md`](NOTES-Fidelity.md) | How the encoding stands against its sources — the Leslie blueprint, ABDY22 and AFW25: where it follows one against another, and what it deliberately does not reproduce. |

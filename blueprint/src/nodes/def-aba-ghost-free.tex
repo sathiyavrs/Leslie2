@@ -3,13 +3,14 @@
   \lean{PLTS.ABA.Implementation.systemGhostFree}\lean{PLTS.ABA.ABDY.ghostFreeProtocol}\lean{PLTS.ABA.AFW.ghostFreeProtocol}\leanok
   \uses{def:aba-implementation, def:aba-protocol, def:aba-afw-protocol}
   The implementation of Definition~\ref{def:aba-implementation} at a one-element ghost.
-  The programs, the network transitions, the common coin and the composition pipeline are those of that definition; what the instantiation settles is the adversary's ghost and the guard of the two graded-agreement return transitions.
+  The programs, the network transitions, the common coin and the composition pipeline are those of that definition; what the instantiation settles is the network's ghost and its read.
   The ghost of a round is the one element, so the update of D30 writes nothing that can be read back.
-  The output of D30 is the full relation, so a graded-agreement return fires at either value of the bound bit its label carries, and the bit a return announces is the adversary's own choice.
+  The read gives no bit at any round, so the network's announcement $\mathrm{boundG}$ never fires.
+  Every other guard of the network reads the message record, the DECIDED sets, the corrupted set and the started rounds, which the ghost-free network holds as the implementation's does.
   Full construction: \leandecl{PLTS.ABA.Implementation.systemGhostFree}.
 
   The two protocols have ghost-free readings at their own round message type, round variables and round's transitions: \leandecl{PLTS.ABA.ABDY.ghostFreeProtocol} against Definition~\ref{def:aba-protocol}, and \leandecl{PLTS.ABA.AFW.ghostFreeProtocol} against Definition~\ref{def:aba-afw-protocol}.
-  Each is the protocol it is named for with the adversary's ghost dropped and nothing else changed, so each has the same alphabet as the protocol and sits in the same composition.
-  The output of D30 is a relation, and that is what puts the three readings in one parametric system.
-  ABDY22's implementation instantiates it as the equation between the announced bit and $\mathrm{abdyGhostOutput}$ of the round, the gather-based implementation as the equation between the announced bit and the bit its own ghost holds, and the ghost-free system as the relation that holds of every bit.
+  Each is the protocol it is named for with the network's ghost dropped and nothing else changed, so each has the same alphabet as the protocol and sits in the same composition.
+  The read of the ghost enables the announcement and no other transition, and that is what puts the three readings in one parametric system.
+  ABDY22's implementation reads its one bit by the identity, the gather-based implementation reads the third field of its ghost, and the ghost-free system reads no bit.
 \end{definition}

@@ -1,20 +1,21 @@
 \begin{definition}[The gather instance as a composition]
   \label{def:aba-gather-composition}
-  \lean{PLTS.ABA.Gather.ProcessVariables}\lean{PLTS.ABA.Gather.NetworkState}\lean{PLTS.ABA.Gather.GatherEvent}\lean{PLTS.ABA.Gather.inputBroadcastLabelMap}\lean{PLTS.ABA.Gather.specificationLabelMap}\lean{PLTS.ABA.Gather.StateOverBroadcasts}\lean{PLTS.ABA.Gather.instanceOverBroadcasts}\lean{PLTS.ABA.Gather.specificationOverInstanceAlphabet}\leanok
+  \lean{PLTS.ABA.Gather.ProcessVariables}\lean{PLTS.ABA.Gather.NetworkState}\lean{PLTS.ABA.Gather.GatherEvent}\lean{PLTS.ABA.Gather.inputBroadcastLabelMap}\lean{PLTS.ABA.Gather.StateOverBroadcasts}\lean{PLTS.ABA.Gather.instanceOverBroadcastsExtended}\lean{PLTS.ABA.Gather.instanceOverBroadcasts}\leanok
   \uses{def:aba-gather-spec, def:aba-bracha-implementation, def:aba-networkstate, def:synchronised-product, def:process-algebra, def:idle-family, def:relabel}
   One gather instance over a payload type $X$, taken apart into the components that run it.
   One part is the $n$ gather programs under $\mathrm{synchronisedProduct}$ beside the gather network.
   The other is $n$ reliable-broadcast instances, one per process, carrying the inputs.
   The two run in parallel, the instance's own events are hidden, and the result is read back over the interface alphabet: \leandecl{PLTS.ABA.Gather.instanceOverBroadcasts}, which takes the broadcast instances as an argument.
-  Four events are hidden --- the gather multicast, the gather delivery, and the call and the return of an input instance --- so what an outside system sees of the instance is the call, the per-process returns, corruption and the call loop.
+  Four events are hidden --- the gather multicast, the gather delivery, and the call and the return of an input instance --- so what an outside system sees of the instance is the call, the per-process returns, the announcement of the core and corruption, the alphabet of Definition~\ref{def:aba-gather-spec}.
   A gather program holds one process's variables and the messages delivered to it, indexed by sender, and its guards read those variables and those sets alone.
   The gather fields are the payload the call recorded, the write-once fields $\mathit{sentEcho}$, $\mathit{sentVote}$ and $\mathit{sentBind}$ holding the $\mathrm{ECHO}$, $\mathrm{VOTE}$ and $\mathrm{BIND}$ payloads the process has multicast, and the return flag.
   Beside them the variables hold what the input broadcasts returned: $\mathit{inputBroadcastReturned}(k)$, the value the instance broadcasting $k$'s input returned here.
   It is written on that instance's return event, and a guard that consumes a returned value reads those variables rather than a neighbouring component.
   The gather network holds the per-sender sent sets, the corrupted set and the instance's core, and reads no program's variables; the core is a function of the sent sets and the corrupted set, which is what lets that component hold it (D29).
+  The network writes the core at the instance's first return, whichever process returns, and announces it on $\mathrm{core}(C)$ by \leandeclnamed{announceCore}{PLTS.ABA.Gather.NetworkStep.announceCore} at every state from then on; every program takes the announcement on an idle transition.
   An input instance joins the composition along the pullback \leandecl{PLTS.ABA.Gather.inputBroadcastLabelMap}, which names it.
   A label carrying another instance's index has no image under the pullback and leaves that instance unchanged, while corruption and the silent label have an image at every instance, so $\mathrm{fail}$ reaches the whole composition at once (D1).
-  The specification answers its call label on two transitions, the call and the input-enabledness loop, so the loop has a label of its own, and the specification is read along \leandecl{PLTS.ABA.Gather.specificationLabelMap}, which sends the loop to the call, where the specification's own loop transition answers it.
-  Neither label reaches a broadcast instance: the call of the instance broadcasting a process's input is the event $\mathrm{inputBroadcastCall}$, guarded on the payload that process's gather variables hold.
+  The specification takes its call label on two transitions, the call and the input-enabledness loop, and the gather program the call names carries the same two: \leandeclnamed{call}{PLTS.ABA.Gather.ProgramStep.call} records the payload at a program holding no input, and \leandeclnamed{callLoop}{PLTS.ABA.Gather.ProgramStep.callLoop} writes nothing at a program holding one.
+  Every other program and the gather network take the call on a Dirac self-loop, so the call posts no message and reaches no broadcast instance: the call of the instance broadcasting a process's input is the event $\mathrm{inputBroadcastCall}$, guarded on the payload that process's gather variables hold, and a repeated call reaches the instance's own loop on its call label.
   Plugging Bracha instances or broadcast specifications into the $n$ broadcast coordinates gives the two instances of the two definitions below.
 \end{definition}

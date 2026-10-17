@@ -1,0 +1,21 @@
+\begin{definition}[Input-enabledness and compatibility]
+  \label{def:input-enabledness}
+  \lean{PLTS.System.InputEnabled}\lean{PLTS.InputOutputLabels}\lean{PLTS.InputOutputLabels.Compatible}\leanok
+  \uses{def:process-algebra, def:idle-family, def:synchronised-product}
+  Let $sys$ be a system over a label type $L$ and let $A \subseteq L$.
+  The system is \emph{input-enabled on $A$} when every label of $A$ has a transition at every state,
+  \[
+    \forall s,\ \forall l \in A,\ \exists \mu,\ s \xrightarrow{\;l\;} \mu .
+  \]
+  The silent label is a label like any other for the predicate, so $\tau \in A$ asks for a silent transition at every state.
+  A component's labels are given as a pair of sets, its input labels and its output labels, and two components are \emph{compatible} when their output labels are disjoint.
+  Section~1.3 of~\cite{LeslieBP} composes systems under these two conditions: the input labels are always enabled, a requirement met by a self-loop on each input label, and the output labels of the composed systems are distinct.
+  Under full synchronisation a component takes as its inputs every non-silent label outside its outputs, so a component is input-enabled when each such label has a transition at every state, the component's own or an idle self-loop.
+  Full definitions: \leandecl{PLTS.System.InputEnabled}, \leandecl{PLTS.InputOutputLabels} and \leandecl{PLTS.InputOutputLabels.Compatible}.
+
+  The constructions of Definitions~\ref{def:process-algebra}, \ref{def:idle-family} and~\ref{def:synchronised-product} carry the predicate from their components.
+  Let $sys$ be input-enabled on $A$.
+  Then idle padding of $sys$ is input-enabled on $A$ and on every label outside the padded set, \leandecl{PLTS.System.InputEnabled.withIdle}, and $sys$ read along a partial label map $\varphi$ is input-enabled on every label with no image under $\varphi$ and on every label whose image lies in $A$, \leandecl{PLTS.System.InputEnabled.mapIdle}.
+  The parallel composition of two systems is input-enabled on the intersection of their two sets, \leandecl{PLTS.System.InputEnabled.parallel}, and the full-synchronisation product of a nonempty finite family on the intersection of all of them, \leandecl{PLTS.System.InputEnabled.synchronisedProduct}.
+  An instance family is input-enabled on every non-silent label no instance owns, a broadcast label or not, and on every label owned by a round at which the instance of that round is input-enabled, \leandecl{PLTS.System.InputEnabled.family}.
+\end{definition}

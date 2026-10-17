@@ -4,42 +4,54 @@
 % position and that the substitution runs in three stages, not one.
 \begin{tikzpicture}[
     >={Stealth[round]}, semithick,
-    comp/.style={draw, rounded corners, align=center, font=\scriptsize,
-      minimum width=4.2cm, minimum height=0.9cm, text width=3.9cm, inner sep=3pt},
+    comp/.style={draw, rounded corners, align=flush left, font=\scriptsize,
+      text width=4.4cm, inner sep=3pt},
     posn/.style={draw, rounded corners, align=center, font=\scriptsize,
       minimum width=5.0cm, minimum height=1.3cm, inner sep=3pt},
     ann/.style={font=\scriptsize, align=center, inner sep=1.5pt},
     lbl/.style={font=\scriptsize, align=left, fill=white, inner sep=1.5pt}]
-  \draw[dashed, rounded corners] (-1.1,-3.3) rectangle (11.1,3.0);
+  \draw[dashed, rounded corners] (-1.1,-3.55) rectangle (11.1,3.0);
   \node[font=\footnotesize] at (8.5,2.7) {$\mathrm{abstract}\,\mathrm{hiddenAPI}$};
-  \draw[dashed, rounded corners] (-0.8,-3.0) rectangle (10.8,2.3);
+  \draw[dashed, rounded corners] (-0.8,-3.3) rectangle (10.8,2.3);
   \node[font=\footnotesize] at (7.5,2.02)
     {$\mathrm{relabel} \circ \mathrm{abstract}\,\mathrm{networkEventLabels}$};
   \draw[thick] (-0.5,1.45) -- (10.5,1.45);
   \node[ann, anchor=west] at (-0.45,1.72) {$\mathrm{ExtendedLabel}(n)$: every component steps};
   % the refinable position
-  \node[posn, text width=4.6cm] (overbracha) at (2.3,0.1)
-    {$\mathrm{roundFamilyOverBracha}(P)$: one composed round\\ per $r \in \mathbb{N}$, each $2n{+}2$ networks};
-  \draw[<->] (2.3,1.45) -- (2.3,0.75);
+  \node[draw, rounded corners, align=flush left, font=\scriptsize, text width=5.4cm,
+    inner sep=3pt, anchor=north] (overbracha) at (2.5,0.5)
+    {$\mathrm{roundFamilyOverBracha}(P)$: the composed round
+     $\mathrm{roundOverBracha}(P,r)$ at every round $r$ of a finite map,
+     each $2n{+}2$ networks; an untouched round reads the initial round under the
+     recorded broadcasts ($\mathrm{InstanceFamilyState}$)\\[2pt]
+     round $r$ outputs $\mathrm{retG}\,r$ and $\mathrm{boundG}\,r$, and takes
+     $\mathrm{callG}\,r$ and $\mathrm{byzantineCallG}\,r$};
+  \draw[<->] (0.6,1.45) -- (0.6,0.5);
   % the three untouched components, fed from a spine clear of both columns
-  \node[comp] (cores) at (8.4,0.6)  {the $n$ round loops};
-  \node[comp] (anet)  at (8.4,-0.7) {$\mathrm{ABANetwork}(P)$: the DECIDED sets,\\ $F$ with $|F| < f$};
-  \node[comp] (w)     at (8.4,-2.0) {$\mathrm{WCC.specFamily}(P)$\\ along $\mathrm{coinLabelMap}$};
-  \foreach \y in {0.6,-0.7,-2.0} \draw[<->] (5.7,1.45) -- (5.7,\y) -- (6.3,\y);
+  \node[comp, anchor=north west] (cores) at (6.1,1.05)
+    {the $n$ round loops\\ outputs $\mathrm{callG}$, $\mathrm{callW}$, $\mathrm{decidedSend}$,\\
+     $\mathrm{decidedRelay}$ and $\mathrm{retABA}$ at $j$};
+  \node[comp, anchor=north west] (anet) at (6.1,-0.15)
+    {$\mathrm{ABANetwork}(P)$: $decidedSent(j)$,\\ $F$, $startedRounds$\\
+     outputs $\mathrm{decidedDeliver}$; $\mathrm{fail}$;\\
+     $\mathrm{byzantineCallG}$, $\mathrm{byzantineCallW}$\\ under $k \in F$, $r \in startedRounds$};
+  \node[comp, anchor=north west] (w) at (6.1,-2.15)
+    {$\mathrm{WCC.specFamily}(P)$\\ along $\mathrm{coinLabelMap}$; outputs $\mathrm{retW}$};
+  \foreach \c in {cores,anet,w} \draw[<->] (5.85,1.45) |- (\c.west);
   % the three stages
-  \node[posn, minimum height=0.75cm] (overbrb) at (2.3,-4.5)
+  \node[posn, minimum height=0.75cm] (overbrb) at (2.3,-4.75)
     {$\mathrm{roundFamilyOverBroadcastSpecification}(P)$ \ \ giving $\afw{\mathrm{composed}}_{\mathrm{BRB}\,\mathrm{spec}}(P)$};
-  \node[posn, minimum height=0.75cm] (overgather)  at (2.3,-5.8)
+  \node[posn, minimum height=0.75cm] (overgather)  at (2.3,-6.05)
     {$\mathrm{roundFamilyOverGatherSpecifications}(P)$ \ \ giving $\afw{\mathrm{composed}}_{\mathrm{Gather}\,\mathrm{spec}}(P)$};
-  \node[posn, minimum height=0.75cm] (spec)  at (2.3,-7.1)
+  \node[posn, minimum height=0.75cm] (specification)  at (2.3,-7.35)
     {$\mathrm{gbcaSpecificationFamily}(P)$ \ \ giving $\mathrm{hybrid}(P)$};
-  \draw[->, dashed] (2.3,-3.3) -- (overbrb.north);
+  \draw[->, dashed] (2.3,-3.55) -- (overbrb.north);
   \draw[->, dashed] (overbrb) -- (overgather);
-  \draw[->, dashed] (overgather) -- (spec);
-  \node[lbl, anchor=west] at (5.2,-3.95) {stage 1: the Bracha instances};
-  \node[lbl, anchor=west] at (5.2,-5.15) {stage 2: the gather instances};
-  \node[lbl, anchor=west] at (5.2,-6.45) {stage 3: the counting, onto Transition System 2};
-  \node[ann, anchor=north west, text width=5.6cm] at (5.2,-6.9)
+  \draw[->, dashed] (overgather) -- (specification);
+  \node[lbl, anchor=west] at (5.2,-4.2) {stage 1: the Bracha instances};
+  \node[lbl, anchor=west] at (5.2,-5.4) {stage 2: the gather instances};
+  \node[lbl, anchor=west] at (5.2,-6.7) {stage 3: the counting, onto Transition System 2};
+  \node[ann, anchor=north west, text width=5.6cm, align=flush center] at (5.2,-7.15)
     {the left position alone is \mbox{replaced}, three times; the other three
      components stand throughout};
 \end{tikzpicture}

@@ -1,35 +1,49 @@
 % The gather-based protocol (PLTS.ABA.AFW.protocol) and the projection that reads it
-% as a composition (PLTS.ABA.AFW.roundProjection).
+% as a composition (PLTS.ABA.AFW.roundProjection). The network is that of
+% PLTS.ABA.Implementation.NetworkStep at the ghost PLTS.ABA.AFW.Ghost, written by
+% PLTS.ABA.AFW.ghostStep and read by PLTS.ABA.AFW.ghostBound.
 \begin{tikzpicture}[
     >={Stealth[round]}, semithick,
     prog/.style={draw, rounded corners, align=center, font=\scriptsize,
       minimum width=2.4cm, minimum height=1.0cm, inner sep=3pt},
-    comp/.style={draw, rounded corners, align=center, font=\scriptsize,
-      minimum width=4.6cm, minimum height=1.2cm, inner sep=3pt},
+    comp/.style={draw, rounded corners, align=flush left, font=\scriptsize,
+      inner sep=4pt},
     ann/.style={font=\scriptsize, align=center, inner sep=1.5pt}]
-  \draw[dashed, rounded corners] (-1.2,-3.95) rectangle (11.0,3.3);
+  \draw[dashed, rounded corners] (-1.2,-5.35) rectangle (11.0,3.3);
   \node[font=\footnotesize] at (8.6,3.0) {$\mathrm{abstract}\,\mathrm{hiddenAPI}$};
-  \draw[dashed, rounded corners] (-0.9,-3.65) rectangle (10.7,2.6);
+  \draw[dashed, rounded corners] (-0.9,-5.05) rectangle (10.7,2.6);
   \node[font=\footnotesize] at (7.5,2.32)
     {$\mathrm{relabel} \circ \mathrm{abstract}\,\mathrm{networkEventLabels}$};
   \draw[thick] (-0.75,1.75) -- (10.55,1.75);
-  \node[ann, anchor=west] at (-0.55,2.05) {$\mathrm{ExtendedLabel}(n)$ over the tagged messages};
+  \node[ann, anchor=west] at (-0.55,2.05)
+    {$\mathrm{ExtendedLabel}(n)$ over the tagged messages and the round events};
   % the n programs
   \node[prog] (p1) at (0.65,0.4) {program $1$};
-  \node[prog, minimum width=3.0cm] (pj) at (4.3,0.4)
+  \node[prog, minimum width=3.0cm, text width=3.0cm, align=flush center] (pj) at (4.3,0.4)
     {program $j$\\ \emph{process-major} variables};
   \node[prog] (pn) at (8.4,0.4) {program $n$};
   \node[font=\scriptsize] at (2.2,0.4)  {$\cdots$};
   \node[font=\scriptsize] at (6.35,0.4) {$\cdots$};
   \foreach \x in {0.65,4.3,8.4} \draw[<->] (\x,1.75) -- (\x,0.9);
-  % the adversary and the common coin, reached round the outside, clear of the programs
-  \node[comp] (adv) at (2.4,-1.95)
-    {the network:\\ one tagged sent-set family per round,\\
-     the DECIDED sets, $F$, the ghost};
-  \node[comp] (w) at (7.8,-1.95)
-    {$\mathrm{WCC.specFamily}(P)$\\ along $\mathrm{coinLabelMap}$};
-  \draw[<->] (-0.75,1.75) -- (-0.75,-1.95) -- (adv.west);
-  \draw[<->] (10.55,1.75) -- (10.55,-1.95) -- (w.east);
-  \node[ann] at (4.9,-3.25)
-    {$\mathrm{roundProjection}$ assembles the composed round's state from this one};
+  % the network and the common coin, reached round the outside, clear of the programs
+  \node[comp, text width=6.6cm, anchor=north west] (network) at (-0.5,-0.55)
+    {the network: $sent(r,j)$ over the tagged messages, $decidedSent(j)$, $F$,
+     $startedRounds$, and the ghost $ghost(r)$ of each round\\[2pt]
+     $ghost(r)$: the first gather's core, the second gather's core and the bound bit,
+     each written once, at the round's first $\mathrm{firstGatherReturn}$,
+     $\mathrm{secondGatherReturn}$ and $\mathrm{retG}$\\[2pt]
+     outputs the deliveries; $\mathrm{fail}$ under $k \notin F$, $|F| < f$;
+     $\mathrm{boundG}(r,b)$ under $\mathrm{ghostBound}(ghost(r)) = b$;
+     $\mathrm{byzantineCallG}$, $\mathrm{byzantineCallW}$ under $k \in F$, $r \in startedRounds$\\[2pt]
+     silent: $\mathrm{byzantineGBCA}$ under $k \in F$, $r \in startedRounds$;
+     $\mathrm{byzantineDecided}$ under $k \in F$};
+  \node[comp, text width=2.9cm, anchor=north west] (w) at (6.9,-0.55)
+    {$\mathrm{WCC.specFamily}(P)$\\ along $\mathrm{coinLabelMap}$\\[2pt]
+     outputs $\mathrm{retW}$;\\ takes $\mathrm{byzantineCallW}$\\ as $\mathrm{callW}$};
+  \draw[<->] (-0.75,1.75) -- (-0.75,-1.6) -- (-0.5,-1.6);
+  \draw[<->] (10.55,1.75) -- (10.55,-1.25) -- (w.east |- 0,-1.25);
+  \node[ann, text width=11.4cm, anchor=north, align=flush center] at (4.9,-5.5)
+    {$\mathrm{roundProjection}$ assembles the composed round's state from this one:
+     the network states of the round from the tagged sent sets, the variables transposed,
+     the two cores and the round's network state from the ghost};
 \end{tikzpicture}

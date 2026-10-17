@@ -10,57 +10,52 @@ programs beside the round's network, in parallel with two gathers (`GBCA.ByAFW.r
 (`ABA/GBCA/ABDY/Composition.lean`), is the template every level copies: components
 synchronise on the instance's own events, the events are hidden, and the result is read back over
 the instance's interface. `DESIGN-GatherComposition.md` is the account of the stack;
-`DESIGN-Composition.md` is the account of what each component owns.
+`DESIGN-Composition.md` is the account of what each component holds.
 
 This note records five constraints the proofs impose on that shape. Each names
 the statement that is false or unprovable without it, so that a reader can
 tell a constraint from a convention.
 
-## 1. The call loop is a label of its own
+## 1. A call sends nothing
 
-A specification answers its call label on two transitions, the call and the
-input-enabledness loop (`BRB.Step.call`, `BRB.Step.callLoop`;
-`Gather.Step.call`, `Gather.Step.callLoop`). A composition splits the caller and
-the network into components, and on one shared label each takes either transition.
-Two of the four combinations are behaviours of no algorithm: the leader loops
-while the network posts `⟨INIT, m⟩`, and the leader records while the network
-posts nothing. The first reaches a state whose network holds the message and
-whose leader holds no input, which only `BRB.BrachaAlgorithm.byzantine` produces and only
-under `ldr ∈ F`.
+A specification takes its call label on two transitions, the call and the input-enabledness
+loop (`BRB.Step.call`, `BRB.Step.callLoop`; `Gather.Step.call`, `Gather.Step.callLoop`). A
+composition takes it on the program the call names: `BRB.ProgramStep.call` records the payload
+at a leader holding no input, `BRB.ProgramStep.callLoop` leaves a leader holding one where it
+stands, and the same pair stands at `Gather.ProgramStep`, `GBCA.ByABDY.GBCAProgramStep` and
+`GBCA.ByAFW.ProgramStep`. Every other component takes the call label on a Dirac self-loop. A
+program's first message is a send of its own, guarded by the recorded input: the leader's
+`⟨INIT, m⟩` is `BRB.ProgramStep.sendInit`.
 
-**What fails.** The characterisation by the algorithm stated label by label,
-`brachaInstance.step s l μ ↔ ∃ l₀, specificationLabelMap l = some l₀ ∧ BrachaAlgorithm s l₀ μ`,
-is false: at the call label the right-hand
-side admits the loop and the left-hand side offers the call alone, and at the loop label the
-reverse. The refinement into the specification fails with it, since a second call with another
-payload would let the specification record and commit a value the instance never broadcast.
+**What fails.** Let the call also post a message at the network. On the call label the leader
+records or loops and the network posts in both cases, and the loop with the post is a behaviour
+of no algorithm: it reaches a state whose network holds `⟨INIT, m'⟩` while the leader holds the
+payload `m` of an earlier call, which only `BRB.BrachaAlgorithm.byzantine` produces and only
+under `ldr ∈ F`. The characterisation by the algorithm, `brachaInstance.step s l μ ↔
+BrachaAlgorithm s l μ`, is false at the call label, and the refinement into the specification
+fails with it, since a second call with another payload would let the specification commit a
+value the instance never broadcast.
 
-**The constraint.** Each composition is over an alphabet in which the loop is its own
-label: `BRB.InstanceLabel = Label ⊕ LoopLabel` with `LoopLabel.callLoop m`,
-`Gather.InstanceLabel = Label ⊕ LoopLabel`
-with `LoopLabel.callLoop id x`, and the round is over `ExtendedLabel` natively, whose
-`NetworkEvent.gbcaCallLoop` and `byzantineCallGLoop` are its loop labels. On the call label the
-caller has one transition and the network posts; on the loop label every component is unchanged.
-The specification is read along a pullback that sends the loop to the call
-(`BRB.specificationLabelMap`, `Gather.specificationLabelMap`, `GBCA.specificationLabelMap`),
-so its own loop transition answers the loop label. The level above pulls the composition's alphabet
-back from its own (`Gather.inputBroadcastLabelMap`,
-`GBCA.ByAFW.firstGatherLabelMap`, `GBCA.ByAFW.secondGatherLabelMap`). The characterisation by the
-algorithm is then exact in the form quantified over the interface labels: `(∃ l,
-specificationLabelMap l = some l₀ ∧ brachaInstance.step s l μ) ↔ BrachaAlgorithm s l₀ μ`
-(`BRB.brachaInstance_step_iff_algorithm`,
+**The constraint.** The network transitions on a call label are Dirac self-loops
+(`BRB.NetworkStep.call`, `Gather.NetworkStep.call`, `GBCA.ByABDY.GBCANetworkStep.callG`,
+`GBCA.ByAFW.NetworkStep.callG`), and the loop is a case of the algorithm on the call label
+(`BRB.BrachaAlgorithm.callLoop` and its companions), so the characterisation holds label by
+label: `BRB.brachaInstance_step_iff_algorithm`,
 `Gather.instanceOverBroadcastSpecification_step_iff_algorithm`,
 `Gather.instanceOverBracha_step_iff_algorithm`,
-`GBCA.ByAFW.roundOverGatherSpecifications_step_iff_algorithm`).
+`GBCA.ByAFW.roundOverGatherSpecifications_step_iff_algorithm`. The guard of the loop on a filled
+input is a convention: the specification's unguarded loop matches a program that drops a first
+call, so no statement turns on it, and the guard makes the program's transition on its call
+a function of its state, as at the ABA interface (D36).
 
 ## 2. The gather specification's call follows the gather's variables
 
 At the composition over the broadcast specifications, the input broadcast of process `k` is
-`BRB.specificationOverInstanceAlphabet` read along `inputBroadcastLabelMap k`, which sends the
-event `inputBroadcastCall k x` to that instance's call and the gather's own `call` and call loop to
-no image. The instance answers that event on either of its two call transitions
-(`Gather.AlgorithmOverBroadcastSpecification.inputBroadcastCall`,
-`inputBroadcastCallSpecificationLoop`): it records the payload, or it loops and nothing moves.
+`BRB.specInst` read along `inputBroadcastLabelMap k`, which sends the event
+`inputBroadcastCall k x` to that instance's call and the gather's own `call` to no image. The
+instance takes that event on either of its two call transitions
+(`Gather.AlgorithmOverBroadcastSpecification.inputBroadcastCall`, `inputBroadcastCallLoop`): it
+records the payload, or it loops and nothing moves.
 
 **What fails.** A clause tying the specification's call to an input instance's variables is
 not inductive: `Gather.AlgorithmOverBroadcastSpecification.call` moves the gather's variables and
@@ -73,7 +68,7 @@ took the specification's call from the instance would be false there, and
 k).input`. The specification's call and the gather's variables move on the one interface label
 under the one write-once guard, and `specificationRelation_call` takes that guard alone;
 `specificationRelation_inputBroadcastCall` is matched by a stutter of the specification.
-`Gather.Invariant.inputBroadcastCall_backed` carries the instance's variables back: the payload an
+`Gather.Conformance.inputBroadcastCall_backed` carries the instance's variables back: the payload an
 input instance of a correct process was called with is the payload that process's gather variables
 hold. A return then discharges the gather specification's commit guard `k ∈ F ∨ call k = some x`
 through `val_witness`, which bounds a committed specification entry by the instance's
@@ -118,7 +113,7 @@ transition at those labels, and neither has `GBCA.ByABDY.composition`.
 transition, so the round blocks exactly where `GBCA.ByABDY.composition` blocks. `fail` alone maps to
 `none`: the round's programs remain unchanged on the round's own `fail` transition, the gathers
 corrupt, and in
-the family the label is answered by the broadcast act (`AFW.corruptionOverBracha`) and not by the
+the family the label is taken by the broadcast act (`AFW.corruptionOverBracha`) and not by the
 instance.
 
 ## 5. A broadcast instance's return is a transition of the implementation

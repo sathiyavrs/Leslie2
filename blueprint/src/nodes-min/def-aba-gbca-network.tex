@@ -2,7 +2,6 @@
   \label{def:aba-gbca-network}
   \lean{PLTS.ABA.GBCA.ByAFW.NetworkStep}\lean{PLTS.ABA.GBCA.ByAFW.GBCANetwork}\leanok
   \uses{def:aba-gather-spec, def:aba-labels}
-  The network component of a gather-based round: it exchanges no messages and its whole state is the round's bound bit --- \leandecl{PLTS.ABA.GBCA.ByAFW.GBCANetwork}.
-  The first gather's return writes the bit, where the component holds none, as $\mathrm{boundOfCore}$ of the core that return carries; every graded return announces the bit on its label and moves nothing; every other label leaves it where it stands.
-  No program reads it, so it is auxiliary state (D29).
+  The network component of a gather-based round: it exchanges no messages, and its state is the first gather's core it has recorded and whether the round has returned --- \leandecl{PLTS.ABA.GBCA.ByAFW.GBCANetwork}.
+  The first gather's announcement of its core records the core where none is recorded, the round's return records the return, and the announcement on $\mathrm{boundG}(r,b)$ fires at the bit $b = \mathrm{boundOfCore}$ of the recorded core once both are recorded; no program reads the state, so it is auxiliary state (D29).
 \end{definition}

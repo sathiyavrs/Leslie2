@@ -9,7 +9,7 @@
        \operatorname{ATD}(\afw{\mathrm{protocol}}(P)) &= \operatorname{ATD}(\afw{\mathrm{protocol}_0}(P)).
      \end{aligned} \]
   No map on labels stands in either equation.
-  A graded-agreement return is a label of the hidden alphabet of Definition~\ref{def:aba-labels}, so the bit it announces is silent at protocol level, and the identification of labels the removal runs on is discharged by the outermost hiding.
+  The announcement $\mathrm{boundG}$ is the one label whose transition reads the ghost, and it is a label of the hidden alphabet of Definition~\ref{def:aba-labels}, so the bit it names is silent at protocol level.
   Every statement of Theorem~\ref{thm:aba-main} and of Theorem~\ref{thm:aba-afw-main} therefore holds of the ghost-free system: the composition inclusion, the refinement by the ABA specification, and Validity and Agreement on every positive-probability trace of every achievable trace distribution.
 \end{theorem}
 
@@ -18,18 +18,19 @@
   Each equation is one instance of the removal of Definition~\ref{def:aba-implementation}, and that removal is assembled in four moves.
 
   The first is the network.
-  Take $\pi$ to delete the adversary's ghost, and $\varphi$ to send a graded-agreement return to the return of the same round, process and graded outcome with the announced bit fixed, and to be the identity on every other label.
-  The projection clause holds because every guard of the adversary reads the message sets, the DECIDED sets and the corrupted set alone, and because the ghost write leaves the deletion where it stands; the two return transitions lose their guard, the ghost-free output being the full relation.
-  The matching clause holds because a ghost-free return is met by the return announcing a bit the implementation's own output admits, which is supplied by the hypothesis that every state, round, process and graded outcome admits one; each algorithm's output is an equation, so its right-hand side is such a bit.
+  Take $\pi$ to delete the network's ghost, $\varphi$ to be the identity, and $K$ to be the announcement labels $\mathrm{boundG}(r,b)$.
+  A transition on an announcement leaves the projection where it stands, its successor being the ghost write of the state it leaves.
+  Every other transition keeps its guards under the removal, since they read the message record, the DECIDED sets, the corrupted set and the started rounds alone, and its successor is its own successor with the ghost removed.
+  A transition of the ghost-free network is met by the transition of the same name at the state that holds the ghost, and the ghost-free network's announcement never fires.\lean{PLTS.ABA.Implementation.network_ghostRemoval}\leanok{}
 
-  The second is the saturation of the components beside it.
-  A program's return transition takes the announced bit free, so each program is saturated along $\varphi$ and the synchronised group of Definition~\ref{def:synchronised-product} is saturated with it.
-  A graded-agreement return belongs to no coin round and is not a corruption, so the coin family answers it by its idle self-loop whichever bit it announces, and the lifted coin inherits the saturation along the label pullback.
+  The second is the components beside it.
+  Every system is saturated along the identity, and the congruences for parallel composition ask in addition that each component beside the network be idle on the announcement labels.
+  A program takes an announcement on $\mathrm{boundGIdle}$ or, replaced, on its self-loop, and the common coin on its family's idle transition, an announcement belonging to no coin round and not being a corruption.\lean{PLTS.ABA.Implementation.program_idleOn}\lean{PLTS.ABA.Implementation.coinOverExtendedAlphabet_idleOn}\leanok{}
 
   The third is the pipeline.
-  The four congruences of Definition~\ref{def:auxiliary-variable-removal} carry the adversary's removal through the composition of Definition~\ref{def:aba-implementation} in the order that composition builds it: parallel composition against the common coin, parallel composition against the process group, abstraction of the network events, and restriction along the left embedding.
+  The congruences of Definition~\ref{def:auxiliary-variable-removal} carry the network's removal through the composition of Definition~\ref{def:aba-implementation} in the order that composition builds it: parallel composition beside the common coin, parallel composition beside the process group, abstraction of the network events, and restriction along the left embedding.
 
   The fourth is the collapse.
-  Every label $\varphi$ identifies with a different label is a graded-agreement return, and those make up part of the hidden alphabet, so abstracting that alphabet leaves a removal at $\varphi = \mathrm{id}$, whose two systems have the same achievable trace distributions by Definition~\ref{def:auxiliary-variable-removal}.
+  Every announcement label lies in the hidden alphabet, so abstracting that alphabet turns the transitions on the announcements into silent transitions that leave the projection where it stands and leaves a removal at $\varphi = \mathrm{id}$ with the empty set as its $K$, whose two systems have the same achievable trace distributions by Definition~\ref{def:auxiliary-variable-removal}.\lean{PLTS.ABA.Implementation.system_auxiliaryVariableRemoval}\leanok{}
   The conclusions at the ghost-free system follow by rewriting along the equation in each statement of Theorem~\ref{thm:aba-main} and of Theorem~\ref{thm:aba-afw-main}, safety by the transfer those theorems already run on.
 \end{proof}

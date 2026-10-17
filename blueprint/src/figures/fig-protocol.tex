@@ -1,18 +1,20 @@
 % The protocol (PLTS.ABA.ABDY.ABAProgram, PLTS.ABA.ABDY.network, PLTS.ABA.ABDY.protocol):
-% n programs, the network, the common coin.
+% n programs, the network, the common coin. Each component lists the labels it outputs
+% (PLTS.ABA.Implementation.ProgramStep, PLTS.ABA.Implementation.NetworkStep); every other
+% label is an input of the component, taken at every state.
 \begin{tikzpicture}[
     >={Stealth[round]}, semithick,
-    prog/.style={draw, rounded corners, align=center, font=\footnotesize,
-      minimum width=2.4cm, minimum height=1.1cm, inner sep=3pt},
-    comp/.style={draw, rounded corners, align=center, font=\footnotesize,
-      minimum width=4.0cm, minimum height=1.0cm, inner sep=3pt},
+    prog/.style={draw, rounded corners, align=flush center, font=\footnotesize,
+      minimum width=2.4cm, minimum height=1.1cm, text width=2.65cm, inner sep=3pt},
+    comp/.style={draw, rounded corners, align=flush left, font=\scriptsize,
+      inner sep=4pt},
     lbl/.style={font=\scriptsize, fill=white, inner sep=1.5pt},
     ann/.style={font=\scriptsize, align=center, inner sep=1.5pt}]
-  % the outer hiding: the coin's call and return hidden
-  \draw[dashed, rounded corners] (-1.3,-3.75) rectangle (11.0,3.5);
+  % the outer hiding: the sub-protocol interface hidden
+  \draw[dashed, rounded corners] (-1.3,-4.55) rectangle (11.0,3.5);
   \node[font=\footnotesize] at (8.9,3.15) {$\mathrm{abstract}\,\mathrm{hiddenAPI}$};
   % the inner hiding: the network events hidden, leaving Label(n)
-  \draw[dashed, rounded corners] (-1.0,-3.45) rectangle (10.4,2.6);
+  \draw[dashed, rounded corners] (-1.0,-4.25) rectangle (10.4,2.6);
   \node[font=\footnotesize] at (7.6,2.33)
     {$\mathrm{relabel} \circ \mathrm{abstract}\,\mathrm{networkEventLabels}$};
   % the n programs
@@ -29,30 +31,39 @@
   \foreach \x in {0.6,4.9,8.9} \draw[->] (\x,1.95) -- (\x,1.68);
   \node[ann, anchor=west] at (-0.65,2.18) {$\mathrm{ExtendedLabel}(n)$: every program steps};
   \draw[->] (10.1,1.95) -- (10.7,1.95) -- (10.7,3.85);
-  \node[ann, anchor=north east] at (10.9,4.3)
+  \node[ann, anchor=north east, text width=2.0cm, align=flush right] at (10.9,4.3)
     {visible $\mathrm{callABA}$,\\ $\mathrm{retABA}$, $\mathrm{fail}$};
   % the line the components synchronise on
   \draw[thick] (-0.7,-0.35) -- (10.1,-0.35);
   \foreach \x in {0.6,4.9,8.9} \draw[<->] (\x,0.32) -- (\x,-0.35);
-  \node[ann, anchor=west] at (-0.65,-0.68) {hidden to $\tau$};
+  \node[ann, anchor=west] at (-0.65,-0.62) {hidden to $\tau$};
   % the network
-  \node[comp] (adv) at (2.2,-2.45)
-    {$\mathrm{network}(P)$\\ sent sets, corrupted set $F$\\ the ghost $ghost(r)$};
-  \draw[<->] (2.2,-0.35) -- (2.2,-1.80);
-  \node[ann, anchor=east] at (2.05,-1.35) {guard $k \in F$ on\\ Byzantine calls};
+  \node[comp, text width=6.9cm, anchor=north west] (network) at (-0.75,-1.05)
+    {$\mathrm{network}(P)$: $sent(r,j)$, $decidedSent(j)$, $F$, $startedRounds$, $ghost(r)$\\[2pt]
+     outputs the deliveries; $\mathrm{fail}$ under $k \notin F$, $|F| < f$;\\
+     $\mathrm{boundG}(r,b)$ under $\mathrm{ghostBound}(ghost(r)) = b$;\\
+     $\mathrm{byzantineCallG}$, $\mathrm{byzantineCallW}$ under $k \in F$, $r \in startedRounds$\\[2pt]
+     silent: $\mathrm{byzantineGBCA}$ under $k \in F$, $r \in startedRounds$;\\
+     $\mathrm{byzantineDecided}$ under $k \in F$};
+  \draw[<->] (2.2,-0.35) -- (2.2,-1.05);
   % the common coin, joined through the pullback
-  \node[comp] (w) at (7.2,-2.45)
-    {$\mathrm{WCC.specFamily}(P)$\\ along $\mathrm{coinLabelMap}$};
+  \node[comp, text width=2.95cm, anchor=north west] (w) at (6.85,-1.95)
+    {$\mathrm{WCC.specFamily}(P)$ along $\mathrm{coinLabelMap}$\\[2pt]
+     outputs $\mathrm{retW}$;\\ takes $\mathrm{byzantineCallW}$\\ as $\mathrm{callW}$};
   \draw[<->] (7.2,-0.35) -- (7.2,-1.95);
-  \node[ann, anchor=west] at (7.35,-1.1)
-    {$\mathrm{callW}$, $\mathrm{retW}$,\\
-     $\mathrm{byzantineCallW}$,\\ $\mathrm{byzantineRetW}$};
+  \node[ann, anchor=west, align=flush left, text width=2.6cm] at (7.35,-1.15)
+    {$\mathrm{callW}$, $\mathrm{retW}$,\\ $\mathrm{byzantineCallW}$, $\mathrm{fail}$};
   % the presentation it is included in
-  \node[comp] (impl) at (4.9,-5.1) {$\abdy{\mathrm{composed}}(P)$};
-  \draw[->, dashed] (4.9,-3.75) --
+  \node[draw, rounded corners, font=\footnotesize, minimum width=4.0cm, minimum height=1.0cm]
+    (composed) at (4.9,-5.85) {$\abdy{\mathrm{composed}}(P)$};
+  \draw[->, dashed] (4.9,-4.55) --
     node[lbl, anchor=west, xshift=4pt]{$\operatorname{ATD}$ inclusion, along $\mathrm{ProtocolRelation}$}
-    (4.9,-4.6);
-  \node[ann, text width=11.6cm] at (4.9,-6.0)
-    {the synchronisation labels are $\mathrm{gbcaSend}$, $\mathrm{gbcaDeliver}$, $\mathrm{decidedSend}$,
-     $\mathrm{decidedRelay}$, $\mathrm{decidedDeliver}$, $\mathrm{gbcaCallLoop}$ and the five Byzantine call and return transitions};
+    (4.9,-5.35);
+  \node[ann, text width=11.6cm, anchor=north, align=flush center] at (4.9,-6.55)
+    {program $j$ outputs $\mathrm{callG}$, $\mathrm{retG}$, $\mathrm{gbcaSend}$, $\mathrm{callW}$,
+     $\mathrm{decidedSend}$, $\mathrm{decidedRelay}$ and $\mathrm{retABA}$ at $j$;
+     the synchronisation labels are $\mathrm{gbcaSend}$, $\mathrm{gbcaDeliver}$, $\mathrm{decidedSend}$,
+     $\mathrm{decidedRelay}$, $\mathrm{decidedDeliver}$, $\mathrm{byzantineCallG}$ and $\mathrm{byzantineCallW}$;
+     $\mathrm{abstract}\,\mathrm{hiddenAPI}$ hides $\mathrm{callG}$, $\mathrm{retG}$, $\mathrm{boundG}$,
+     $\mathrm{callW}$ and $\mathrm{retW}$};
 \end{tikzpicture}

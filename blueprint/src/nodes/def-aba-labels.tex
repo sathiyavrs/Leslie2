@@ -2,10 +2,10 @@
   \label{def:aba-labels}
   \lean{PLTS.ABA.Label}\lean{PLTS.ABA.Label.hiddenAPI}\leanok
   \uses{def:aba-parameters}
-  All systems of the case study share one label type: the ABA API $\mathrm{callABA}(id,b)$ and $\mathrm{retABA}(id,b)$, the round-tagged GBCA API $\mathrm{callG}(r,id,b)$ and $\mathrm{retG}(r,id,out,bnd)$ with $out$ a graded outcome $(b,2)$, $(b,1)$ or $(\bot,0)$ and $bnd$ a bit, the round-tagged WCC API $\mathrm{callW}(r,id)$ and $\mathrm{retW}(r,id,b)$, the corruption broadcast $\mathrm{fail}(id)$, and $\tau$.
-  The two sub-protocol APIs make up the hidden alphabet of every composed system.
+  All systems of the case study share one label type: the ABA API $\mathrm{callABA}(id,b)$ and $\mathrm{retABA}(id,b)$, the round-tagged GBCA API $\mathrm{callG}(r,id,b)$ and $\mathrm{retG}(r,id,out)$ with $out$ a graded outcome $(b,2)$, $(b,1)$ or $(\bot,0)$, the announcement $\mathrm{boundG}(r,b)$ of round $r$'s bound bit, the round-tagged WCC API $\mathrm{callW}(r,id)$ and $\mathrm{retW}(r,id,b)$, the corruption broadcast $\mathrm{fail}(id)$, and $\tau$.
+  The labels that carry a round, the two sub-protocol APIs and the announcement, make up the hidden alphabet of every composed system.
   The graded outcome is program data: a round loop reads it and retains it.
-  The bound bit is a ghost output (D29): it is the bit the round's specification holds as state, announced on the label, and no program reads it.
+  The bound bit is a ghost output (D29): the component that holds it outputs the announcement, and no program reads it.
   Announcing it makes binding, a property of the extensions of a run, a property of a single trace.
   Full label type: \leandecl{PLTS.ABA.Label}.
 \end{definition}

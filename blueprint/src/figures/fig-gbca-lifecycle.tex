@@ -1,18 +1,19 @@
 % GBCA specification instance (PLTS.ABA.GBCA.Step). Automata style.
 % Nodes are the reachable states quotiented to the pair (|excluded|, grade). The
-% bit-labelled reachable states are (empty, bot), ({b}, bot), ({b}, A) and
-% ({b}, C) for each bit b, seven in all. (empty, A) and (empty, C) are
+% bit-labelled reachable states are (empty, bot), ({b}, bot), ({b}, 2) and
+% ({b}, 0) for each bit b, seven in all. (empty, 2) and (empty, 0) are
 % unreachable, every graded return needing excluded nonempty; and excluded never holds
 % two bits, bindUnset being enabled from excluded = empty alone, so no second exclusion
 % is drawn. The exclude edge names the bit it excludes, so 1-b is the bit not excluded
-% at every node to its right. Every return announces the round's bound bit bnd,
-% the complement of the excluded one, so bnd = 1-b at every node to the right of
-% the exclude edge. call/callLoop are enabled in every state and
-% drawn once, on the initial state; fail is omitted.
+% at every node to its right. The returns carry the returned value alone; announceBound
+% announces the bit not excluded, 1-b, under (!b') in excluded, at every node to the
+% right of the exclude edge. The transitions are numbered in the order of the constructors
+% of PLTS.ABA.GBCA.Step. call/callLoop are enabled in every state and drawn once, on the
+% initial state; fail is omitted.
 \begin{tikzpicture}[
     ->, >={Stealth[round]}, auto, semithick, on grid,
     every state/.style={draw, minimum size=1.45cm, align=center, font=\small},
-    lbl/.style={font=\footnotesize, align=center, fill=white, inner sep=1.5pt}]
+    lbl/.style={font=\footnotesize, align=flush center, fill=white, inner sep=1.5pt}]
 
   \node[state]                           (dA) at (4.9,3.0)  {$(1,2)$};
   \node[state, initial, initial text={}] (e0) at (0,0)      {$(0,\bot)$};
@@ -22,13 +23,13 @@
   % self-loops
   \path
     (e0) edge[loop below, looseness=5]
-      node[lbl, below]{1 \texttt{call}\\2 \texttt{callLoop}} (e0)
+      node[lbl, below, text width=1.7cm]{1 \texttt{call}\\2 \texttt{callLoop}} (e0)
     (d0) edge[loop, out=-28, in=28, looseness=5]
-      node[lbl, right]{4 \texttt{retGrade1}\ $1{-}b$\\$bnd = 1{-}b$} (d0)
+      node[lbl, right, align=flush left, text width=3.3cm]{4 \texttt{retGrade1}\ $1{-}b$\\7 \texttt{announceBound}\ $1{-}b$} (d0)
     (dA) edge[loop above, looseness=5]
-      node[lbl, above]{4 \texttt{retGrade1}\ $1{-}b$\\5 \texttt{retGrade2}\ $1{-}b$\\$bnd = 1{-}b$} (dA)
+      node[lbl, above, text width=3.3cm]{4 \texttt{retGrade1}\ $1{-}b$\\5 \texttt{retGrade2}\ $1{-}b$\\7 \texttt{announceBound}\ $1{-}b$} (dA)
     (dC) edge[loop below, looseness=5]
-      node[lbl, below]{4 \texttt{retGrade1}\ $1{-}b$\\6 \texttt{retGrade0}\\$bnd = 1{-}b$} (dC);
+      node[lbl, below, text width=3.3cm]{4 \texttt{retGrade1}\ $1{-}b$\\6 \texttt{retGrade0}\\7 \texttt{announceBound}\ $1{-}b$} (dC);
 
   % the exclusion
   \path
@@ -36,10 +37,11 @@
 
   % the two grade guards
   \path
-    (d0) edge node[lbl, left]{5 \texttt{retGrade2}\ $1{-}b$\\$bnd = 1{-}b$} (dA)
-    (d0) edge node[lbl, left]{6 \texttt{retGrade0}\\$bnd = 1{-}b$} (dC);
+    (d0) edge node[lbl, left]{5 \texttt{retGrade2}\ $1{-}b$} (dA)
+    (d0) edge node[lbl, left]{6 \texttt{retGrade0}} (dC);
 
   % the note on the announced bit
-  \node[font=\footnotesize, align=center, text width=10.5cm] at (2.45,-5.75)
-    {every return announces the bound bit $bnd$, the complement of the excluded bit (D29)};
+  \node[font=\footnotesize, align=flush center, text width=10.5cm] at (2.45,-6.0)
+    {every return requires $excluded \neq \emptyset$;\\
+     \texttt{announceBound}\ $1{-}b$, on $\mathrm{boundG}(r,1{-}b)$, is enabled at every state with $excluded = \{b\}$ (D29)};
 \end{tikzpicture}

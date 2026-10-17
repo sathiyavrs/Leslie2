@@ -1,8 +1,8 @@
 \begin{theorem}[Family congruence and the graded-agreement family refinement]
   \label{thm:gbca-family-refines}
-  \lean{PLTS.ForwardSimulation.family}\lean{PLTS.ABA.gbcaSpecificationFamily}\lean{PLTS.ABA.substitutionRelationFamily}\lean{PLTS.ABA.familySubstitution}\lean{PLTS.ABA.familySubstitutionSimulation}\leanok
+  \lean{PLTS.ForwardSimulation.family}\lean{PLTS.ABA.gbcaSpecificationFamily}\lean{PLTS.ABA.substitutionRelationFamily}\lean{PLTS.ABA.GBCA.ByABDY.refinesSpecification_untouchedFirstStep}\lean{PLTS.ABA.familySubstitution}\lean{PLTS.ABA.familySubstitutionSimulation}\leanok
   \uses{thm:aba-gbca-composition-by-abdy-refines-specification, def:aba-gbca-instance-by-abdy, def:idle-family, lem:hyperstep-weakstep}
-  Per-instance forward simulations lift to the $\mathbb{N}$-indexed families, and the lift makes the family of round instances forward-simulated by the family of round specifications: \leandecl{PLTS.ForwardSimulation.family}, \leandecl{PLTS.ABA.familySubstitutionSimulation}.
+  Per-instance forward simulations lift to the $\mathbb{N}$-indexed families, along the relation asking for the same recorded broadcasts, the same rounds in the two maps and related instances at every round, once each round's first step from a related pair of untouched instances is matched by a transition on the same label; the lift makes the family of round instances forward-simulated by the family of round specifications: \leandecl{PLTS.ForwardSimulation.family}, \leandecl{PLTS.ABA.familySubstitutionSimulation}.
 \end{theorem}
 
 \begin{proof}\leanok

@@ -8,21 +8,26 @@ lemmas) and `ABA/GBCA/ABDY/RefinesSpecification.lean` (the matching and the simu
 algorithm in
 `ABA/GBCA/ABDY/Algorithm.lean` (deviation D18: all five message levels of ABDY22's Algorithm 6)
 and the specification shape in `ABA/GBCA/Specification.lean` (deviation D19: the exclusion set
-`excluded : Finset Bool` as the state shape, with the bound value announced on the return labels,
-D29). The refinement paragraphs of `blueprint/src/content.tex` — the exclusion witness, the
+`excluded : Finset Bool` as the state shape, with the bound value announced by an event of its
+own, D29). The refinement paragraphs of `blueprint/src/content.tex` — the exclusion witness, the
 `VOTE` quorum, and the two-step exclusion-then-return run — are a condensation of this document.
 
 ## Systems
 
 ```
-composition P r : System (RoundState P.n) (ExtendedLabel P.n)     -- ABDY22 Algorithm 6, D1/D5/D8/D18
-specificationOverRoundAlphabet P r : System (SpecState P.n) (ExtendedLabel P.n)     -- graded-binding spec, D1/D14/D15/D19
-target : ForwardSimulation (composition P r) (specificationOverRoundAlphabet P r) (specificationRelation P r)
+composition P r : System (RoundState P.n) (ExtendedLabel P.n Message)     -- ABDY22 Algorithm 6, D1/D5/D8/D18
+specificationOverRoundAlphabet P Message r : System (SpecState P.n) (ExtendedLabel P.n Message)     -- graded-binding spec, D1/D14/D15/D19
+target : ForwardSimulation (composition P r) (specificationOverRoundAlphabet P Message r) (specificationRelation P r)
 ```
 
-Both systems are Dirac-transition LTSs. The refinement reaches the ℕ-indexed families through
-`ForwardSimulation.family` (`ABA/ABDY/Substitution.lean`), whose family lifting
-takes its broadcast ingredient from `GBCA.ByABDY.specificationRelation_corrupt`.
+Both systems are Dirac-transition LTSs. The round's interface is `callG r`, `retG r`, `boundG r`
+and a corrupted process's call `byzantineCallG r`, which `GBCA.specificationLabelMap` sends to the
+specification's call: a transition of the composition is the algorithm's transition at the
+specification label its interface label projects to (`composition_projects`), and the matching
+run of `GBCA.specInst` is lifted back along a section of that map. The refinement reaches the
+ℕ-indexed families through `ForwardSimulation.family` (`ABA/ABDY/Substitution.lean`), whose family
+lifting takes its broadcast ingredient from `GBCA.ByABDY.specificationRelation_corrupt` and its
+first step at an untouched round from `GBCA.ByABDY.refinesSpecification_untouchedFirstStep`.
 
 ### The algorithm (D18): the five message levels
 
@@ -58,8 +63,8 @@ block boundaries are denials: within a return block the `⊥` transition denies 
 block's case (a) at either bit, and the returns read as Algorithm 6's
 `if (a) … elif (b) … else …`, each carrying the denials of the cases above it.
 
-* `call` / `callLoop` — record the input, multicast `INPUT b` / input-enabled
-  self-loop;
+* `call` / `callLoop` — record the input / input-enabled self-loop;
+* `input` — multicast `INPUT b` once the input `b` is recorded, a send of its own;
 * `deliver` — adversarial move of a sent message into a `received` cell;
 * `relay` — `f + 1` received `INPUT b` messages, re-multicast `INPUT b` (amplification);
 * `echo` — `n − f` received `INPUT b` messages, multicast `ECHO b` (write-once);
@@ -89,18 +94,19 @@ block's case (a) at either bit, and the returns read as Algorithm 6's
   (b)'s other two conjuncts, the `n − f` any-`ECHO5` quorum and `bothValid`, are
   this transition's own `hcnt` and `hval`, an `n − f` `ECHO5 ⊥` quorum being in
   particular an `n − f` any-`ECHO5` quorum (grade 0);
+* `announceBound` — announce the recorded bound bit `b` on `boundG r b`, a Dirac self-loop;
 * `fail` — D1 determinised corruption.
 
-The three return transitions each announce a bit and write it back, and no other transition
-touches the field. `GBCA.ByABDY.boundOf sent F out` is the bit a return of outcome
-`out` announces where the round has none on record: `v` at an outcome
+The three return transitions each write the round's bound bit where none is on record, and
+`announceBound` reads it; no other transition touches the field. `GBCA.ByABDY.boundOf sent F out`
+is the bit a return of outcome `out` writes where the round has none on record: `v` at an outcome
 of grade 1 or 2, and at grade `0` the payload of a correct `⟨VOTE, b⟩` sender, `true` where
 there is none. A correct `⟨VOTE, b⟩` sender holds a quorum of `n − f` received `⟨ECHO, b⟩`
 messages and at most one bit carries such a quorum, so on a reachable
-state at most one of the two cases `b = 0`, `b = 1` applies. A return announces
-`bound.getD (boundOf sent F out)`, so the round announces one bit on all of its
-returns. The bit is a ghost output (D29): it enters no guard of Algorithm 6 and
-no field a program holds.
+state at most one of the two cases `b = 0`, `b = 1` applies. A return writes
+`bound.getD (boundOf sent F out)`, so a later return leaves the recorded bit as it stands and the
+round records one bit. The bit is a ghost output (D29): it enters no guard of Algorithm 6 but the
+announcement's, and no field a program holds.
 
 The depth of the witness a return carries, which the binding argument uses: **every grade-≥1
 output names a bit that a correct process has sent in a `BIND`** — `retGrade2` via `n − f` `ECHO5 v` →
@@ -122,28 +128,29 @@ instance can no longer return. The transitions:
   `f + 1 ≤ #{id | s.call id = some (!b) ∨ id ∈ s.F}` (the D15 InputSupport count,
   at the bit `!b` the transition leaves not excluded), and `hd0 : s.excluded = ∅`; effect
   `excluded := insert b s.excluded`;
-* `retGrade2 id v bnd` — guards `v ∉ s.excluded`, `(!v) ∈ s.excluded`,
-  `(!bnd) ∈ s.excluded`, `s.grade = none ∨ s.grade = some true`,
-  `s.ret id = false`; effect `grade := some true`, mark returned;
-* `retGrade1 id v bnd` — guards `v ∉ s.excluded`, `(!v) ∈ s.excluded`,
-  `(!bnd) ∈ s.excluded`, the D15 dissent count
+* `retGrade2 id v` — guards `v ∉ s.excluded`, `(!v) ∈ s.excluded`,
+  `s.grade = none ∨ s.grade = some true`, `s.ret id = false`; effect `grade := some true`, mark
+  returned;
+* `retGrade1 id v` — guards `v ∉ s.excluded`, `(!v) ∈ s.excluded`, the D15 dissent count
   `f + 1 ≤ #{id' | s.call id' = some (!v) ∨ id' ∈ s.F}`, `s.ret id = false`;
   effect: mark returned;
-* `retGrade0 id bnd` — guards `(!bnd) ∈ s.excluded`, the two D15 counts (one per
+* `retGrade0 id` — guards `s.excluded ≠ ∅`, the two D15 counts (one per
   bit), `s.grade = none ∨ s.grade = some false`, `s.ret id = false`; effect
   `grade := some false`, mark returned;
+* `announceBound b` — guard `(!b) ∈ s.excluded`; a Dirac self-loop on `.boundG r b`;
 * `fail` — D1 corruption, `excluded` untouched.
 
-Each return announces `bnd` on its label `.retG r id out bnd` under the single
-guard `(!bnd) ∈ s.excluded`. A reachable state excludes at most one bit, so the
-guard determines `bnd` as the complement of the excluded one, and all the
-returns of a round announce one bit. A return of grade 1 or 2 carries
-`(!v) ∈ s.excluded` too, so it announces `bnd = v`. This is what makes binding a
-property of the trace alone (`GBCA.BindingTrace`, `specInst_binding`).
+A return carries the returned value alone. The announcement fires on `.boundG r b` under the
+single guard `(!b) ∈ s.excluded`. A reachable state excludes at most one bit, so the guard
+determines `b` as the complement of the excluded one, and all the announcements of a round name
+one bit. A return of grade 1 or 2 of `v` carries `(!v) ∈ s.excluded`, so `v` is the announced bit,
+and every return requires an excluded bit, so every trace with a return extends by the
+announcement. This is what makes binding a property of the trace alone (`GBCA.BindingTrace`,
+`specInst_binding`).
 
 The `hd0` guard admits `bindUnset` from the empty set only, so an instance excludes
 at most once and every reachable state has `excluded ∈ {∅, {b}}`
-(`GBCASafety.excluded_card_le_one`). The once-only exclude is also what keeps a round
+(`GBCA.excluded_card_le_one`). The once-only exclude is also what keeps a round
 completable: after a grade-2 return a second exclusion would leave no bit outside
 `excluded` for the returns of grade 1 and 2 while the grade-2 guard blocks `retGrade0`, which
 leaves the processes yet to return with no enabled return.
@@ -188,8 +195,9 @@ ExclusionWitness P s b}`) and never from below.
 implementation's ghost field: `excludedOf` is `∅` at `bound = none` and
 `{!β}` at `bound = some β`, and the equation holds because the exclusion fires
 inside the round's first return, which is also the transition that writes the bit. Two
-things follow. It discharges the guard `(!bnd) ∈ excluded` of a return that
-announces a bit already on record, and with `exclusion_witness` it gives
+things follow. It discharges the guard `(!b) ∈ excluded` of the specification's announcement of
+the network's bit `b` (`SpecificationRelation.excluded_of_bound`) and the guards of a return after
+the round's first, and with `exclusion_witness` it gives
 `SpecificationRelation.bound_witness`: the bit on record carries an exclusion witness for its
 complement. Each return transition therefore splits on `bound`: with a bit on record
 the guard is discharged and the transition is matched by `ret` alone, and with the field
@@ -429,6 +437,7 @@ never witnessed, hence never picked.
 |---|---|---|---|
 | `call` | `callG r id b` | `Step.call` (guard via `call_eq`) | `call_eq`/`ret_eq` re-pointwise; `exclusion_witness` by `ExclusionWitness.mono` (input write only); the grade witnesses untouched |
 | `callLoop` | `callG r id b` | `Step.callLoop` | all fields unchanged |
+| `input` | τ | stutter | unchanged but the sender's `sentInput` |
 | `deliver` | τ | stutter (`weakLSilent_refl`) | `exclusion_witness` via `ExclusionWitness.mono` (received grows); the grade witnesses via `receivedCount_le_receiveMessage` |
 | `relay` | τ | stutter | unchanged but the sender's `sentInput` |
 | `echo` | τ | stutter | unchanged but the sender's `sentEcho` |
@@ -436,9 +445,10 @@ never witnessed, hence never picked.
 | `bindBit` / `bindBot` | τ | stutter | unchanged but the sender's `sentBind` |
 | `echo5Bit` / `echo5Bot` | τ | stutter | unchanged but the sender's `sentEcho5` (nothing in the relation reads `sentEcho5` outside `Invariant`) |
 | `byzantine` | τ | stutter | unchanged but the `sent` set of a corrupted sender |
-| `retGrade2 id v` | `retG r id (A v)` | `(!v) ∈ excluded`: single `Step.retGrade2`; else: `excludeThenRetGrade2_run` | see below |
-| `retGrade1 id v` | `retG r id (B v)` | `(!v) ∈ excluded`: single `Step.retGrade1`; else: `excludeThenRetGrade1_run` | see below |
-| `retGrade0 id` | `retG r id C` | `excluded ≠ ∅`: single `Step.retGrade0`; else: `excludeThenRetGrade0_run` on `b*` | see below |
+| `retGrade2 id v` | `retG r id (.grade2 v)` | `(!v) ∈ excluded`: single `Step.retGrade2`; else: `excludeThenRetGrade2_run` | see below |
+| `retGrade1 id v` | `retG r id (.grade1 v)` | `(!v) ∈ excluded`: single `Step.retGrade1`; else: `excludeThenRetGrade1_run` | see below |
+| `retGrade0 id` | `retG r id .grade0` | `excluded ≠ ∅`: single `Step.retGrade0`; else: `excludeThenRetGrade0_run` on `b*` | see below |
+| `announceBound b` | `boundG r b` | `Step.announceBound`, its guard `(!b) ∈ excluded` by `SpecificationRelation.excluded_of_bound` | all fields unchanged |
 | `fail id` | `fail id` | `Step.fail` (`corrupt` on both) | `corrupt_F_eq`; `excluded` untouched by spec `corrupt`; `exclusion_witness` via `ExclusionWitness.mono` (`corrupt_received`/`corrupt_processVariables`/`corrupt_F_subset`); the grade witnesses via `corrupt_receivedCount` |
 
 The three return transitions in detail. Common first move: derive the correct
@@ -488,7 +498,7 @@ correct bit-voter the all-⊥ quorum (`exclusionWitness_of_noCorrectVote`) witne
 once. In
 that all-⊥ run no bit is ever returned, and the bit the grade-0 returns announce is the one not
 excluded — `boundOf` reads `true` there, and the run excludes `false` — which is sound because the bit is
-a ghost output and answers no process.
+a ghost output and is returned to no process.
 
 ## The full list of invariants
 
@@ -654,7 +664,7 @@ discharges by `corrupt_received`, `corrupt_processVariables` and `corrupt_F_subs
 `GBCA.ByABDY.RoundVariables` keep the write-once `sentEcho5` field in their `processVariables` field
 and carry their own `echo5Count` over their received sets, the synchronised transitions
 `gbcaSendEcho5Bit`/`gbcaSendEcho5Bot` are the echo5 multicasts computed from those variables, and the
-three `retG` transitions (and their `byzantineRetG` counterparts) read the echo5 level from them. No
+three `retG` transitions read the echo5 level from them. No
 translation to the protocol's state is needed: the round-`r` `RoundState` *is* the round instance's
 own state — the round variables with their received sets beside the round's network state, which
 holds the
@@ -678,8 +688,8 @@ specification.
    written `(!v) ∈ s.excluded` / `(!v) ∉ t.excluded`.
 2. **`retGrade1`'s `honce` guard.** The implementation's `retGrade1` keeps the
    algorithm's "at least one received `ECHO5 v` message" guard. The simulation never
-   reads it (the `f + 1` received `BIND v` messages carry the whole witness), so it rides
-   along as pure conformance; it must not be dropped from the transition — the transition
+   reads it (the `f + 1` received `BIND v` messages carry the whole witness), so it stays
+   as conformance; it must not be dropped from the transition — the transition
    is the algorithm's line.
 3. **Canonical grade-0 exclude via `Classical.choose`.** The `retGrade0` transition consumes `∃ b,
    ExclusionWitness P s b` nonconstructively. If a later development (e.g. a quantitative or
@@ -688,7 +698,7 @@ specification.
    witnessed bit is chosen.
 4. **`excluded.card ≤ 1` carries no conjunct of its own.** It holds at every
    state of every execution of the specification instance
-   (`GBCASafety.excluded_card_le_one`), by the `hd0 : excluded = ∅` guard on the
+   (`GBCA.excluded_card_le_one`), by the `hd0 : excluded = ∅` guard on the
    single writer, and it is a consequence of `bound_excluded`, `excludedOf`
    taking only `∅` and singletons. A separate conjunct would create restoration
    obligations on every transition for no benefit, and each run gets its `hd0` from the

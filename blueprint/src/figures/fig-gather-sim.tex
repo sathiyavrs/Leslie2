@@ -1,36 +1,46 @@
 % The three simulations of one gather-based round
 % (PLTS.ABA.GBCA.ByAFW.broadcastSubstitution, gatherSubstitution,
-% refinesSpecification).
-% Concrete transitions above each composition, the composition below, dashed verticals the relation.
+% refinesSpecification), with the per-transition matching of each
+% (PLTS.ABA.Gather.refinesSpecification inside the second,
+% PLTS.ABA.GBCA.ByAFW.specificationRelation_transition for the third).
+% The compositions on the left, the concrete transitions of each stage on the right with
+% what matches them, dashed the relation.
 \begin{tikzpicture}[
     >={Stealth[round]}, semithick, on grid,
-    conc/.style={draw, rounded corners, minimum height=0.8cm, align=center,
-      font=\footnotesize, inner sep=3pt},
-    lvl/.style={draw, rounded corners, minimum width=3.1cm, minimum height=0.8cm,
-      align=center, font=\footnotesize, inner sep=3pt},
-    note/.style={font=\scriptsize, align=left},
-    rel/.style={font=\scriptsize, align=center}]
-  \node[lvl] (overbracha) at (0,1.95)  {$\mathrm{roundOverBracha}$};
-  \node[lvl] (overbrb)    at (0,0.35)  {$\mathrm{roundOverBroadcastSpecification}$};
-  \node[lvl] (overgather) at (0,-1.25) {$\mathrm{roundOverGatherSpecifications}$};
-  \node[lvl] (spec)  at (0,-2.85) {$\mathrm{GBCA.specInst}$};
+    conc/.style={draw, rounded corners, align=flush left, font=\scriptsize,
+      text width=7.0cm, inner sep=3pt},
+    lvl/.style={draw, rounded corners, minimum width=3.9cm, minimum height=0.75cm,
+      align=center, font=\scriptsize, inner sep=3pt}]
+  \node[lvl] (overbracha) at (0,2.6)  {$\mathrm{roundOverBracha}$};
+  \node[lvl] (overbrb)    at (0,0.6)  {$\mathrm{roundOverBroadcastSpecification}$};
+  \node[lvl] (overgather) at (0,-1.4) {$\mathrm{roundOverGatherSpecifications}$};
+  \node[lvl] (specification)       at (0,-3.4) {$\mathrm{GBCA.specificationOverRoundAlphabet}$};
   \draw[->, thick] (overbracha) -- (overbrb);
   \draw[->, thick] (overbrb)    -- (overgather);
-  \draw[->, thick] (overgather) -- (spec);
-  \node[conc] (r1) at (9.4,1.15)
-    {every $\mathrm{ECHO}$, $\mathrm{VOTE}$, delivery\\ and return of a Bracha instance};
-  \node[conc] (r2) at (9.4,-0.45)
-    {every $\mathrm{ECHO}$, $\mathrm{VOTE}$ and $\mathrm{BIND}$\\ of a gather instance};
-  \node[conc] (r3) at (9.4,-2.05)
-    {a return whose exclusion is missing;\\ a return whose exclusion has happened};
-  \draw[dashed, ->] (r1) -- (2.45,1.15) node[rel, pos=0.5, above]{$\mathrm{BroadcastSubstitutionRelation}$};
-  \draw[dashed, ->] (r2) -- (2.45,-0.45) node[rel, pos=0.5, above]{$\mathrm{GatherSubstitutionRelation}$};
-  \draw[dashed, ->] (r3) -- (2.45,-2.05) node[rel, pos=0.5, above]{$\mathrm{SpecificationRelation}$};
-  \node[note, anchor=west] at (12.3,1.15)  {a stutter or a return\\ of the BRB specification};
-  \node[note, anchor=west] at (12.3,-0.45) {a stutter; a broadcast\\ return records the\\ value returned};
-  \node[note, anchor=west] at (12.3,-2.05) {a run, or a single\\ graded return};
-  \node[font=\footnotesize, align=center] at (7.2,-3.85)
-    {each stage replaces one component by its specification\\ and holds the components above it equal;\\
-     the two upper stages are congruence applications, the round's network held equal,\\
-     and $\mathrm{SpecificationRelation}$ fixes $excluded$ at the complement of the bit it holds};
+  \draw[->, thick] (overgather) -- (specification);
+  \node[conc, anchor=west] (r1) at (4.3,1.75)
+    {$\mathrm{BroadcastSubstitutionRelation}$, by congruence:\\
+     a call of a Bracha instance $\mapsto$ $\mathtt{call}$ or $\mathtt{callLoop}$;\\
+     its $\mathrm{ECHO}$, $\mathrm{VOTE}$ and deliveries $\mapsto$ a stutter;\\
+     its return $\mapsto$ $\mathtt{commit}$; $\mathtt{ret}$ while $val = \bot$, $\mathtt{ret}$ once $val$ is set};
+  \node[conc, anchor=west] (r2) at (4.3,-0.35)
+    {$\mathrm{GatherSubstitutionRelation}$, by congruence:\\
+     a call of a gather instance $\mapsto$ $\mathtt{call}$ or $\mathtt{callLoop}$;\\
+     its sends, deliveries, broadcast calls and broadcast returns $\mapsto$ a stutter;\\
+     its return $\mapsto$ $\mathtt{commit}^{*}$; $\mathtt{bindCore}$ at the first return; $\mathtt{ret}$;\\
+     its announcement $\mathrm{core}\,C$ $\mapsto$ $\mathtt{announceCore}\,C$};
+  \node[conc, anchor=west] (r3) at (4.3,-2.5)
+    {$\mathrm{SpecificationRelation}$:\\
+     a call $\mapsto$ $\mathtt{call}$ or $\mathtt{callLoop}$;
+     the round's events and the gathers' internal transitions $\mapsto$ a stutter;\\
+     the round's first return $\mapsto$ $\mathtt{bindUnset}$; $\mathtt{ret}$, a later return $\mapsto$ $\mathtt{ret}$;\\
+     $\mathrm{boundG}(r,b)$ $\mapsto$ $\mathtt{announceBound}\,b$};
+  \draw[dashed, ->] (r1.west) -- (2.05,1.75);
+  \draw[dashed, ->] (r2.west) -- (2.05,-0.35);
+  \draw[dashed, ->] (r3.west) -- (2.05,-2.5);
+  \node[font=\scriptsize, align=flush center, text width=11.5cm, anchor=north] at (5.0,-4.25)
+    {each stage replaces one component by its specification and holds the components above it equal;
+     the round's network is held equal by the two substitutions, and $\mathrm{SpecificationRelation}$
+     excludes the complement of the bound bit of the first gather's core once the round's network
+     has recorded a return};
 \end{tikzpicture}
