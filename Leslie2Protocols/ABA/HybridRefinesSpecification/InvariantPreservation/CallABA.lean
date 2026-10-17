@@ -11,9 +11,10 @@ import Leslie2Protocols.ABA.Composition.Hybrid
 # `Invariant` across the `callABA` transitions of `hybrid`
 
 `Invariant.step_callABA`, preservation of `Invariant` at a call of the ABA interface. The
-transition is either a never-corrupted process's genuine external input, guarded by
-`input = none`, so that `input_called` rules out the corner where the graded-agreement call has
-already been made, or the idle self-loop.
+transition is either a correct process's external input, guarded by `input = none`, so that
+`input_called` rules out a graded-agreement call of the process, or a self-loop: the
+input-enabledness loop at a process holding an input, or the replaced round loop's self-loop.
+Neither writes a record of DECIDED sends, so `decidedSent_recorded` (I4') passes through.
 -/
 
 namespace PLTS
@@ -44,6 +45,11 @@ theorem Invariant.step_callABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
     have hDS : c'.decidedSent = c.decidedSent := ABAState.setProcessVariables_decidedSent _ _ _
     have hDR : c'.decidedReceived = c.decidedReceived :=
       ABAState.setProcessVariables_decidedReceived _ _ _
+    have hRecorded : ∀ j, (c'.1 j).decidedSent = (c.1 j).decidedSent := by
+      intro j
+      by_cases hj : j = id
+      · rw [hj, hc'def]; simp [ABAState.setProcessVariables]
+      · rw [hc'def]; simp [ABAState.setProcessVariables, Function.update_of_ne hj]
     have hSelf : c'.processes id = { c.processes id with
         input := some b, estimate := some b, round := 0, phase := .toCallG } := by
       rw [hc'def]; exact ABAState.setProcessVariables_processes_self _ _ _
@@ -95,7 +101,9 @@ theorem Invariant.step_callABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
       fun v _ hpin j b' hj hh => hpin j b' (hF ▸ hj) (hHold j b' hh)⟩
     refine ⟨fun id' => by rw [hCorr, hF]; exact hI.corrupted_F id',
       fun r => (hI.F_gbca r).trans hF.symm, fun r => hF ▸ hI.F_wcc r, hF ▸ hI.F_card,
-      ?_, ?_, ?_, hI.down_settled, hI.quiescent, hI.wcc_bound, ?_, ?_, ?_, ?_, ?_,
+      ?_, ?_, ?_, hI.down_settled, hI.quiescent, hI.wcc_bound, ?_, ?_,
+      fun j hj => by rw [hRecorded j, hDS]; exact hI.decidedSent_recorded j (hF ▸ hj),
+      ?_, ?_, ?_,
       hI.grade2_needs_bind, ?_, ?_, ?_, ?_, ?_, ?_, hI.bind_succ, ?_, ?_, hI.grade0_chain, ?_,
       hI.wcc_order, ?_, ?_, ?_, ?_, ?_, ?_, hI.bound_quorum,
       fun r v hb => (hI.bind_support r v hb).mono hInMono (fun x hx => by rw [hF]; exact hx),
@@ -177,7 +185,7 @@ theorem Invariant.step_callABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
         · rw [hid, hin] at hpre; exact absurd hpre (by simp)
         · left; rw [hNe id' hid]; exact hpre
       · right; rw [hF]; exact hf
-    · -- `wcc_callRound`'s `id' = id` corner: `id` was just idle (`hin`), so `idle_no_wccCall`
+    · -- The case `id' = id` of `wcc_callRound`: `id` held no input (`hin`), so `idle_no_wccCall`
       -- rules out `id` having ever called any `WCC` instance.
       intro r id' hmem hcalled
       by_cases hid : id' = id
@@ -186,9 +194,9 @@ theorem Invariant.step_callABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
         rw [this] at hcalled
         exact absurd hcalled (by simp)
       · rw [hNe id' hid]; exact hI.wcc_callRound r id' (hF ▸ hmem) hcalled
-    · -- `flip_witness`: `g` is untouched entirely; the only wrinkle is the `r = 0` dissent
-      -- witness possibly naming `id` itself, ruled out by `hin : input = none` (the fresh
-      -- the input of a correct process cannot have been the opposing dissenter).
+    · -- `flip_witness`: `g` is untouched. The one case left is a dissent witness at `r = 0`
+      -- naming `id` itself, which `hin : input = none` rules out: a correct process holding no
+      -- input is not the opposing dissenter.
       intro r h
       rcases hI.flip_witness r h with hg | hd
       · left; exact hg

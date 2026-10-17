@@ -99,11 +99,11 @@ and grade information that the specification tracks is an abstraction of these p
 messages and lives only on the specification; the simulation relation
 (`GBCA/ABDY/SpecificationRelation.lean`) supplies it from the received messages.
 
-Each return also announces the round's bound bit (D29): the label carries
-`bound.getD (boundOf sent F out)`, the recorded bit if the round has returned before and
-`boundOf`'s otherwise, and the transition writes it back to `NetworkState.bound`. The three
-returns are otherwise the returns of Algorithm 6 unchanged: the announced bit enters no guard of
-the algorithm and no field a program holds.
+Each return also writes the round's bound bit (D29): `bound.getD (boundOf sent F out)`, the
+recorded bit if the round has returned before and `boundOf`'s otherwise, written to
+`NetworkState.bound`. `announceBound` announces the recorded bit on `boundG r b`, a Dirac
+self-loop. The three returns are otherwise the returns of Algorithm 6: the bound bit enters no
+guard of the algorithm but the announcement's and no field a program holds.
 -/
 
 namespace PLTS
@@ -122,8 +122,9 @@ inductive Algorithm (P : Parameters) (r : ℕ) :
       (h : (s.processVariables id).input = none) :
       Algorithm P r s (.callG r id b)
         (PMF.pure (s.setProcessVariables id { s.processVariables id with input := some b }))
-  /-- Input-enabledness loop for `call`. -/
-  | callLoop (s : RoundState P.n) (id : Fin P.n) (b : Bool) :
+  /-- The call at a process holding an input: the input-enabledness loop. -/
+  | callLoop (s : RoundState P.n) (id : Fin P.n) (b : Bool)
+      (h : (s.processVariables id).input ≠ none) :
       Algorithm P r s (.callG r id b) (PMF.pure s)
   /-- Asynchronous delivery: the adversary moves a multicast message into a
   receiver's delivered set. -/
@@ -242,21 +243,21 @@ inductive Algorithm (P : Parameters) (r : ℕ) :
   /-- Grade-2 return (decide case (1)): an `n − f` `ECHO5 v` quorum. The process
   has called and its own `ECHO5` is out. Case (1) heads the chain, so there is
   no higher case to deny. -/
-  | retGrade2 (s : RoundState P.n) (id : Fin P.n) (v : Bool) (bnd : Bool)
+  | retGrade2 (s : RoundState P.n) (id : Fin P.n) (v : Bool)
       (hin : (s.processVariables id).input ≠ none)
       (hlv : (s.processVariables id).sentEcho5 ≠ none)
       (hcnt : P.n - P.f ≤ s.receivedCount id (.echo5 (some v)))
-      (hr : (s.processVariables id).returned = false)
-      (hbnd : bnd = s.bound.getD (boundOf s.sent s.F (.grade2 v))) :
-      Algorithm P r s (.retG r id (.grade2 v) bnd)
+      (hr : (s.processVariables id).returned = false) :
+      Algorithm P r s (.retG r id (.grade2 v))
         (PMF.pure ((s.setProcessVariables id
-          { s.processVariables id with returned := true }).setBound bnd))
+          { s.processVariables id with returned := true }).setBound
+            (s.bound.getD (boundOf s.sent s.F (.grade2 v)))))
   /-- Grade-1 return (decide case (2)): an `n − f` any-`ECHO5` quorum containing
   `ECHO5 v`, `f + 1` `BIND v`s and `|Valid| > 1`. The `f + 1` received `BIND v` messages
   yield a correct `BIND v` sender, hence an `n − f` quorum of received `VOTE v` messages,
   for every grade-1 output. The process has called, it has sent its own `ECHO5`,
   and no higher case holds: `hnotGrade2` denies case (1) at either bit. -/
-  | retGrade1 (s : RoundState P.n) (id : Fin P.n) (v : Bool) (bnd : Bool)
+  | retGrade1 (s : RoundState P.n) (id : Fin P.n) (v : Bool)
       (hin : (s.processVariables id).input ≠ none)
       (hlv : (s.processVariables id).sentEcho5 ≠ none)
       (hnotGrade2 : ∀ v, s.receivedCount id (.echo5 (some v)) < P.n - P.f)
@@ -264,11 +265,11 @@ inductive Algorithm (P : Parameters) (r : ℕ) :
       (honce : ∃ k, Message.echo5 (some v) ∈ s.received id k)
       (hbind : P.f + 1 ≤ s.receivedCount id (.bind (some v)))
       (hval : s.bothValid P id)
-      (hr : (s.processVariables id).returned = false)
-      (hbnd : bnd = s.bound.getD (boundOf s.sent s.F (.grade1 v))) :
-      Algorithm P r s (.retG r id (.grade1 v) bnd)
+      (hr : (s.processVariables id).returned = false) :
+      Algorithm P r s (.retG r id (.grade1 v))
         (PMF.pure ((s.setProcessVariables id
-          { s.processVariables id with returned := true }).setBound bnd))
+          { s.processVariables id with returned := true }).setBound
+            (s.bound.getD (boundOf s.sent s.F (.grade1 v)))))
   /-- Grade-0 return (decide case (3)): an `n − f` `ECHO5 ⊥` quorum and
   `|Valid| > 1`. The process has called, its own `ECHO5` is out, and no higher
   case holds: `hnotGrade2` denies case (1) at either bit, and `hnotGrade1` denies
@@ -279,7 +280,7 @@ inductive Algorithm (P : Parameters) (r : ℕ) :
   `ECHO5 ⊥` quorum being in particular an `n − f` any-`ECHO5` quorum. What is
   left to deny is the pair of the received `ECHO5 v` and the `f + 1` received
   `BIND v` messages, which is what `hnotGrade1` states. -/
-  | retGrade0 (s : RoundState P.n) (id : Fin P.n) (bnd : Bool)
+  | retGrade0 (s : RoundState P.n) (id : Fin P.n)
       (hin : (s.processVariables id).input ≠ none)
       (hlv : (s.processVariables id).sentEcho5 ≠ none)
       (hnotGrade2 : ∀ v, s.receivedCount id (.echo5 (some v)) < P.n - P.f)
@@ -287,11 +288,15 @@ inductive Algorithm (P : Parameters) (r : ℕ) :
         s.receivedCount id (.bind (some v)) < P.f + 1)
       (hcnt : P.n - P.f ≤ s.receivedCount id (.echo5 none))
       (hval : s.bothValid P id)
-      (hr : (s.processVariables id).returned = false)
-      (hbnd : bnd = s.bound.getD (boundOf s.sent s.F .grade0)) :
-      Algorithm P r s (.retG r id .grade0 bnd)
+      (hr : (s.processVariables id).returned = false) :
+      Algorithm P r s (.retG r id .grade0)
         (PMF.pure ((s.setProcessVariables id
-          { s.processVariables id with returned := true }).setBound bnd))
+          { s.processVariables id with returned := true }).setBound
+            (s.bound.getD (boundOf s.sent s.F .grade0))))
+  /-- The announcement of the round's bound bit `b`, under `bound = some b`: a Dirac self-loop,
+  enabled at every state from the round's first return on (D29). -/
+  | announceBound (s : RoundState P.n) (b : Bool) (h : s.bound = some b) :
+      Algorithm P r s (.boundG r b) (PMF.pure s)
   /-- Corruption (deviation D1). -/
   | fail (s : RoundState P.n) (id : Fin P.n) :
       Algorithm P r s (.fail id) (PMF.pure (s.corrupt P id))
@@ -304,10 +309,11 @@ interface label projects to, with no stuttering anywhere:
 
 | the composition | the algorithm |
 | --- | --- |
-| `callG` (caller writes) | `Algorithm.call` |
-| `gbcaCallLoop`, `byzantineCallGLoop` | `Algorithm.callLoop` |
-| `byzantineCallG` (D11) | `Algorithm.call` |
-| `retG` / `byzantineRetG`, by grade | `Algorithm.retGrade2` / `retGrade1` / `retGrade0` |
+| `callG` at a process holding no input | `Algorithm.call` |
+| `callG` at a process holding an input | `Algorithm.callLoop` |
+| `byzantineCallG` (D11), likewise | `Algorithm.call`, `Algorithm.callLoop` |
+| `retG`, by grade | `Algorithm.retGrade2` / `retGrade1` / `retGrade0` |
+| `boundG` | `Algorithm.announceBound` |
 | hidden `send` synchronisation, by level | the nine silent send transitions |
 | hidden `deliver` synchronisation | `Algorithm.deliver` |
 | network-local injection | `Algorithm.byzantine` |
@@ -410,15 +416,21 @@ theorem composition_projects (P : Parameters) (r : ℕ) :
           obtain ⟨rfl, hw⟩ := gbcaNetworkStep_callG_round hn
           have hw' : w' = w := PMF.pure_injective hw
           subst hw'
-          obtain ⟨hin, hx⟩ := gbcaProgramStep_callG_own (hall id)
           have hfor : ∀ i, i ≠ id → x i = u i :=
             fun i hi => PMF.pure_injective (gbcaProgramStep_callG_notOwn (Ne.symm hi) (hall i))
           refine ⟨_, rfl, ?_⟩
-          rw [composition_setProcessVariables (PMF.pure_injective hx) hfor]
-          exact Algorithm.call _ id b hin
-        | retG r' id out bnd =>
-          obtain ⟨rfl, hbnd, hw⟩ := gbcaNetworkStep_retG_round hn
-          have hw' : w' = w.setBound bnd := PMF.pure_injective hw
+          rcases gbcaProgramStep_callG_own (hall id) with ⟨hin, hx⟩ | ⟨hin, hx⟩
+          · rw [composition_setProcessVariables (PMF.pure_injective hx) hfor]
+            exact Algorithm.call _ id b hin
+          · have hidle : ∀ i, x i = u i := fun i => by
+              by_cases hi : i = id
+              · subst hi; exact PMF.pure_injective hx
+              · exact hfor i hi
+            rw [composition_idle hidle]
+            exact Algorithm.callLoop _ id b hin
+        | retG r' id out =>
+          obtain ⟨rfl, hw⟩ := gbcaNetworkStep_retG_round hn
+          have hw' := PMF.pure_injective hw
           subst hw'
           have hfor : ∀ i, i ≠ id → x i = u i :=
             fun i hi => PMF.pure_injective (gbcaProgramStep_retG_notOwn (Ne.symm hi) (hall i))
@@ -427,21 +439,26 @@ theorem composition_projects (P : Parameters) (r : ℕ) :
           | grade2 v =>
             obtain ⟨hin, hlv, hcnt, hret, hx⟩ := gbcaProgramStep_retGGrade2_own (hall id)
             rw [composition_setProcessVariables_setBound (PMF.pure_injective hx) hfor]
-            exact Algorithm.retGrade2 _ id v bnd hin hlv hcnt hret hbnd
+            exact Algorithm.retGrade2 _ id v hin hlv hcnt hret
           | grade1 v =>
             obtain ⟨hin, hlv, hnotGrade2, hcnt, honce, hbind, hval, hret, hx⟩ :=
               gbcaProgramStep_retGGrade1_own (hall id)
             rw [composition_setProcessVariables_setBound (PMF.pure_injective hx) hfor]
-            exact Algorithm.retGrade1 _ id v bnd hin hlv hnotGrade2 hcnt honce
-              hbind hval
-              hret hbnd
+            exact Algorithm.retGrade1 _ id v hin hlv hnotGrade2 hcnt honce hbind hval hret
           | grade0 =>
             obtain ⟨hin, hlv, hnotGrade2, hnotGrade1, hcnt, hval, hret, hx⟩ :=
               gbcaProgramStep_retGGrade0_own (hall id)
             rw [composition_setProcessVariables_setBound (PMF.pure_injective hx) hfor]
-            exact Algorithm.retGrade0 _ id bnd hin hlv hnotGrade2 hnotGrade1
-              hcnt hval hret
-              hbnd
+            exact Algorithm.retGrade0 _ id hin hlv hnotGrade2 hnotGrade1 hcnt hval hret
+        | boundG r' b =>
+          obtain ⟨rfl, hbound, hw⟩ := gbcaNetworkStep_boundG_round hn
+          have hw' : w' = w := PMF.pure_injective hw
+          subst hw'
+          have hidle : ∀ i, x i = u i :=
+            fun i => PMF.pure_injective (gbcaProgramStep_boundG (hall i))
+          refine ⟨_, rfl, ?_⟩
+          rw [composition_idle hidle]
+          exact Algorithm.announceBound _ b hbound
       | inr ev =>
         cases ev with
         | gbcaRoundEvent r' j e => exact e.elim
@@ -451,63 +468,23 @@ theorem composition_projects (P : Parameters) (r : ℕ) :
         | decidedDeliver i j b => exact (gbcaNetworkStep_decidedDeliver_noStep hn).elim
         | decidedSend j b => exact (gbcaNetworkStep_decidedSend_noStep hn).elim
         | byzantineCallW r' k => exact (gbcaNetworkStep_byzantineCallW_noStep hn).elim
-        | byzantineRetW r' k b => exact (gbcaNetworkStep_byzantineRetW_noStep hn).elim
-        | gbcaCallLoop r' id b =>
-          obtain ⟨rfl, hw⟩ := gbcaNetworkStep_gbcaCallLoop_round hn
-          have hw' : w' = w := PMF.pure_injective hw
-          subst hw'
-          have hidle : ∀ i,
-            x i = u i := fun i => PMF.pure_injective (gbcaProgramStep_gbcaCallLoop (hall i))
-          refine ⟨_, rfl, ?_⟩
-          rw [composition_idle hidle]
-          exact Algorithm.callLoop _ id b
         | byzantineCallG r' k b =>
           obtain ⟨rfl, hw⟩ := gbcaNetworkStep_byzantineCallG_round hn
           have hw' : w' = w := PMF.pure_injective hw
           subst hw'
-          obtain ⟨hin, hx⟩ := gbcaProgramStep_byzantineCallG_own (hall k)
           have hfor : ∀ i, i ≠ k → x i = u i :=
             fun i hi => PMF.pure_injective (gbcaProgramStep_byzantineCallG_notOwn (Ne.symm hi)
               (hall i))
           refine ⟨_, rfl, ?_⟩
-          rw [composition_setProcessVariables (PMF.pure_injective hx) hfor]
-          exact Algorithm.call _ k b hin
-        | byzantineCallGLoop r' k b =>
-          obtain ⟨rfl, hw⟩ := gbcaNetworkStep_byzantineCallGLoop_round hn
-          have hw' : w' = w := PMF.pure_injective hw
-          subst hw'
-          have hidle : ∀ i, x i = u i :=
-            fun i => PMF.pure_injective (gbcaProgramStep_byzantineCallGLoop (hall i))
-          refine ⟨_, rfl, ?_⟩
-          rw [composition_idle hidle]
-          exact Algorithm.callLoop _ k b
-        | byzantineRetG r' k out bnd =>
-          obtain ⟨rfl, hbnd, hw⟩ := gbcaNetworkStep_byzantineRetG_round hn
-          have hw' : w' = w.setBound bnd := PMF.pure_injective hw
-          subst hw'
-          have hfor : ∀ i, i ≠ k → x i = u i :=
-            fun i hi => PMF.pure_injective (gbcaProgramStep_byzantineRetG_notOwn (Ne.symm hi) (hall
-              i))
-          refine ⟨_, rfl, ?_⟩
-          cases out with
-          | grade2 v =>
-            obtain ⟨hin, hlv, hcnt, hret, hx⟩ := gbcaProgramStep_byzantineRetGGrade2_own (hall k)
-            rw [composition_setProcessVariables_setBound (PMF.pure_injective hx) hfor]
-            exact Algorithm.retGrade2 _ k v bnd hin hlv hcnt hret hbnd
-          | grade1 v =>
-            obtain ⟨hin, hlv, hnotGrade2, hcnt, honce, hbind, hval, hret, hx⟩ :=
-              gbcaProgramStep_byzantineRetGGrade1_own (hall k)
-            rw [composition_setProcessVariables_setBound (PMF.pure_injective hx) hfor]
-            exact Algorithm.retGrade1 _ k v bnd hin hlv hnotGrade2 hcnt honce
-              hbind hval
-              hret hbnd
-          | grade0 =>
-            obtain ⟨hin, hlv, hnotGrade2, hnotGrade1, hcnt, hval, hret, hx⟩ :=
-              gbcaProgramStep_byzantineRetGGrade0_own (hall k)
-            rw [composition_setProcessVariables_setBound (PMF.pure_injective hx) hfor]
-            exact Algorithm.retGrade0 _ k bnd hin hlv hnotGrade2 hnotGrade1
-              hcnt hval hret
-              hbnd
+          rcases gbcaProgramStep_byzantineCallG_own (hall k) with ⟨hin, hx⟩ | ⟨hin, hx⟩
+          · rw [composition_setProcessVariables (PMF.pure_injective hx) hfor]
+            exact Algorithm.call _ k b hin
+          · have hidle : ∀ i, x i = u i := fun i => by
+              by_cases hi : i = k
+              · subst hi; exact PMF.pure_injective hx
+              · exact hfor i hi
+            rw [composition_idle hidle]
+            exact Algorithm.callLoop _ k b hin
 
 /-! ### Mechanical axiom check -/
 

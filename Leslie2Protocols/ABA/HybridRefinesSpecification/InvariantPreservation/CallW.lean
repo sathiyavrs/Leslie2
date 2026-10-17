@@ -11,10 +11,15 @@ import Leslie2Protocols.ABA.Composition.Hybrid
 # `Invariant` across the `callW` transitions of `hybrid`
 
 `Invariant.step_callW`, preservation of `Invariant` at a call of the coin, assembled from the two
-transitions of `WCC.step_callW_cases`. The input-enabledness loop and the recording call leave
-`val` and `F` alone, the coin instance touching only `.called` and the core only `.phase`, both at
-`id` and neither inspected by `Invariant` (`Invariant.step_callW_dirac`). The draw of the coin is
-the silent resolution of `Invariant.step_resolve`.
+transitions of `WCC.step_callW_cases`. The call is the round loop's own call, which moves `id`
+from `toCallW` to `awaitW` at round `r`, or the network's call for a process of `F` at a started
+round (D11, D37), which leaves the round loops as they stand. The coin takes either on its
+recording call or on its input-enabledness loop. Both leave `val` and `F` alone, and the recording
+call writes `called` at `id` alone (`Invariant.step_callW_dirac`). No component writes a record
+of DECIDED sends on the call, so `decidedSent_recorded` (I4') passes through. The successor of the
+coin family is `o.setInstanceState r wr'`, whose accessor is `Function.update w r wr'`
+(`InstanceFamilyState.instanceState_setInstanceState`). The draw of the coin is the silent
+resolution of `Invariant.step_resolve`.
 -/
 
 namespace PLTS
@@ -94,11 +99,20 @@ theorem Invariant.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState 
     rcases hCstep with ⟨-, -, hc'eq⟩ | ⟨-, hc'eq⟩
     · rw [hc'eq]; exact ABAState.setProcessVariables_corrupted _ _ _
     · rw [hc'eq]
+  have hRecorded : ∀ j, (c'.1 j).decidedSent = (c.1 j).decidedSent := by
+    intro j
+    rcases hCstep with ⟨-, -, hc'eq⟩ | ⟨-, hc'eq⟩
+    · rw [hc'eq]
+      by_cases hj : j = id
+      · subst hj; simp [ABAState.setProcessVariables]
+      · simp [ABAState.setProcessVariables, Function.update_of_ne hj]
+    · rw [hc'eq]
   refine ⟨fun id' => by rw [hCcorr, hCF]; exact hI.corrupted_F id',
     fun r' => hCF ▸ hI.F_gbca r', fun r' => (hFweq r').trans (hCF ▸ hI.F_wcc r'),
     hCF ▸ hI.F_card,
-    ?_, ?_, ?_, hI.down_settled, hI.quiescent, ?_, ?_, ?_, ?_, ?_, ?_,
-    hI.grade2_needs_bind, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, hI.grade0_chain, ?_,
+    ?_, ?_, ?_, hI.down_settled, hI.quiescent, ?_, ?_, ?_,
+    fun j hj => by rw [hRecorded j, hCDS]; exact hI.decidedSent_recorded j (hCF ▸ hj),
+    ?_, ?_, ?_, hI.grade2_needs_bind, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, hI.grade0_chain, ?_,
     ?_, ?_, ?_, ?_, ?_, ?_, ?_, hI.bound_quorum,
     fun r' v hb => (hI.bind_support r' v hb).mono
       (fun id' b' h => by rw [(hCprocs id').1]; exact h) (fun x hx => by rw [hCF]; exact hx),
@@ -305,7 +319,8 @@ theorem Invariant.step_callW_dirac {P : Parameters} {g : ℕ → GBCA.SpecState 
       · right; exact DissentWitness.preserved rfl rfl (fun h => h) (fun id' => (hCprocs id').1) hd
 
 /-- `callW`: `Invariant` is preserved and the abstract state is unchanged at a call of the
-coin. -/
+coin: the round loop's own call at `toCallW` and round `r`, or the network's call for a process
+of `F` at a started round. -/
 theorem Invariant.step_callW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (r : ℕ) (id : Fin P.n)
     {μw' : PMF (WCC.SpecState P.n)} (hstepW : WCC.Step P r (w r) (.callW r id) μw')

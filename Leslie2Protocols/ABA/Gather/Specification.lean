@@ -6,6 +6,7 @@ Authors: Sathiya / Claude
 
 import Leslie2Protocols.ABA.Vocabulary.ProcessAndNetworkState
 import Leslie2.Systems.LTS
+import Leslie2Protocols.Framework.InputEnabledness
 
 /-!
 # The gather specification (blueprint Transition System 4, repaired: D26)
@@ -30,7 +31,7 @@ of scope.
   is the corrupted half of `commit` (deviation D26).
 * `core` — the binding content: one payload set, written at most once, by
   the internal transition `bindCore`. Its entries are committed entries, it
-  has at least `n − f` of them, and every return carries it.
+  has at least `n − f` of them, and every returned map contains it.
 * `ret`, `F` — the return flags and the corrupted set.
 
 Agreement and Validity are linear. Two returns agree wherever both are
@@ -40,12 +41,13 @@ process's entry is its genuine call, by `commit`'s guard.
 ## The core
 
 The instance binds one payload set: the `core`, written before the first
-return by `bindCore`, of at least `n − f` committed entries, and carried by
-every return.
+return by `bindCore`, of at least `n − f` committed entries, and contained in
+every returned map.
 
-The core is a ghost output. No process holds it; the set a return label names
-is specification state. The return label carries it — `ret id g C` names the
-returner, the map it returns and the core — so the binding content is
+The core is announced by an event of its own (D29). No process holds it; it is
+specification state. `announceCore` fires on `core C` at every state whose core
+is `C`, as a Dirac self-loop that may repeat, and `ret id g` asks for a core
+below `g` that the label does not carry. The binding content is therefore
 determined by a trace rather than by a state, and a system that embeds this
 instance binds by reading its labels.
 
@@ -58,6 +60,10 @@ processes outside `F`, and the size bound is that payload's own.
 
 Every transition is Dirac, so the instance is an LTS. `fail` is the
 determinised D1 corruption.
+
+The calls and corruption are the inputs of the instance, and the returns and the announcement of
+the core its outputs (`specInstInputOutputLabels`). `callLoop` takes `call id x` and `fail` takes
+`fail id` at every state, so every input is enabled (`specInst_inputEnabled`).
 -/
 
 namespace PLTS
@@ -82,9 +88,10 @@ inductive Label (n : ℕ) (X : Type) : Type
   | tau
   /-- The environment calls process `id` with payload `x`. -/
   | call (id : Fin n) (x : X)
-  /-- Process `id` returns the partial map `g`, and the instance's core is
-  `C`. -/
-  | ret (id : Fin n) (g : Fin n → Option X) (C : AcceptedPairs n X)
+  /-- Process `id` returns the partial map `g`. -/
+  | ret (id : Fin n) (g : Fin n → Option X)
+  /-- The instance's common core `C` is announced. -/
+  | core (C : AcceptedPairs n X)
   /-- Corruption of process `id`. -/
   | fail (id : Fin n)
 
@@ -102,8 +109,8 @@ structure SpecState (n : ℕ) (X : Type) : Type where
   val : Fin n → Option X
   /-- Which processes have received their return. -/
   ret : Fin n → Bool
-  /-- The core: every return carries it. Written at most once, by
-  `bindCore`. -/
+  /-- The core: every returned map contains it, and `announceCore` announces it. Written at
+  most once, by `bindCore`. -/
   core : Option (AcceptedPairs n X)
   /-- The corrupted set (local copy, kept equal by `fail` broadcast). -/
   F : Finset (Fin n)
@@ -178,14 +185,18 @@ inductive Step (P : Parameters) [DecidableEq X] :
       (hcard : P.n - P.f ≤ S.card) :
       Step P s .tau (PMF.pure { s with core := some S })
   /-- A process returns a sub-map of the committed entries containing the
-  core, which the label carries. -/
+  core `C`. The label carries the returned map alone. -/
   | ret (s : SpecState P.n X) (id : Fin P.n) (g : Fin P.n → Option X)
       (C : AcceptedPairs P.n X) (hC : s.core = some C)
       (hmem : AcceptedPairs.subMap C g)
       (hsub : ∀ k x, g k = some x → s.val k = some x)
       (hr : s.ret id = false) :
-      Step P s (.ret id g C)
+      Step P s (.ret id g)
         (PMF.pure { s with ret := Function.update s.ret id true })
+  /-- The core `C` is announced: a Dirac self-loop at every state whose core is `C`, which may
+  repeat (D29). -/
+  | announceCore (s : SpecState P.n X) (C : AcceptedPairs P.n X) (h : s.core = some C) :
+      Step P s (.core C) (PMF.pure s)
   /-- Corruption (deviation D1). -/
   | fail (s : SpecState P.n X) (id : Fin P.n) :
       Step P s (.fail id) (PMF.pure (s.corrupt P id))
@@ -209,6 +220,20 @@ noncomputable def specInst (P : Parameters) (X : Type) [DecidableEq X] :
 theorem specInst_isLTS (P : Parameters) : (specInst P X).IsLTS := by
   rintro s l μ hstep
   cases hstep <;> exact ⟨_, rfl⟩
+
+/-- The input labels and the output labels of the gather specification: the calls and
+corruption are inputs, and the returns and the announcement of the core are outputs. -/
+def specInstInputOutputLabels (n : ℕ) (X : Type) : InputOutputLabels (Label n X) where
+  inputLabels := {l | (∃ id x, l = .call id x) ∨ ∃ id, l = .fail id}
+  outputLabels := {l | (∃ id g, l = .ret id g) ∨ ∃ C, l = .core C}
+
+/-- The gather specification is input-enabled: `callLoop` takes `call id x` and `fail` takes
+`fail id` at every state. -/
+theorem specInst_inputEnabled (P : Parameters) :
+    (specInst P X).InputEnabled (specInstInputOutputLabels P.n X).inputLabels := by
+  rintro s l (⟨id, x, rfl⟩ | ⟨id, rfl⟩)
+  · exact ⟨_, Step.callLoop s id x⟩
+  · exact ⟨_, Step.fail s id⟩
 
 end Gather
 end ABA

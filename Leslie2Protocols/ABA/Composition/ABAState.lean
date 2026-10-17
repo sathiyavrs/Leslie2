@@ -5,6 +5,7 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.Composition.Components
+import Leslie2Protocols.ABA.Implementation.System
 
 /-!
 # The ABA state of the composed system
@@ -14,9 +15,18 @@ The round-loop variables beside the ABA network, read as one object.
 `ABAState` is the pair `(∀ j, RoundLoopVariables) × ABANetworkState`. Its accessors gather the
 data the two components hold apart: `processes` reads each process's control
 variables, `decidedReceived` its received DECIDED messages, `corrupted` the replacement flag of its
-program (D23), and `decidedSent` and `F` the network's sent sets and corrupted
-set. The invariant of the core simulation is stated through these accessors, so
-it reads the composed state without a change of system.
+program (D23), and `decidedSent`, `F` and `startedRounds` the network's sent sets, its
+corrupted set and the rounds a correct process has started (D37). The invariant of the core
+simulation is stated through these accessors, so it reads the composed state without a change of
+system. A process's own record of its DECIDED sends is the field `decidedSent` of its round-loop
+variables, `(s.1 j).decidedSent`.
+
+The writes of the composed system's transitions are stated here, each with the lemmas that read the
+accessors after it: `setProcessVariables`, `recordDecided`, `relayDecided` (a correct DECIDED
+relay, which writes both components), `deliverDecided`, `stepRound`, `sendDecidedOnGrade2` and
+`corrupt`.
+`corrupt_abaNetwork` reads the ABA network after a corruption from the network of an
+implementation.
 -/
 
 namespace PLTS
@@ -49,6 +59,9 @@ def corrupted (s : ABAState P) : Fin P.n → Bool := fun j => (s.1 j).corrupted
 /-- The corrupted set. -/
 def F (s : ABAState P) : Finset (Fin P.n) := s.2.F
 
+/-- The rounds a process outside `F` has started (D37). -/
+def startedRounds (s : ABAState P) : Finset ℕ := s.2.startedRounds
+
 @[simp] theorem corrupted_apply (C : ∀ _ : Fin P.n, RoundLoopVariables P.n) (a : ABANetworkState
   P.n)
     (j : Fin P.n) : corrupted (P := P) (C, a) j = (C j).corrupted := rfl
@@ -64,6 +77,9 @@ def F (s : ABAState P) : Finset (Fin P.n) := s.2.F
       a) i = (C i).decidedDelivered := rfl
 @[simp] theorem F_apply (C : ∀ _ : Fin P.n, RoundLoopVariables P.n) (a : ABANetworkState P.n) :
     F (P := P) (C, a) = a.F := rfl
+@[simp] theorem startedRounds_apply (C : ∀ _ : Fin P.n, RoundLoopVariables P.n)
+    (a : ABANetworkState P.n) :
+    startedRounds (P := P) (C, a) = a.startedRounds := rfl
 
 /-- Dot notation resolves against `ABAState`, so the invariant reads the
 composed state in the accessors' own names. -/
@@ -87,6 +103,8 @@ def initial (P : Parameters) : ABAState P :=
     (ABANetworkState.initial n).decidedSent j = ∅ := rfl
 @[simp] theorem _root_.PLTS.ABA.Composition.ABANetworkState.initial_F (n : ℕ) :
     (ABANetworkState.initial n).F = ∅ := rfl
+@[simp] theorem _root_.PLTS.ABA.Composition.ABANetworkState.initial_startedRounds
+    (n : ℕ) : (ABANetworkState.initial n).startedRounds = ∅ := rfl
 
 @[simp] theorem initial_processes (id : Fin P.n) :
     (initial P).processes id = RoundLoopState.initial P.n := rfl
@@ -97,6 +115,7 @@ def initial (P : Parameters) : ABAState P :=
 @[simp] theorem initial_corrupted (id : Fin P.n) :
     (initial P).corrupted id = false := rfl
 @[simp] theorem initial_F : (initial P).F = ∅ := rfl
+@[simp] theorem initial_startedRounds : (initial P).startedRounds = ∅ := rfl
 
 /-- The number of distinct senders whose `⟨DECIDED, b⟩` has been delivered to
 receiver `id`. -/
@@ -116,6 +135,9 @@ def setProcessVariables (s : ABAState P) (id : Fin P.n) (p : RoundLoopState P.n)
     (s.setProcessVariables id p).decidedSent = s.decidedSent := rfl
 @[simp] theorem setProcessVariables_F (s : ABAState P) (id : Fin P.n) (p : RoundLoopState P.n) :
     (s.setProcessVariables id p).F = s.F := rfl
+@[simp] theorem setProcessVariables_startedRounds (s : ABAState P) (id : Fin P.n)
+    (p : RoundLoopState P.n) :
+    (s.setProcessVariables id p).startedRounds = s.startedRounds := rfl
 
 @[simp] theorem setProcessVariables_decidedReceived (s : ABAState P) (id : Fin P.n)
   (p : RoundLoopState P.n) :
@@ -161,6 +183,8 @@ def recordDecided (s : ABAState P) (id : Fin P.n) (b : Bool) : ABAState P :=
     (s.recordDecided id b).corrupted = s.corrupted := rfl
 @[simp] theorem recordDecided_F (s : ABAState P) (id : Fin P.n) (b : Bool) :
     (s.recordDecided id b).F = s.F := rfl
+@[simp] theorem recordDecided_startedRounds (s : ABAState P) (id : Fin P.n) (b : Bool) :
+    (s.recordDecided id b).startedRounds = s.startedRounds := rfl
 @[simp] theorem recordDecided_decidedSent (s : ABAState P) (id : Fin P.n) (b : Bool) :
     (s.recordDecided id b).decidedSent =
       Function.update s.decidedSent id (insert b (s.decidedSent id)) := rfl
@@ -179,8 +203,8 @@ theorem recordDecided_decidedSent_mono (s : ABAState P) (id : Fin P.n) (b : Bool
   · simp only [recordDecided_decidedSent, Function.update_of_ne hk]
     exact h
 
-/-- Membership in a post-`recordDecided` sent set: the fresh bit at `id`, or an
-old sent member. -/
+/-- Membership in a sent set after `recordDecided`: the recorded bit at `id`, or a member of the
+sent set before the write. -/
 theorem mem_recordDecided_decidedSent_iff (s : ABAState P) (id : Fin P.n) (b : Bool)
     (k : Fin P.n) (b' : Bool) :
     b' ∈ (s.recordDecided id b).decidedSent k ↔
@@ -189,6 +213,71 @@ theorem mem_recordDecided_decidedSent_iff (s : ABAState P) (id : Fin P.n) (b : B
   · subst hk
     simp [recordDecided_decidedSent, Function.update_self, Finset.mem_insert]
   · simp [recordDecided_decidedSent, hk]
+
+/-! ### The write of a correct DECIDED relay
+
+A correct process relays `⟨DECIDED, b⟩` in two halves: its round loop records the bit among its
+own DECIDED sends (`RoundLoopVariables.recordDecided`), and the network sets the bit under the
+process (`ABANetworkState.recordDecided`). A replaced round loop takes the relay on its self-loop,
+so the relay of a corrupted process writes the network's half alone, `ABAState.recordDecided`. -/
+
+/-- Process `id` relays `⟨DECIDED, b⟩`: its round loop records `b` among its own DECIDED sends,
+and the network sets `b` under `id` (D12′). -/
+def relayDecided (s : ABAState P) (id : Fin P.n) (b : Bool) : ABAState P :=
+  (Function.update s.1 id ((s.1 id).recordDecided b), s.2.recordDecided id b)
+
+@[simp] theorem relayDecided_processes (s : ABAState P) (id : Fin P.n) (b : Bool) :
+    (s.relayDecided id b).processes = s.processes := by
+  funext k
+  by_cases hk : k = id
+  · subst hk; simp [relayDecided, processes]
+  · simp [relayDecided, processes, Function.update_of_ne hk]
+
+@[simp] theorem relayDecided_decidedReceived (s : ABAState P) (id : Fin P.n) (b : Bool) :
+    (s.relayDecided id b).decidedReceived = s.decidedReceived := by
+  funext k
+  by_cases hk : k = id
+  · subst hk; simp [relayDecided, decidedReceived]
+  · simp [relayDecided, decidedReceived, Function.update_of_ne hk]
+
+@[simp] theorem relayDecided_corrupted (s : ABAState P) (id : Fin P.n) (b : Bool) :
+    (s.relayDecided id b).corrupted = s.corrupted := by
+  funext k
+  by_cases hk : k = id
+  · subst hk; simp [relayDecided, corrupted]
+  · simp [relayDecided, corrupted, Function.update_of_ne hk]
+
+@[simp] theorem relayDecided_F (s : ABAState P) (id : Fin P.n) (b : Bool) :
+    (s.relayDecided id b).F = s.F := rfl
+
+@[simp] theorem relayDecided_startedRounds (s : ABAState P) (id : Fin P.n) (b : Bool) :
+    (s.relayDecided id b).startedRounds = s.startedRounds := rfl
+
+@[simp] theorem relayDecided_decidedSent (s : ABAState P) (id : Fin P.n) (b : Bool) :
+    (s.relayDecided id b).decidedSent =
+      Function.update s.decidedSent id (insert b (s.decidedSent id)) := rfl
+
+@[simp] theorem relayDecided_decidedCount (s : ABAState P) (id : Fin P.n) (b : Bool)
+    (i : Fin P.n) (b' : Bool) :
+    (s.relayDecided id b).decidedCount i b' = s.decidedCount i b' := by
+  unfold decidedCount
+  rw [relayDecided_decidedReceived]
+
+/-- The relaying process's own record of its DECIDED sends after the relay: the relayed bit joins
+it. -/
+@[simp] theorem relayDecided_fst_decidedSent_self (s : ABAState P) (id : Fin P.n) (b : Bool) :
+    ((s.relayDecided id b).1 id).decidedSent = insert b (s.1 id).decidedSent := by
+  simp [relayDecided]
+
+theorem relayDecided_fst_ne (s : ABAState P) (id : Fin P.n) (b : Bool) {k : Fin P.n}
+    (h : k ≠ id) : (s.relayDecided id b).1 k = s.1 k := by
+  simp [relayDecided, Function.update_of_ne h]
+
+/-- Membership in a sent set after the relay: the relayed bit at `id`, or a bit sent before. -/
+theorem mem_relayDecided_decidedSent_iff (s : ABAState P) (id : Fin P.n) (b : Bool)
+    (k : Fin P.n) (b' : Bool) :
+    b' ∈ (s.relayDecided id b).decidedSent k ↔ (k = id ∧ b' = b) ∨ b' ∈ s.decidedSent k :=
+  mem_recordDecided_decidedSent_iff s id b k b'
 
 /-- The adversary delivers `⟨DECIDED, b⟩` from sender `j` to receiver `i`:
 the receiver's variables file `b` under `j` (per-(receiver, sender, bit),
@@ -200,6 +289,8 @@ def deliverDecided (s : ABAState P) (i j : Fin P.n) (b : Bool) : ABAState P :=
     (s.deliverDecided i j b).decidedSent = s.decidedSent := rfl
 @[simp] theorem deliverDecided_F (s : ABAState P) (i j : Fin P.n) (b : Bool) :
     (s.deliverDecided i j b).F = s.F := rfl
+@[simp] theorem deliverDecided_startedRounds (s : ABAState P) (i j : Fin P.n) (b : Bool) :
+    (s.deliverDecided i j b).startedRounds = s.startedRounds := rfl
 
 @[simp] theorem deliverDecided_corrupted (s : ABAState P) (i j : Fin P.n) (b : Bool) :
     (s.deliverDecided i j b).corrupted = s.corrupted := by
@@ -233,7 +324,7 @@ theorem deliverDecided_decidedReceived_of_ne (s : ABAState P) (i j : Fin P.n) (b
 
 /-- The round advance of process `id` on receiving the coin `c`: the round loop's own advance
 `RoundLoopVariables.stepRound`, the network untouched. It adopts the coin when the estimate is `⊥`
-and opens the next round. On a grade-2 outcome it keeps the grade and enters `toSendDecided`;
+and starts the next round. On a grade-2 outcome it keeps the grade and enters `toSendDecided`;
 otherwise it clears the grade and enters `toCallG`. -/
 def stepRound (s : ABAState P) (id : Fin P.n) (c : Bool) : ABAState P :=
   (Function.update s.1 id ((s.1 id).stepRound c), s.2)
@@ -307,6 +398,8 @@ theorem stepRound_processes_ne (s : ABAState P) (id : Fin P.n) (c : Bool)
 
 @[simp] theorem stepRound_F (s : ABAState P) (id : Fin P.n) (c : Bool) :
     (s.stepRound id c).F = s.F := rfl
+@[simp] theorem stepRound_startedRounds (s : ABAState P) (id : Fin P.n) (c : Bool) :
+    (s.stepRound id c).startedRounds = s.startedRounds := rfl
 
 @[simp] theorem stepRound_decidedSent (s : ABAState P) (id : Fin P.n) (c : Bool) :
     (s.stepRound id c).decidedSent = s.decidedSent := rfl
@@ -318,27 +411,40 @@ theorem stepRound_processes_ne (s : ABAState P) (id : Fin P.n) (c : Bool)
   rw [stepRound_decidedReceived]
 
 /-- The DECIDED send of process `id` on the grade-2 outcome `grade2 b` of the round it has just
-closed: the network sets `b` under `id`, and the process clears the grade and enters the
-next round's `toCallG`. -/
+closed: the process clears the grade, enters the next round's `toCallG` and records `b` in its own
+`decidedSent`, and the network sets `b` under `id`. -/
 def sendDecidedOnGrade2 (s : ABAState P) (id : Fin P.n) (b : Bool) : ABAState P :=
-  (s.recordDecided id b).setProcessVariables id
-    { s.processes id with lastGrade := none, phase := .toCallG }
+  (Function.update s.1 id (((s.1 id).setProcessVariables
+      { (s.1 id).processVariables with lastGrade := none, phase := .toCallG }).recordDecided b),
+    s.2.recordDecided id b)
 
 theorem sendDecidedOnGrade2_apply (C : ∀ _ : Fin P.n, RoundLoopVariables P.n)
     (A : ABANetworkState P.n) (id : Fin P.n) (b : Bool) :
     sendDecidedOnGrade2 (P := P) (C, A) id b =
-      (Function.update C id ((C id).setProcessVariables
-        { (C id).processVariables with lastGrade := none, phase := .toCallG }),
+      (Function.update C id (((C id).setProcessVariables
+        { (C id).processVariables with lastGrade := none, phase := .toCallG }).recordDecided b),
         A.recordDecided id b) := rfl
 
 @[simp] theorem sendDecidedOnGrade2_processes_self (s : ABAState P) (id : Fin P.n) (b : Bool) :
     (s.sendDecidedOnGrade2 id b).processes id =
-      { s.processes id with lastGrade := none, phase := .toCallG } :=
-  setProcessVariables_processes_self _ _ _
+      { s.processes id with lastGrade := none, phase := .toCallG } := by
+  simp only [sendDecidedOnGrade2, processes, Function.update_self]
+  rfl
 
 theorem sendDecidedOnGrade2_processes_ne (s : ABAState P) (id : Fin P.n) (b : Bool)
-    {k : Fin P.n} (h : k ≠ id) : (s.sendDecidedOnGrade2 id b).processes k = s.processes k :=
-  setProcessVariables_processes_ne _ _ _ h
+    {k : Fin P.n} (h : k ≠ id) : (s.sendDecidedOnGrade2 id b).processes k = s.processes k := by
+  simp [sendDecidedOnGrade2, processes, Function.update_of_ne h]
+
+/-- The process's own record of its DECIDED sends after the send: the sent bit joins it. -/
+@[simp] theorem sendDecidedOnGrade2_fst_decidedSent_self (s : ABAState P) (id : Fin P.n)
+    (b : Bool) :
+    ((s.sendDecidedOnGrade2 id b).1 id).decidedSent = insert b (s.1 id).decidedSent := by
+  simp only [sendDecidedOnGrade2, Function.update_self]
+  rfl
+
+theorem sendDecidedOnGrade2_fst_ne (s : ABAState P) (id : Fin P.n) (b : Bool)
+    {k : Fin P.n} (h : k ≠ id) : (s.sendDecidedOnGrade2 id b).1 k = s.1 k := by
+  simp [sendDecidedOnGrade2, Function.update_of_ne h]
 
 @[simp] theorem sendDecidedOnGrade2_decidedSent (s : ABAState P) (id : Fin P.n) (b : Bool) :
     (s.sendDecidedOnGrade2 id b).decidedSent =
@@ -352,20 +458,34 @@ theorem mem_sendDecidedOnGrade2_decidedSent_iff (s : ABAState P) (id : Fin P.n) 
   mem_recordDecided_decidedSent_iff s id b k b'
 
 @[simp] theorem sendDecidedOnGrade2_decidedReceived (s : ABAState P) (id : Fin P.n) (b : Bool) :
-    (s.sendDecidedOnGrade2 id b).decidedReceived = s.decidedReceived :=
-  setProcessVariables_decidedReceived _ _ _
+    (s.sendDecidedOnGrade2 id b).decidedReceived = s.decidedReceived := by
+  funext i
+  by_cases hi : i = id
+  · subst hi
+    simp only [sendDecidedOnGrade2, decidedReceived, Function.update_self]
+    rfl
+  · simp [sendDecidedOnGrade2, decidedReceived, Function.update_of_ne hi]
 
 @[simp] theorem sendDecidedOnGrade2_corrupted (s : ABAState P) (id : Fin P.n) (b : Bool) :
-    (s.sendDecidedOnGrade2 id b).corrupted = s.corrupted :=
-  setProcessVariables_corrupted _ _ _
+    (s.sendDecidedOnGrade2 id b).corrupted = s.corrupted := by
+  funext i
+  by_cases hi : i = id
+  · subst hi
+    simp only [sendDecidedOnGrade2, corrupted, Function.update_self]
+    rfl
+  · simp [sendDecidedOnGrade2, corrupted, Function.update_of_ne hi]
 
 @[simp] theorem sendDecidedOnGrade2_F (s : ABAState P) (id : Fin P.n) (b : Bool) :
     (s.sendDecidedOnGrade2 id b).F = s.F := rfl
 
+@[simp] theorem sendDecidedOnGrade2_startedRounds (s : ABAState P) (id : Fin P.n)
+    (b : Bool) : (s.sendDecidedOnGrade2 id b).startedRounds = s.startedRounds := rfl
+
 @[simp] theorem sendDecidedOnGrade2_decidedCount (s : ABAState P) (id : Fin P.n) (b : Bool)
     (i : Fin P.n) (b' : Bool) :
-    (s.sendDecidedOnGrade2 id b).decidedCount i b' = s.decidedCount i b' :=
-  setProcessVariables_decidedCount _ _ _ _ _
+    (s.sendDecidedOnGrade2 id b).decidedCount i b' = s.decidedCount i b' := by
+  unfold decidedCount
+  rw [sendDecidedOnGrade2_decidedReceived]
 
 /-- Corruption (deviations D1, D23): total, Dirac, monotone in `F`. The
 network takes `id` into the corrupted set and the named round loop takes the
@@ -414,6 +534,17 @@ theorem corrupt_F (P : Parameters) (id : Fin P.n) (s : ABAState P) :
   split_ifs <;> rfl
 
 end ABAState
+
+/-- The ABA network after a corruption, read from the network of an implementation: the DECIDED
+sets, the corrupted set and the started rounds of the implementation's network after the same
+corruption. -/
+theorem corrupt_abaNetwork {M G : Type} (w : Implementation.NetworkState P.n M G) (k : Fin P.n) :
+    ABANetworkState.corrupt P k ⟨w.decidedSent, w.F, w.startedRounds⟩ =
+      ⟨(Implementation.NetworkState.corrupt P k w).decidedSent,
+        (Implementation.NetworkState.corrupt P k w).F,
+        (Implementation.NetworkState.corrupt P k w).startedRounds⟩ := by
+  by_cases hc : k ∉ w.F ∧ w.F.card < P.f <;>
+    simp [ABANetworkState.corrupt, Implementation.NetworkState.corrupt, hc]
 
 end ABA
 end PLTS

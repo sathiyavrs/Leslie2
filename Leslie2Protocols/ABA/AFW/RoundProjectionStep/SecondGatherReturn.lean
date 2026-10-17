@@ -11,10 +11,11 @@ import Leslie2Protocols.ABA.AFW.RoundProjectionStep.FirstGatherReturn
 
 `roundProjection_secondGatherReturn`: the projection of the composed round after the second gather
 returns to the acting process. The transition records the graded outcome the returned entries
-determine and marks its variables in the gather returned, and its ghost write is the second gather's
-core, which is what the composed round's `secondGatherReturn` event writes.
-`afterSecondGatherReturn` names the state the return reaches, and `secondGatherReturnCore` is the
-core the return carries.
+determine and marks its variables in the gather returned, and its ghost write records the second
+gather's core where none is recorded. That is what the composed round's `secondGatherReturn` event
+writes: the program records the grade, the second gather takes `Gather.AlgorithmOverBracha.ret`,
+and the round's network stands. `afterSecondGatherReturn` names the state the return reaches, and
+`secondGatherReturnCore` is the core the second gather holds after the return.
 -/
 
 namespace PLTS
@@ -33,10 +34,11 @@ variable {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} {w : NetworkState P.n} 
 /-! ### The second gather's return
 
 The transition records the graded outcome and marks its variables in the gather returned. It sends
-nothing,
-and its ghost write is the second gather's core. -/
+nothing, and its ghost write records the second gather's core and leaves the first core and the
+bound bit, from which the projection computes the round's network state. -/
 
-/-- The core the second gather's return carries. -/
+/-- The core the second gather holds after its return: the recorded one, and the core of the
+gather's network state where none is recorded. -/
 noncomputable def secondGatherReturnCore (P : Parameters)
   (s : GBCA.ByAFW.RoundStateOverBracha P.n) :
     Gather.AcceptedPairs P.n (Option Bool) :=
@@ -61,7 +63,7 @@ noncomputable def afterSecondGatherReturn (P : Parameters) (s : GBCA.ByAFW.Round
       (some (secondGatherReturnCore P s)))
 
 /-- **The second gather's return, read through the projection.** The second gather returns to `j`,
-which records the grade; the round's second core is written from the core the return carries. -/
+which records the grade, and the second gather records its core where none is recorded. -/
 theorem roundProjection_secondGatherReturn (hu : (u j).2 = p) (r : ℕ)
     (g : Fin P.n → Option (Option Bool))
     (hr2 : ((p.roundVariables r).secondGather.processVariables).returned = false) :
@@ -83,9 +85,10 @@ theorem roundProjection_secondGatherReturn (hu : (u j).2 = p) (r : ℕ)
       GBCA.ByAFW.programs_setPrograms, programs_roundProjection_eq,
       roundVariables_update_self rfl, locals_programProjection_if]
     simp [programs_mk, programProjection, LocalState.setProcessVariables, hr2]
-  · simp only [afterSecondGatherReturn, GBCA.ByAFW.bound_setSecondGather,
-      GBCA.ByAFW.bound_setPrograms, bound_roundProjection]
-    simp only [bound_mk, ghostStep]
+  · simp only [afterSecondGatherReturn, GBCA.ByAFW.network_setSecondGather,
+      GBCA.ByAFW.network_setPrograms, network_roundProjection, network_mk,
+      ghostStep_secondGatherReturn]
+    rfl
   · simp only [afterSecondGatherReturn, GBCA.ByAFW.firstGather_setSecondGather,
       GBCA.ByAFW.firstGather_setPrograms, firstGather_roundProjection]
     simp only [firstGather_mk, ghostStep]

@@ -12,8 +12,8 @@ import Leslie2Protocols.Framework.FamilySimulation
 `Framework/FamilySimulation.lean` builds the two smallest weak runs by hand: the
 single external step (`System.weakLStep_of_step`) and the two-step run
 (`weakLStep_tauThen`). Simulations whose abstract system must fire several
-internal transitions before the matching step — a chain of Byzantine call registrations, a
-core bind, then the return — need runs of unbounded length. This file
+internal transitions before the matching step — a chain of commits, the core write
+`bindCore`, then the return — need runs of any finite length. This file
 supplies them:
 
 * `System.weakLSilent_tauCons` / `System.weakLStep_tauCons` — prepending a
@@ -25,8 +25,9 @@ supplies them:
   of `weakLStep_tauThen`.
 
 The construction is by front-cons on the witness execution: each prepend
-extends the run by one transition, so a chain folds into a single terminating
-`AlterSeq` without any list-surgery on executions.
+extends the run by one transition (`AlterSeq.endState_cons`,
+`Framework/FamilySimulation.lean`), so a chain folds into a single terminating
+`AlterSeq`.
 -/
 
 open Stream'
@@ -35,31 +36,7 @@ namespace PLTS
 
 variable {State Label : Type} [Silent Label] {sys : System State Label}
 
-/-! ### Front-cons surgery on executions -/
-
-omit [Silent Label] in
-/-- `Option.elim` of `getLast?` peels the head: the last element of `x :: M` is
-read from `M` (falling back to `x`'s second component when `M` is empty). -/
-private theorem getLast?_elim_cons (x : Label × State) (M : List (Label × State)) (d : State) :
-    ((x :: M).getLast?).elim d Prod.snd = (M.getLast?).elim x.2 Prod.snd := by
-  induction M generalizing x d with
-  | nil => rfl
-  | cons a rest ih => rw [List.getLast?_cons_cons, ih a d, ih a x.2]
-
-/-- Prepending a transition does not change the end state: the run
-`⟨q, cons (l₀, q₁) T⟩` ends where `⟨q₁, T⟩` ends. -/
-private theorem endState_cons (q q₁ : State) (l₀ : Label) {T : Seq (Label × State)}
-    (hT : T.Terminates) (h : (Seq.cons (l₀, q₁) T).Terminates) :
-    (⟨q, Seq.cons (l₀, q₁) T⟩ : AlterSeq State Label).endState h
-      = (⟨q₁, T⟩ : AlterSeq State Label).endState hT := by
-  have h1 : (⟨q, Seq.cons (l₀, q₁) T⟩ : AlterSeq State Label).endState h
-      = (((Seq.cons (l₀, q₁) T).toList h).getLast?).elim q Prod.snd :=
-    AlterSeq.endState_eq_getLast? _ h
-  have h2 : (⟨q₁, T⟩ : AlterSeq State Label).endState hT
-      = ((T.toList hT).getLast?).elim q₁ Prod.snd :=
-    AlterSeq.endState_eq_getLast? _ hT
-  rw [h1, h2, Stream'.Seq.toList_cons h]
-  exact getLast?_elim_cons (l₀, q₁) (T.toList _) q
+/-! ### Prepending a transition to a run -/
 
 omit [Silent Label] in
 /-- Prepending an `LStep` preserves validity: consing a genuine first
@@ -110,7 +87,7 @@ theorem System.weakLSilent_tauCons {q q₁ q' : State}
   refine ⟨⟨q, Seq.cons (Silent.τ, e.init) e.trans⟩,
     Stream'.Seq.terminates_cons_iff.mpr hterm,
     isPartialExec_cons h' hpe, rfl, ?_, ?_⟩
-  · rw [endState_cons q e.init Silent.τ hterm]
+  · rw [AlterSeq.endState_cons q e.init Silent.τ hterm]
     exact hend
   · rw [trace_cons_internal q e.init e.trans]
     exact htr
@@ -127,7 +104,7 @@ theorem System.weakLStep_tauCons {q q₁ q' : State} {l : Label}
   refine ⟨⟨q, Seq.cons (Silent.τ, e.init) e.trans⟩,
     Stream'.Seq.terminates_cons_iff.mpr hterm,
     isPartialExec_cons h' hpe, rfl, ?_, ?_⟩
-  · rw [endState_cons q e.init Silent.τ hterm]
+  · rw [AlterSeq.endState_cons q e.init Silent.τ hterm]
     exact hend
   · rw [trace_cons_internal q e.init e.trans]
     exact htr

@@ -16,8 +16,8 @@ relation on that state; the system is the composition.
 
 The message pattern, per process:
 
-* the leader, called with `m`, records `m` in `input`, and multicasts `⟨INIT, m⟩` in a
-  transition of its own, once;
+* the leader, called with `m` while it holds no input, records `m` in `input`, and multicasts
+  `⟨INIT, m⟩` in a transition of its own, once;
 * `⟨ECHO, m⟩` is multicast on receiving `⟨INIT, m⟩` from the leader, on a quorum of received
   `ECHO m` messages, or on `f + 1` received `VOTE m` messages, once;
 * `⟨VOTE, m⟩` is multicast on a quorum of received `ECHO m` messages, or amplified from `f + 1`
@@ -33,10 +33,9 @@ makes the leader's `INIT` a single multicast. The write-once `sentEcho` and
 whichever of the two fires first.
 
 `brachaInstance_step_algorithm` is the projection and `algorithm_brachaInstance_step` the embedding.
-Together they give `brachaInstance_step_iff_algorithm`: at a specification label `l₀`, the
-transitions of the composition over the labels `BRB.specificationLabelMap` sends to `l₀` are exactly
-the `l₀`-transitions of `BrachaAlgorithm`, on the same composed state and with the same
-distribution.
+Together they give `brachaInstance_step_iff_algorithm`: at every label `l`, the `l`-transitions of
+the composition are exactly the `l`-transitions of `BrachaAlgorithm`, on the same composed state
+and with the same distribution.
 
 ## Model and deviations
 
@@ -57,17 +56,18 @@ variable {M : Type} [DecidableEq M]
 /-- The transitions of the reliable-broadcast instance with leader `ldr`
 (`BRB.brachaInstance`, `ABA/ReliableBroadcast/Bracha/Composition.lean`), stated over the composed
 state: one constructor per case of `BRB.brachaInstance_step_iff_algorithm`. The call and the call
-loop are the two transitions of `call m`, which the instance takes at two labels. Every transition
-is Dirac. -/
+loop are the two transitions of `call m`, the call at a leader holding no input and the loop at a
+leader holding one. Every transition is Dirac. -/
 inductive BrachaAlgorithm (P : Parameters) (ldr : Fin P.n) :
     BrachaState P.n M → Label P.n M → PMF (BrachaState P.n M) → Prop
-  /-- The environment call arrives at the leader: record the payload. -/
+  /-- The environment call arrives at a leader holding no input: record the payload. -/
   | call (s : BrachaState P.n M) (m : M)
       (h : (s.processVariables ldr).input = none) :
       BrachaAlgorithm P ldr s (.call m)
         (PMF.pure (s.setProcessVariables ldr { s.processVariables ldr with input := some m }))
-  /-- Input-enabledness loop for `call`. -/
-  | callLoop (s : BrachaState P.n M) (m : M) :
+  /-- Input-enabledness loop for `call`, at a leader holding an input: nothing moves. -/
+  | callLoop (s : BrachaState P.n M) (m : M)
+      (h : (s.processVariables ldr).input ≠ none) :
       BrachaAlgorithm P ldr s (.call m) (PMF.pure s)
   /-- Asynchronous delivery: the adversary moves a multicast message into a
   receiver's delivered set. -/
@@ -127,14 +127,14 @@ inductive BrachaAlgorithm (P : Parameters) (ldr : Fin P.n) :
 
 /-! ### The transitions of the instance against the algorithm
 
-Every transition of the instance is one transition of `BrachaAlgorithm` at the same state, and the
-correspondence is strong: one step matches one step, at the specification label the interface
-label projects to, with no stuttering anywhere.
+Every transition of the instance is one transition of `BrachaAlgorithm` at the same state and the
+same label, and the correspondence is strong: one step matches one step, with no stuttering
+anywhere.
 
 | instance | algorithm |
 | --- | --- |
-| `call` (leader writes) | `BrachaAlgorithm.call` |
-| `callLoop` | `BrachaAlgorithm.callLoop` |
+| `call` at a leader holding no input | `BrachaAlgorithm.call` |
+| `call` at a leader holding an input | `BrachaAlgorithm.callLoop` |
 | hidden `send` synchronisation, by level | `BrachaAlgorithm.init` / `echo` / `voteQuorum` /
 `voteAmplification` |
 | hidden `deliver` synchronisation | `BrachaAlgorithm.deliver` |
@@ -142,19 +142,16 @@ label projects to, with no stuttering anywhere.
 | `ret` | `BrachaAlgorithm.ret` |
 | `fail` | `BrachaAlgorithm.fail` |
 
-The two hidden synchronisations and the network's injection are silent in both systems, and
-`specificationLabelMap` takes `τ` to `τ`. -/
+The two hidden synchronisations and the network's injection are silent in both systems. -/
 
 /-- **The projection.** -/
 theorem brachaInstance_step_algorithm (P : Parameters) (ldr : Fin P.n) :
-    ∀ (s : BrachaState P.n M) (l : InstanceLabel P.n M) (μ : PMF (BrachaState P.n M)),
-      (brachaInstance P ldr M).step s l μ →
-      ∃ l₀, specificationLabelMap P.n M l = some l₀ ∧ BrachaAlgorithm P ldr s l₀ μ := by
+    ∀ (s : BrachaState P.n M) (l : Label P.n M) (μ : PMF (BrachaState P.n M)),
+      (brachaInstance P ldr M).step s l μ → BrachaAlgorithm P ldr s l μ := by
   rintro ⟨u, w⟩ l μ hstep
   rcases (brachaInstance_step_iff P ldr (u, w) l μ).mp hstep with ⟨rfl, e, hev⟩ | hlab
   · -- a hidden synchronisation: an internal transition
     obtain ⟨x, w', rfl, hall, hn⟩ := brachaInstanceExtended_synchronised_cases (by simp) hev
-    refine ⟨Label.tau, rfl, ?_⟩
     cases e with
     | send j m =>
       have hfor : ∀ i, i ≠ j → x i = u i :=
@@ -184,126 +181,107 @@ theorem brachaInstance_step_algorithm (P : Parameters) (ldr : Fin P.n) :
         fun i' hi' => PMF.pure_injective (programStep_deliver_notOwn (Ne.symm hi') (hall i'))
       rw [brachaInstance_deliver (PMF.pure_injective (programStep_deliver_own (hall i))) hfor]
       exact BrachaAlgorithm.deliver _ i j m hmem
-  · by_cases hlτ : l = Sum.inl Label.tau
-    · -- the network's own injection
-      subst hlτ
+  · cases l with
+    | tau =>
+      -- the network's own injection
       obtain ⟨w', rfl, hn⟩ := brachaInstanceExtended_tau_cases hlab
       obtain ⟨j, m, hF, hw⟩ := networkStep_tau hn
       have hw' : w' = w.recordSent j m := PMF.pure_injective hw
       subst hw'
-      refine ⟨Label.tau, rfl, ?_⟩
       rw [brachaInstance_recordSent]
       exact BrachaAlgorithm.byzantine _ j m hF
-    · obtain ⟨x, w', rfl, hall, hn⟩ :=
-        brachaInstanceExtended_synchronised_cases (by simpa using hlτ) hlab
-      cases l with
-      | inl l₀ =>
-        cases l₀ with
-        | tau => exact absurd rfl hlτ
-        | call m =>
-          have hw : w' = w := PMF.pure_injective (networkStep_call hn)
-          subst hw
-          obtain ⟨hin, hx⟩ := programStep_call_leader (hall ldr)
-          have hfor : ∀ i, i ≠ ldr → x i = u i :=
-            fun i hi => PMF.pure_injective (programStep_call_notOwn hi (hall i))
-          refine ⟨_, rfl, ?_⟩
-          rw [brachaInstance_setProcessVariables (PMF.pure_injective hx) hfor]
-          exact BrachaAlgorithm.call _ m hin
-        | ret id m =>
-          have hw : w' = w := PMF.pure_injective (networkStep_ret hn)
-          subst hw
-          obtain ⟨hcnt, hr, hx⟩ := programStep_ret_own (hall id)
-          have hfor : ∀ i, i ≠ id → x i = u i :=
-            fun i hi => PMF.pure_injective (programStep_ret_notOwn (Ne.symm hi) (hall i))
-          refine ⟨_, rfl, ?_⟩
-          rw [brachaInstance_setProcessVariables (PMF.pure_injective hx) hfor]
-          exact BrachaAlgorithm.ret _ id m hcnt hr
-        | fail id =>
-          have hw : w' = w.corrupt P id := PMF.pure_injective (networkStep_fail hn)
-          subst hw
-          have hidle : ∀ i, x i = u i := fun i => PMF.pure_injective (programStep_fail (hall i))
-          refine ⟨_, rfl, ?_⟩
-          rw [brachaInstance_idle hidle, brachaInstance_corrupt]
-          exact BrachaAlgorithm.fail _ id
-      | inr e =>
-        cases e with
-        | callLoop m =>
-          have hw : w' = w := PMF.pure_injective (networkStep_callLoop hn)
-          subst hw
-          have hidle : ∀ i, x i = u i := fun i => PMF.pure_injective (programStep_callLoop (hall i))
-          refine ⟨_, rfl, ?_⟩
-          rw [brachaInstance_idle hidle]
-          exact BrachaAlgorithm.callLoop _ m
+    | call m =>
+      obtain ⟨x, w', rfl, hall, hn⟩ := brachaInstanceExtended_synchronised_cases (by simp) hlab
+      have hw : w' = w := PMF.pure_injective (networkStep_call hn)
+      subst hw
+      have hfor : ∀ i, i ≠ ldr → x i = u i :=
+        fun i hi => PMF.pure_injective (programStep_call_notOwn hi (hall i))
+      rcases programStep_call_leader (hall ldr) with ⟨hin, hx⟩ | ⟨hin, hx⟩
+      · rw [brachaInstance_setProcessVariables (PMF.pure_injective hx) hfor]
+        exact BrachaAlgorithm.call _ m hin
+      · have hidle : ∀ i, x i = u i := by
+          intro i
+          rcases eq_or_ne i ldr with rfl | hi
+          · exact PMF.pure_injective hx
+          · exact hfor i hi
+        rw [brachaInstance_idle hidle]
+        exact BrachaAlgorithm.callLoop _ m hin
+    | ret id m =>
+      obtain ⟨x, w', rfl, hall, hn⟩ := brachaInstanceExtended_synchronised_cases (by simp) hlab
+      have hw : w' = w := PMF.pure_injective (networkStep_ret hn)
+      subst hw
+      obtain ⟨hcnt, hr, hx⟩ := programStep_ret_own (hall id)
+      have hfor : ∀ i, i ≠ id → x i = u i :=
+        fun i hi => PMF.pure_injective (programStep_ret_notOwn (Ne.symm hi) (hall i))
+      rw [brachaInstance_setProcessVariables (PMF.pure_injective hx) hfor]
+      exact BrachaAlgorithm.ret _ id m hcnt hr
+    | fail id =>
+      obtain ⟨x, w', rfl, hall, hn⟩ := brachaInstanceExtended_synchronised_cases (by simp) hlab
+      have hw : w' = w.corrupt P id := PMF.pure_injective (networkStep_fail hn)
+      subst hw
+      have hidle : ∀ i, x i = u i := fun i => PMF.pure_injective (programStep_fail (hall i))
+      rw [brachaInstance_idle hidle, brachaInstance_corrupt]
+      exact BrachaAlgorithm.fail _ id
 
 /-- **The embedding.** -/
 theorem algorithm_brachaInstance_step (P : Parameters) (ldr : Fin P.n) :
-    ∀ (s : BrachaState P.n M) (l₀ : Label P.n M) (μ : PMF (BrachaState P.n M)),
-      BrachaAlgorithm P ldr s l₀ μ →
-      ∃ l, specificationLabelMap P.n M l = some l₀ ∧ (brachaInstance P ldr M).step s l μ := by
-  rintro ⟨u, w⟩ l₀ μ htransition
+    ∀ (s : BrachaState P.n M) (l : Label P.n M) (μ : PMF (BrachaState P.n M)),
+      BrachaAlgorithm P ldr s l μ → (brachaInstance P ldr M).step s l μ := by
+  rintro ⟨u, w⟩ l μ htransition
   cases htransition with
   | call m h =>
-    exact ⟨Sum.inl (.call m), rfl, brachaInstance_label_step P ldr (by simp)
+    exact brachaInstance_label_step P ldr (by simp)
       (dirac_steps_update (ProgramStep.call (u ldr) m rfl h)
         (fun i hi => ProgramStep.callIdle (u i) m hi))
-      (NetworkStep.call w m)⟩
-  | callLoop m =>
-    exact ⟨Sum.inr (.callLoop m), rfl, brachaInstance_label_step P ldr (by simp)
-      (fun i => ProgramStep.callLoop (u i) m) (NetworkStep.callLoop w m)⟩
+      (NetworkStep.call w m)
+  | callLoop m h =>
+    refine brachaInstance_label_step P ldr (x := u) (by simp) (fun i => ?_) (NetworkStep.call w m)
+    rcases eq_or_ne i ldr with rfl | hi
+    · exact ProgramStep.callLoop (u i) m rfl h
+    · exact ProgramStep.callIdle (u i) m hi
   | init m hin hsend =>
-    exact ⟨Sum.inl Label.tau, rfl, brachaInstance_event_step P ldr
-      (BroadcastEvent.send ldr (.init m))
+    exact brachaInstance_event_step P ldr (BroadcastEvent.send ldr (.init m))
       (dirac_steps_update (ProgramStep.sendInit (u ldr) m rfl hin hsend)
         (fun i hi => ProgramStep.sendIdle (u i) ldr (.init m) (Ne.symm hi)))
-      (NetworkStep.send w ldr (.init m))⟩
+      (NetworkStep.send w ldr (.init m))
   | deliver i j m h =>
-    exact ⟨Sum.inl Label.tau, rfl, brachaInstance_event_step P ldr (BroadcastEvent.deliver i j m)
+    exact brachaInstance_event_step P ldr (BroadcastEvent.deliver i j m)
       (dirac_steps_update (ProgramStep.deliverReceive (u i) j m)
         (fun i' hi' => ProgramStep.deliverIdle (u i') i j m (Ne.symm hi')))
-      (NetworkStep.deliver w i j m h)⟩
+      (NetworkStep.deliver w i j m h)
   | echo j m hrecv hsend =>
-    exact ⟨Sum.inl Label.tau, rfl, brachaInstance_event_step P ldr (BroadcastEvent.send j (.echo m))
+    exact brachaInstance_event_step P ldr (BroadcastEvent.send j (.echo m))
       (dirac_steps_update (ProgramStep.sendEcho (u j) m hrecv hsend)
         (fun i hi => ProgramStep.sendIdle (u i) j (.echo m) (Ne.symm hi)))
-      (NetworkStep.send w j (.echo m))⟩
+      (NetworkStep.send w j (.echo m))
   | voteQuorum j m hcnt hsend =>
-    exact ⟨Sum.inl Label.tau, rfl, brachaInstance_event_step P ldr (BroadcastEvent.send j (.vote m))
+    exact brachaInstance_event_step P ldr (BroadcastEvent.send j (.vote m))
       (dirac_steps_update (ProgramStep.sendVoteQuorum (u j) m hcnt hsend)
         (fun i hi => ProgramStep.sendIdle (u i) j (.vote m) (Ne.symm hi)))
-      (NetworkStep.send w j (.vote m))⟩
+      (NetworkStep.send w j (.vote m))
   | voteAmplification j m hcnt hsend =>
-    exact ⟨Sum.inl Label.tau, rfl, brachaInstance_event_step P ldr (BroadcastEvent.send j (.vote m))
+    exact brachaInstance_event_step P ldr (BroadcastEvent.send j (.vote m))
       (dirac_steps_update (ProgramStep.sendVoteAmplification (u j) m hcnt hsend)
         (fun i hi => ProgramStep.sendIdle (u i) j (.vote m) (Ne.symm hi)))
-      (NetworkStep.send w j (.vote m))⟩
+      (NetworkStep.send w j (.vote m))
   | byzantine j m h =>
-    exact ⟨Sum.inl Label.tau, rfl, brachaInstance_tau_network P ldr (NetworkStep.byzantine w j m h)⟩
+    exact brachaInstance_tau_network P ldr (NetworkStep.byzantine w j m h)
   | ret id m hcnt hr =>
-    exact ⟨Sum.inl (.ret id m), rfl, brachaInstance_label_step P ldr (by simp)
+    exact brachaInstance_label_step P ldr (by simp)
       (dirac_steps_update (ProgramStep.ret (u id) m hcnt hr)
         (fun i hi => ProgramStep.retIdle (u i) id m (Ne.symm hi)))
-      (NetworkStep.retIdle w id m)⟩
+      (NetworkStep.retIdle w id m)
   | fail id =>
-    exact ⟨Sum.inl (.fail id), rfl, brachaInstance_label_step P ldr (by simp)
-      (fun i => ProgramStep.failIdle (u i) id) (NetworkStep.fail w id)⟩
+    exact brachaInstance_label_step P ldr (by simp)
+      (fun i => ProgramStep.failIdle (u i) id) (NetworkStep.fail w id)
 
-/-- **The characterisation.** At a specification label `l₀`, the transitions of the instance
-over the labels `specificationLabelMap` sends to `l₀` are exactly the `l₀`-transitions of
-`BrachaAlgorithm`, on the same state and with the same distribution. The call and the call loop
-are the two transitions of `call m`, taken at the two labels `specificationLabelMap` sends to it;
-every other specification label has a single interface label over it. -/
+/-- **The characterisation.** At every label `l`, the `l`-transitions of the instance are exactly
+the `l`-transitions of `BrachaAlgorithm`, on the same state and with the same distribution. The
+call and the call loop are the two transitions of `call m`. -/
 theorem brachaInstance_step_iff_algorithm (P : Parameters) (ldr : Fin P.n) (s : BrachaState P.n M)
-    (l₀ : Label P.n M) (μ : PMF (BrachaState P.n M)) :
-    (∃ l, specificationLabelMap P.n M l = some l₀ ∧ (brachaInstance P ldr M).step s l μ) ↔
-    BrachaAlgorithm P ldr s l₀ μ := by
-  constructor
-  · rintro ⟨l, hl, hstep⟩
-    obtain ⟨l₁, hl₁, htransition⟩ := brachaInstance_step_algorithm P ldr s l μ hstep
-    have hll : l₁ = l₀ := Option.some.inj (show (some l₁ : Option (Label P.n M)) = some l₀ by
-      rw [← hl₁, hl])
-    subst hll
-    exact htransition
-  · exact algorithm_brachaInstance_step P ldr s l₀ μ
+    (l : Label P.n M) (μ : PMF (BrachaState P.n M)) :
+    (brachaInstance P ldr M).step s l μ ↔ BrachaAlgorithm P ldr s l μ :=
+  ⟨brachaInstance_step_algorithm P ldr s l μ, algorithm_brachaInstance_step P ldr s l μ⟩
 
 /-- info: 'PLTS.ABA.BRB.brachaInstance_step_iff_algorithm' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in

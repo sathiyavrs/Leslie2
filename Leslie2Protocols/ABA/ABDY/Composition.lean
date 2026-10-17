@@ -18,52 +18,52 @@ graded-agreement round at once, and the single adversary holds both kinds of mes
 
 * the graded-agreement family is the round-indexed family `GBCA.ByABDY.gbcaInstanceFamily`. Its
   round-`r` instance is a parallel component in its own right: the graded-agreement programs of
-  round `r` beside the network of round `r`, which that instance owns outright
+  round `r` beside the network of round `r`, which that instance holds
   (`GBCA/ABDY/Composition.lean`);
 * the round loops are `n` separate automata (`roundLoopProgram`), synchronised;
-* what is left of the network is the DECIDED sets beside the corrupted set (`ABANetwork`);
+* what is left of the network is the DECIDED sets beside the corrupted set and the started rounds
+  (`ABANetwork`);
 * the common coin enters through the same label pullback as in the protocol
   (`Composition.coinOverRoundAlphabet`).
 
 The four components have the alphabet `Composition.ExtendedLabel n`, the labels they synchronise on
 are hidden, and the result is read back over `Label n`. The round loops, the ABA network and the
-lifted common coin are
-defined in `ABA/Composition/Components.lean`. The pipeline `ABDY.composedExtended` /
-`ABDY.composedHidden` / `ABDY.composed` is the context term of `hybrid`
-(`ABA/Composition/Hybrid.lean`), character for character.
+lifted common coin are defined in `ABA/Composition/Components.lean`. The pipeline
+`ABDY.composedExtended` / `ABDY.composedHidden` / `ABDY.composed` is the context term of `hybrid`
+(`ABA/Composition/Hybrid.lean`), component for component.
 
-## Per-round memory
+## The rounds of the family
 
-A round instance is a component of the composite from the start, not an object created by the
-round's first call, and it keeps its round variables and its network state for the whole run. The
-graded-agreement coordinate of a composed state is therefore `ℕ → GBCA.ByABDY.RoundState n`:
-every round is present at every moment, whichever round each process is in. Those retained
-variables are specification state in one respect only: a process of the protocol holds its own
-variables per round in a finite map and, once it terminates, answers nothing further, where the
-round instance answers at every moment (D22).
+The graded-agreement coordinate of a composed state is an `InstanceFamilyState`: the corruptions
+broadcast so far, and a finite map holding the instance of every round the family has touched. A
+round enters the map at its first owned transition, a call, a return, an announcement or a
+corrupted process's call, and it keeps its round variables and its network state from then on.
+A round outside the map reads as the initial instance under the recorded corruptions, and the
+family takes no silent transition there. The protocol holds a process's variables per round in a
+finite map in the same way (D22). A process of the protocol that has terminated takes a round
+delivery on `deliverLoop` and leaves its variables where they stand, and the round instance files
+the message.
 
-## The authorisation relocation (D11)
+## A corrupted process's call (D11)
 
-A round instance carries no `k ∈ F` guard on the Byzantine call and return labels `byzantineCallG`,
-`byzantineCallGLoop` and `byzantineRetG` (`GBCA/ABDY/Components.lean`, D11). Such a label
-stays visible at the instance boundary and is authorised outside it. Here `ABANetwork` is that
-outside, and it carries the guard on its own copy of the corrupted set. The two copies are written
-by one broadcast: `fail` reaches every round's network through the family
-(`gbcaInstanceFamily_fail`) and `ABANetwork` through its own `fail` transition, and
-`GBCA.ByABDY.NetworkState.corrupt` and `ABANetworkState.corrupt` are the same budget-guarded
-insertion.
+A round instance carries no `k ∈ F` guard on a corrupted process's call `byzantineCallG`
+(`GBCA/ABDY/Components.lean`, D11). The ABA network outputs the label under `k ∈ F`, read on its
+own copy of the corrupted set, and at a started round (D37). The two copies are written by one
+broadcast: `fail` reaches every round's network through the family (`gbcaInstanceFamily_fail`)
+and the ABA network through its own `fail` transition, and `GBCA.ByABDY.NetworkState.corrupt` and
+`ABANetworkState.corrupt` are the same budget-guarded insertion.
 
 ## What this file supplies
 
 The composed system, and the lemmas that read and build its transitions. The builders assemble a
 transition of the composite out of transitions of its components
 (`composedExtended_visible_step`, `composedExtended_tau_gbca`, `composedExtended_tau_ABANetwork`,
-`composedExtended_tau_coin`, `gbcaInstanceFamily_owned`, `gbcaInstanceFamily_idle`,
-`gbcaInstanceFamily_tau`, `gbcaInstanceFamily_fail`, `composedHidden_of_event`,
-`composedHidden_of_tau`). The per-component transitions these consume and produce are those of
-`ABA/Composition/Components.lean` and `GBCA/ABDY/Components.lean`. The protocol meets the
-composed system in `ABA/ABDY/Simulation.lean`, and `ABA/ABDY/Substitution.lean` carries the
-composed system to `hybrid`.
+`composedExtended_tau_coin`, `gbcaInstanceFamily_owned`, `gbcaInstanceFamily_owned_id`,
+`gbcaInstanceFamily_idle`, `gbcaInstanceFamily_tau`, `gbcaInstanceFamily_fail`,
+`composedHidden_of_event`, `composedHidden_of_tau`). The per-component transitions these consume
+and produce are those of `ABA/Composition/Components.lean` and `GBCA/ABDY/Components.lean`. The
+protocol meets the composed system in `ABA/ABDY/Simulation.lean`, and
+`ABA/ABDY/Substitution.lean` carries the composed system to `hybrid`.
 -/
 namespace PLTS
 namespace ABA
@@ -74,19 +74,20 @@ open Composition
 /-! ## The composed system
 
 The protocol cut into its components: the graded-agreement family as a round-indexed family of
-instances, the round loops as `n` synchronised automata, the DECIDED sets beside the corrupted set,
-and the lifted common coin. This section composes the four components and reads the transitions of
-the composite. -/
+instances, the round loops as `n` synchronised automata, the DECIDED sets beside the corrupted set
+and the started rounds, and the lifted common coin. This section composes the four components and
+reads the transitions of the composite. -/
 
 namespace Composition
 
 /-! ### The composition pipeline -/
 
-/-- The state of the composed system: the round instances, the round loops, the ABA network and the
-common coin. -/
+/-- The state of the composed system: the family of round instances, the round loops, the ABA
+network and the family of coin instances. -/
 abbrev ComposedState (P : Parameters) : Type :=
-  (ℕ → GBCA.ByABDY.RoundState P.n) ×
-    ((∀ _ : Fin P.n, RoundLoopVariables P.n) × (ABANetworkState P.n × (ℕ → WCC.SpecState P.n)))
+  InstanceFamilyState (GBCA.ByABDY.RoundState.initial P.n) (GBCA.ByABDY.corruptionAct P) ×
+    ((∀ _ : Fin P.n, RoundLoopVariables P.n) ×
+      (ABANetworkState P.n × InstanceFamilyState (WCC.SpecState.initial P.n) (WCC.failAct P)))
 
 end Composition
 
@@ -135,8 +136,10 @@ theorem composedHidden_step_iff (P : Parameters) (q : ComposedState P) (l : Labe
 /-- Build a synchronised transition of the four components on a visible label, the
 coin's successor left arbitrary. -/
 theorem composedExtended_visible_step (P : Parameters)
-    {G G' : ℕ → GBCA.ByABDY.RoundState P.n} {C C' : ∀ _ : Fin P.n, RoundLoopVariables P.n}
-    {A A' : ABANetworkState P.n} {o : ℕ → WCC.SpecState P.n} {ω : PMF (ℕ → WCC.SpecState P.n)}
+    {G G' : InstanceFamilyState (GBCA.ByABDY.RoundState.initial P.n) (GBCA.ByABDY.corruptionAct P)}
+    {C C' : ∀ _ : Fin P.n, RoundLoopVariables P.n} {A A' : ABANetworkState P.n}
+    {o : InstanceFamilyState (WCC.SpecState.initial P.n) (WCC.failAct P)}
+    {ω : PMF (InstanceFamilyState (WCC.SpecState.initial P.n) (WCC.failAct P))}
     {L : ExtendedLabel P.n GBCA.ByABDY.Message} (hL : L ≠ Silent.τ)
     (hG : (GBCA.ByABDY.gbcaInstanceFamily P).step G L (PMF.pure G'))
     (hC : ∀ i, RoundLoopStep P i (C i) L (PMF.pure (C' i)))
@@ -153,9 +156,10 @@ theorem composedExtended_visible_step (P : Parameters)
   exact Or.inl ⟨hL, PMF.pure A', ω, hA, hW, rfl⟩
 
 /-- Build a silent transition of the four components from a graded-agreement one. -/
-theorem composedExtended_tau_gbca (P : Parameters) {G G' : ℕ → GBCA.ByABDY.RoundState P.n}
+theorem composedExtended_tau_gbca (P : Parameters)
+    {G G' : InstanceFamilyState (GBCA.ByABDY.RoundState.initial P.n) (GBCA.ByABDY.corruptionAct P)}
     {C : ∀ _ : Fin P.n, RoundLoopVariables P.n} {A : ABANetworkState P.n}
-    {o : ℕ → WCC.SpecState P.n}
+    {o : InstanceFamilyState (WCC.SpecState.initial P.n) (WCC.failAct P)}
     (hG : (GBCA.ByABDY.gbcaInstanceFamily P).step G (Sum.inl Label.tau) (PMF.pure G')) :
     (ABDY.composedExtended P).step (G, C, A, o) (Sum.inl Label.tau) (PMF.pure (G', C, A, o)) := by
   rw [ABDY.composedExtended, System.parallel_step]
@@ -164,8 +168,9 @@ theorem composedExtended_tau_gbca (P : Parameters) {G G' : ℕ → GBCA.ByABDY.R
 
 /-- Build a silent transition of the four components from an ABA network injection. -/
 theorem composedExtended_tau_ABANetwork (P : Parameters)
-    {G : ℕ → GBCA.ByABDY.RoundState P.n} {C : ∀ _ : Fin P.n, RoundLoopVariables P.n}
-    {A A' : ABANetworkState P.n} {o : ℕ → WCC.SpecState P.n}
+    {G : InstanceFamilyState (GBCA.ByABDY.RoundState.initial P.n) (GBCA.ByABDY.corruptionAct P)}
+    {C : ∀ _ : Fin P.n, RoundLoopVariables P.n} {A A' : ABANetworkState P.n}
+    {o : InstanceFamilyState (WCC.SpecState.initial P.n) (WCC.failAct P)}
     (hA : ABANetworkStep P A (Sum.inl Label.tau : ExtendedLabel P.n GBCA.ByABDY.Message)
       (PMF.pure A')) :
     (ABDY.composedExtended P).step (G, C, A, o) (Sum.inl Label.tau) (PMF.pure (G, C, A', o)) := by
@@ -179,56 +184,62 @@ theorem composedExtended_tau_ABANetwork (P : Parameters)
   · rw [prodPMF_pure_pure, prodPMF_pure_pure, prodPMF_pure_pure]
 
 /-- Build a silent transition of the four components from the resolution of one round of the
-common coin. -/
+common coin, at a round of the coin family's map. -/
 theorem composedExtended_tau_coin (P : Parameters)
-    {G : ℕ → GBCA.ByABDY.RoundState P.n} {C : ∀ _ : Fin P.n, RoundLoopVariables P.n}
-    {A : ABANetworkState P.n} {o : ℕ → WCC.SpecState P.n} {r : ℕ}
-    {μw : PMF (WCC.SpecState P.n)} (hW : WCC.Step P r (o r) Label.tau μw) :
+    {G : InstanceFamilyState (GBCA.ByABDY.RoundState.initial P.n) (GBCA.ByABDY.corruptionAct P)}
+    {C : ∀ _ : Fin P.n, RoundLoopVariables P.n} {A : ABANetworkState P.n}
+    {o : InstanceFamilyState (WCC.SpecState.initial P.n) (WCC.failAct P)} {r : ℕ}
+    (hr : r ∈ o.instanceMap.keys) {μw : PMF (WCC.SpecState P.n)}
+    (hW : WCC.Step P r (o r) Label.tau μw) :
     (ABDY.composedExtended P).step (G, C, A, o) (Sum.inl Label.tau)
       (prodPMF (PMF.pure G) (prodPMF (PMF.pure C)
-        (prodPMF (PMF.pure A) (μw.map (Function.update o r))))) := by
+        (prodPMF (PMF.pure A) (μw.map (o.setInstanceState r))))) := by
   rw [ABDY.composedExtended, System.parallel_step]
   refine Or.inr (Or.inr ⟨rfl, _, ?_, rfl⟩)
   rw [System.parallel_step]
   refine Or.inr (Or.inr ⟨rfl, _, ?_, rfl⟩)
   rw [System.parallel_step]
   exact Or.inr (Or.inr ⟨rfl, _,
-    coinOverExtendedAlphabet_tau P GBCA.ByABDY.Message Empty o hW, rfl⟩)
+    coinOverExtendedAlphabet_tau P GBCA.ByABDY.Message Empty o hr hW, rfl⟩)
 
 /-! ### The graded-agreement family's transitions
 
-The family passes a round-tagged label to the instance of its round, takes `τ` at any round,
-broadcasts `fail`, and idles on everything else. -/
+The family passes a round-tagged label to the instance of its round and enters that round in its
+map, takes `τ` at a round of its map, broadcasts `fail`, and idles on everything else. -/
 
-/-- The round-`r` instance moves on a label it owns. -/
-theorem gbcaInstanceFamily_owned (P : Parameters) (G : ℕ → GBCA.ByABDY.RoundState P.n)
+/-- The round-`r` instance moves on a label it owns, and the family enters its successor at `r`. -/
+theorem gbcaInstanceFamily_owned (P : Parameters)
+    (G : InstanceFamilyState (GBCA.ByABDY.RoundState.initial P.n) (GBCA.ByABDY.corruptionAct P))
     (r : ℕ) {L : ExtendedLabel P.n GBCA.ByABDY.Message} (hL : GBCA.ByABDY.roundOwnsLabel L = some r)
     {X : GBCA.ByABDY.RoundState P.n}
     (h : (GBCA.ByABDY.composition P r).step (G r) L (PMF.pure X)) :
-    (GBCA.ByABDY.gbcaInstanceFamily P).step G L (PMF.pure (Function.update G r X)) := by
+    (GBCA.ByABDY.gbcaInstanceFamily P).step G L (PMF.pure (G.setInstanceState r X)) := by
   rw [GBCA.ByABDY.gbcaInstanceFamily, System.family_step_iff]
   exact Or.inr (Or.inl ⟨r, hL, PMF.pure X, h, by rw [PMF.pure_map]⟩)
 
-/-- An owned label whose instance is unchanged. -/
-theorem gbcaInstanceFamily_owned_id (P : Parameters) (G : ℕ → GBCA.ByABDY.RoundState P.n)
-  (r : ℕ)
-    {L : ExtendedLabel P.n GBCA.ByABDY.Message} (hL : GBCA.ByABDY.roundOwnsLabel L = some r)
+/-- An owned label whose instance is unchanged, at a round of the map: the family is unchanged. -/
+theorem gbcaInstanceFamily_owned_id (P : Parameters)
+    (G : InstanceFamilyState (GBCA.ByABDY.RoundState.initial P.n) (GBCA.ByABDY.corruptionAct P))
+    (r : ℕ) (hr : r ∈ G.instanceMap.keys) {L : ExtendedLabel P.n GBCA.ByABDY.Message}
+    (hL : GBCA.ByABDY.roundOwnsLabel L = some r)
     (h : (GBCA.ByABDY.composition P r).step (G r) L (PMF.pure (G r))) :
     (GBCA.ByABDY.gbcaInstanceFamily P).step G L (PMF.pure G) := by
   have hstep := gbcaInstanceFamily_owned P G r hL h
-  rwa [Function.update_eq_self] at hstep
+  rwa [InstanceFamilyState.setInstanceState_apply_self hr] at hstep
 
-/-- The round-`r` instance takes one of its own silent transitions. -/
-theorem gbcaInstanceFamily_tau (P : Parameters) (G : ℕ → GBCA.ByABDY.RoundState P.n)
-    (r : ℕ) {X : GBCA.ByABDY.RoundState P.n}
+/-- The instance of a round of the map takes one of its own silent transitions. -/
+theorem gbcaInstanceFamily_tau (P : Parameters)
+    (G : InstanceFamilyState (GBCA.ByABDY.RoundState.initial P.n) (GBCA.ByABDY.corruptionAct P))
+    (r : ℕ) (hr : r ∈ G.instanceMap.keys) {X : GBCA.ByABDY.RoundState P.n}
     (h : (GBCA.ByABDY.composition P r).step (G r) (Sum.inl Label.tau) (PMF.pure X)) :
     (GBCA.ByABDY.gbcaInstanceFamily P).step G (Sum.inl Label.tau)
-    (PMF.pure (Function.update G r X)) := by
+      (PMF.pure (G.setInstanceState r X)) := by
   rw [GBCA.ByABDY.gbcaInstanceFamily, System.family_step_iff]
-  exact Or.inl ⟨rfl, r, PMF.pure X, h, by rw [PMF.pure_map]⟩
+  exact Or.inl ⟨rfl, r, hr, PMF.pure X, h, by rw [PMF.pure_map]⟩
 
 /-- A label no round owns and no broadcast: the family idles. -/
-theorem gbcaInstanceFamily_idle (P : Parameters) (G : ℕ → GBCA.ByABDY.RoundState P.n)
+theorem gbcaInstanceFamily_idle (P : Parameters)
+    (G : InstanceFamilyState (GBCA.ByABDY.RoundState.initial P.n) (GBCA.ByABDY.corruptionAct P))
     {L : ExtendedLabel P.n GBCA.ByABDY.Message} (hτ : L ≠ Silent.τ)
     (hown : GBCA.ByABDY.roundOwnsLabel L = none)
     (hf : ¬ GBCA.ByABDY.isFailLabel L) :
@@ -236,11 +247,12 @@ theorem gbcaInstanceFamily_idle (P : Parameters) (G : ℕ → GBCA.ByABDY.RoundS
   rw [GBCA.ByABDY.gbcaInstanceFamily, System.family_step_iff]
   exact Or.inr (Or.inr (Or.inr ⟨hτ, hown, hf, rfl⟩))
 
-/-- Corruption is broadcast to every round's network. -/
-theorem gbcaInstanceFamily_fail (P : Parameters) (G : ℕ → GBCA.ByABDY.RoundState P.n)
+/-- Corruption is broadcast to every round's network, in the map or not. -/
+theorem gbcaInstanceFamily_fail (P : Parameters)
+    (G : InstanceFamilyState (GBCA.ByABDY.RoundState.initial P.n) (GBCA.ByABDY.corruptionAct P))
     (k : Fin P.n) :
     (GBCA.ByABDY.gbcaInstanceFamily P).step G (Sum.inl (Label.fail k))
-    (PMF.pure (fun r => GBCA.ByABDY.corruptionAct P (Sum.inl (Label.fail k)) (G r))) := by
+      (PMF.pure (G.applyBroadcast (Sum.inl (Label.fail k)))) := by
   rw [GBCA.ByABDY.gbcaInstanceFamily, System.family_step_iff]
   exact Or.inr (Or.inr (Or.inl ⟨by simp, rfl, trivial, rfl⟩))
 
@@ -248,9 +260,8 @@ theorem gbcaInstanceFamily_fail (P : Parameters) (G : ℕ → GBCA.ByABDY.RoundS
 
 /-- One graded-agreement program moves and every other idles. -/
 theorem gbcaProgramStep_family {P : Parameters} {r : ℕ}
-    {u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundVariables P.n} {L : GBCA.ByABDY.GBCALabel P.n} (id : Fin
-      P.n)
-    (nd : GBCA.ByABDY.RoundVariables P.n)
+    {u : ∀ _ : Fin P.n, GBCA.ByABDY.RoundVariables P.n} {L : GBCA.ByABDY.GBCALabel P.n}
+    (id : Fin P.n) (nd : GBCA.ByABDY.RoundVariables P.n)
     (hown : GBCA.ByABDY.GBCAProgramStep P r id (u id) L (PMF.pure nd))
     (hfor : ∀ i, i ≠ id → GBCA.ByABDY.GBCAProgramStep P r i (u i) L (PMF.pure (u i))) :
     ∀ i, GBCA.ByABDY.GBCAProgramStep P r i (u i) L (PMF.pure (Function.update u id nd i)) := by
@@ -263,8 +274,8 @@ theorem gbcaProgramStep_family {P : Parameters} {r : ℕ}
 
 The composition hides `NetworkEvent n`, so a transition of `ABDY.composedExtended` on one of those
 labels is a silent transition of `ABDY.composedHidden`, as is one on `τ`. The two round
-synchronisations never reach this point. They are internal to a round instance, hidden inside
-`GBCA.ByABDY.composition`, and reach the composite as the family's own `τ`. -/
+synchronisations carry no label of the composite. They are internal to a round instance, hidden
+inside `GBCA.ByABDY.composition`, and appear in the composite as the family's own `τ`. -/
 
 theorem composedHidden_of_event (P : Parameters) {q : ComposedState P}
     (e : NetworkEvent P.n GBCA.ByABDY.Message)

@@ -19,9 +19,11 @@ two systems they carry, and `ABA/GBCA/ABDY/Composition.lean` assembles them into
 
 A local program holds the variables of one round: the process's own protocol data and the messages
 delivered to it, indexed by sender (`GBCA.ByABDY.RoundVariables`). It holds no corrupted set and no
-corruption flag, and it does not record the messages it has multicast; its guards read its variables
-and the delivered sets, never the identity of the caller. The round loop that moves the ports is not
-here either — a call writes the round's variables alone, a return sets their `returned` flag alone.
+corruption flag. It records its own sends in the send fields of its protocol data, `sentInput` and
+the write-once `sentEcho`, `sentVote`, `sentBind` and `sentEcho5`; the sent sets that a delivery
+reads belong to the round's network. Its guards read its variables and the delivered sets, never
+the identity of the caller. The round loop that moves the ports is not here either — a call writes
+the round's variables alone, a return sets their `returned` flag alone.
 
 A call records the input and sends nothing. The process's own `⟨INPUT, b⟩` is the first multicast of
 the round, a send of its own (ABDY22 Algorithm 6 line 2, the first statement of LeslieBP
@@ -40,11 +42,23 @@ they are labels of the instance-internal alphabet
 `GBCALabel n = ExtendedLabel n Message ⊕ GBCAEvent n`.
 They are untagged: the round is the identity of the instance they belong to, and they are hidden
 before the family sees the instance at all (`gbcaEvents` is the set hidden there). What stays
-visible is the round's interface in the shared extended alphabet `ExtendedLabel n Message`:
-`callG r`,
-`retG r`, `gbcaCallLoop r` and the three Byzantine graded-agreement labels of round `r`. The
-round-multicast and round-delivery constructors of `NetworkEvent` are therefore not part of that
-interface — no component offers them, so they carry no transition of the instance.
+visible is the round's interface in the shared extended alphabet `ExtendedLabel n Message`: the
+calls `callG r`, the returns `retG r`, the announcements `boundG r` and a corrupted process's calls
+`byzantineCallG r` of round `r`. The round-multicast and round-delivery constructors of
+`NetworkEvent` are not part of that interface: no component offers them, so they carry no
+transition of the instance.
+
+## Inputs and outputs
+
+The program of process `j` outputs its sends `send j _` and its returns `retG r j _`. The round's
+network outputs the deliveries and the announcements `boundG r _`, and its injection
+`byzantineGBCA` is silent. Each component takes every other label of the round's interface and of
+the two synchronisations as an input, on a transition at every state
+(`ABA/GBCA/ABDY/InputEnabledness.lean`): a call at variables holding no input on `call`, at
+variables holding one on `callLoop`, and the same pair `byzantineCall`, `byzantineCallLoop` for a
+corrupted process's call; the announcement on `boundGIdle`; a delivery to `j` on `deliverReceive`;
+every label at another process on an idle transition. The network takes each of its inputs on one
+unguarded transition.
 
 ## Model and deviations
 
@@ -58,17 +72,17 @@ interface — no component offers them, so they carry no transition of the insta
   through the network's own `byzantineGBCA` transition.
 * **D8 (participation guard).** The protocol sends and the three returns require the variables to
   hold the process's input: the algorithm's handlers only run inside a called instance.
-* **D11 (Byzantine call and return transitions), split.** A Byzantine call or return transition is
-  authorised by a `k ∈ F` guard and has an effect on the round's data. The components carry the
-  effect and not the authorisation: `byzantineCallG` opens the round's variables without any
-  `k ∈ F` guard, and `byzantineRetG` sets the `returned` flag and writes
-  the round's bound bit on the same witness, denials and guard a correct return needs. The guard
-  belongs to the network that surrounds the instance, where it applies to the call or return label
-  that stays visible at this boundary.
-* **The round's bound bit (D29).** The ghost field `NetworkState.bound` belongs to the network, so
-  the two return transitions that write it are the network's (`GBCANetworkStep.retGIdle`,
-  `GBCANetworkStep.byzantineRetG`), and a program's return takes the announced bit free. The write
-  is the one in `Algorithm.retGrade2`/`retGrade1`/`retGrade0`, which is what keeps
+* **D11 (a corrupted process's call).** A corrupted process's call of round `r` is the label
+  `byzantineCallG r k b`, which the ABA network outside the instance outputs under `k ∈ F` at a
+  round a correct process has started (D37). The program takes it on the transitions of a correct
+  call, and the round's network on an unguarded transition. A return to a process, corrupted or
+  not, is the program's own return `retG r k out`, under the guards of a correct return.
+* **The round's bound bit (D29).** The auxiliary field `NetworkState.bound` belongs to the network.
+  The network's transition on a return, `GBCANetworkStep.retG`, writes the bit at the round's
+  first return, `boundOf` at the sent sets, the corrupted set and the outcome, and leaves the
+  recorded bit at every later return. `GBCANetworkStep.announceBound` outputs `boundG r b` while the
+  network holds `b`, a Dirac self-loop, and every program idles on it (`boundGIdle`). The write is
+  the one in `Algorithm.retGrade2`/`retGrade1`/`retGrade0`, which is what keeps
   `composition_projects` an equality.
 * **D18 (the five message levels).** The send transitions are the five levels
   `INPUT / ECHO / VOTE / BIND / ECHO5` and the three graded returns of the cited algorithm, not the
@@ -82,9 +96,9 @@ interface — no component offers them, so they carry no transition of the insta
 ## The interface
 
 Every transition mirrors the round-visible half of one transition of the algorithm
-(`GBCA/ABDY/Algorithm.lean`), split between the program that owns the variables and the network
-that owns the sent sets. The round loop's phase, estimate and grade appear nowhere here: they are
-held by another component of the protocol system. -/
+(`GBCA/ABDY/Algorithm.lean`), split between the program, which holds the variables, and the
+network, which holds the sent sets. The round loop's phase, estimate and grade appear nowhere here:
+they are held by another component of the protocol system. -/
 
 namespace PLTS
 namespace ABA
@@ -134,37 +148,37 @@ def gbcaEvents (n : ℕ) : Set (GBCALabel n) := {l | ∃ e : GBCAEvent n, l = Su
 Process `j`'s program in this round. Every guard reads the round's variables and the received sets
 and nothing else. A synchronised transition carries the program's half of a synchronised step with
 the network — on a send the write to its variables, on a delivery the write to its received sets.
-The transitions are exactly the labels that reach the round's instance: the round's own call and
-return ports and the two synchronisations. -/
+The transitions are exactly the labels that reach the round's instance: the round's calls, returns
+and announcements, a corrupted process's calls, and the two synchronisations. -/
 
 /-- The step relation of the local graded-agreement program of process `j` in
 round `r`. -/
 inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
     GBCA.ByABDY.RoundVariables P.n → GBCALabel P.n → PMF (GBCA.ByABDY.RoundVariables P.n) → Prop
-  /-- The call arrives: record the input (`Algorithm.call`). -/
+  /-- The call arrives at variables holding no input: record the input (`Algorithm.call`). -/
   | call (p : GBCA.ByABDY.RoundVariables P.n) (b : Bool) (h : p.processVariables.input = none) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inl (.callG r j b)))
         (PMF.pure (p.setProcessVariables { p.processVariables with input := some b }))
+  /-- The call arrives at variables holding an input: the variables do not move
+  (`Algorithm.callLoop`). -/
+  | callLoop (p : GBCA.ByABDY.RoundVariables P.n) (b : Bool) (h : p.processVariables.input ≠ none) :
+      GBCAProgramStep P r j p (Sum.inl (Sum.inl (.callG r j b))) (PMF.pure p)
   /-- A call addressed elsewhere: not `j`'s business. -/
   | callIdle (p : GBCA.ByABDY.RoundVariables P.n) (id : Fin P.n) (b : Bool) (hid : id ≠ j) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inl (.callG r id b))) (PMF.pure p)
-  /-- A call against variables already called: the variables do not move
-  (`Algorithm.callLoop`). -/
-  | callLoop (p : GBCA.ByABDY.RoundVariables P.n) (id : Fin P.n) (b : Bool) :
-      GBCAProgramStep P r j p (Sum.inl (Sum.inr (.gbcaCallLoop r id b))) (PMF.pure p)
   /-- Return with outcome `grade2 v`: an `n − f` `ECHO5 v` quorum, the variables called
   and its own `ECHO5` out (`Algorithm.retGrade2`). -/
-  | retGrade2 (p : GBCA.ByABDY.RoundVariables P.n) (v : Bool) (bnd : Bool)
+  | retGrade2 (p : GBCA.ByABDY.RoundVariables P.n) (v : Bool)
       (hin : p.processVariables.input ≠ none)
       (hlv : p.processVariables.sentEcho5 ≠ none)
       (hcnt : P.n - P.f ≤ p.receivedCount (.echo5 (some v)))
       (hret : p.processVariables.returned = false) :
-      GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r j (.grade2 v) bnd)))
+      GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r j (.grade2 v))))
         (PMF.pure (p.setProcessVariables { p.processVariables with returned := true }))
   /-- Return with outcome `grade1 v`: an `n − f` any-`ECHO5` quorum containing
   `ECHO5 v`, `f + 1` `BIND v`s and `|Valid| > 1`, the variables called, its own
   `ECHO5` out and case (1) denied at either bit (`Algorithm.retGrade1`). -/
-  | retGrade1 (p : GBCA.ByABDY.RoundVariables P.n) (v : Bool) (bnd : Bool)
+  | retGrade1 (p : GBCA.ByABDY.RoundVariables P.n) (v : Bool)
       (hin : p.processVariables.input ≠ none)
       (hlv : p.processVariables.sentEcho5 ≠ none)
       (hnotGrade2 : ∀ v, p.receivedCount (.echo5 (some v)) < P.n - P.f)
@@ -173,12 +187,12 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
       (hbind : P.f + 1 ≤ p.receivedCount (.bind (some v)))
       (hval : p.bothValid P)
       (hret : p.processVariables.returned = false) :
-      GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r j (.grade1 v) bnd)))
+      GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r j (.grade1 v))))
         (PMF.pure (p.setProcessVariables { p.processVariables with returned := true }))
   /-- Return with outcome `grade0`: an `n − f` `ECHO5 ⊥` quorum and `|Valid| > 1`, the
   variables called, its own `ECHO5` out, case (1) denied at either bit and case (2)
   denied in the reduced form `Algorithm.retGrade0` states. -/
-  | retGrade0 (p : GBCA.ByABDY.RoundVariables P.n) (bnd : Bool)
+  | retGrade0 (p : GBCA.ByABDY.RoundVariables P.n)
       (hin : p.processVariables.input ≠ none)
       (hlv : p.processVariables.sentEcho5 ≠ none)
       (hnotGrade2 : ∀ v, p.receivedCount (.echo5 (some v)) < P.n - P.f)
@@ -187,65 +201,29 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
       (hcnt : P.n - P.f ≤ p.receivedCount (.echo5 none))
       (hval : p.bothValid P)
       (hret : p.processVariables.returned = false) :
-      GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r j .grade0 bnd)))
+      GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r j .grade0)))
         (PMF.pure (p.setProcessVariables { p.processVariables with returned := true }))
   /-- A return to another process: not `j`'s business. -/
-  | retIdle (p : GBCA.ByABDY.RoundVariables P.n) (id : Fin P.n) (out : GBCAOutput) (bnd : Bool)
+  | retIdle (p : GBCA.ByABDY.RoundVariables P.n) (id : Fin P.n) (out : GBCAOutput)
       (hid : id ≠ j) :
-      GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r id out bnd))) (PMF.pure p)
-  /-- A Byzantine call (D11): the round's variables open on the named bit, exactly as a correct call
-  opens them (`Algorithm.call`). -/
-  | byzantineCall (p : GBCA.ByABDY.RoundVariables P.n) (b : Bool) (h : p.processVariables.input =
-      none) :
+      GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r id out))) (PMF.pure p)
+  /-- The announcement of the round's bound bit: not `j`'s business (D29). -/
+  | boundGIdle (p : GBCA.ByABDY.RoundVariables P.n) (b : Bool) :
+      GBCAProgramStep P r j p (Sum.inl (Sum.inl (.boundG r b))) (PMF.pure p)
+  /-- A corrupted process's call at variables holding no input (D11): the variables record the
+  named bit, as a correct call records it (`Algorithm.call`). -/
+  | byzantineCall (p : GBCA.ByABDY.RoundVariables P.n) (b : Bool)
+      (h : p.processVariables.input = none) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineCallG r j b)))
         (PMF.pure (p.setProcessVariables { p.processVariables with input := some b }))
-  /-- A Byzantine call at another process: not `j`'s business. -/
+  /-- A corrupted process's call at variables holding an input (D11): the variables do not move
+  (`Algorithm.callLoop`). -/
+  | byzantineCallLoop (p : GBCA.ByABDY.RoundVariables P.n) (b : Bool)
+      (h : p.processVariables.input ≠ none) :
+      GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineCallG r j b))) (PMF.pure p)
+  /-- A corrupted process's call at another process: not `j`'s business. -/
   | byzantineCallIdle (p : GBCA.ByABDY.RoundVariables P.n) (k : Fin P.n) (b : Bool) (hk : k ≠ j) :
       GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineCallG r k b))) (PMF.pure p)
-  /-- A Byzantine call against variables already called (D11): the variables do not move
-  (`Algorithm.callLoop`). -/
-  | byzantineCallLoop (p : GBCA.ByABDY.RoundVariables P.n) (k : Fin P.n) (b : Bool) :
-      GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineCallGLoop r k b))) (PMF.pure p)
-  /-- A Byzantine grade-2 return (D11): the correct transition's witness and guard, and
-  the same write to the variables (`Algorithm.retGrade2`). -/
-  | byzantineRetGrade2 (p : GBCA.ByABDY.RoundVariables P.n) (v : Bool) (bnd : Bool)
-      (hin : p.processVariables.input ≠ none)
-      (hlv : p.processVariables.sentEcho5 ≠ none)
-      (hcnt : P.n - P.f ≤ p.receivedCount (.echo5 (some v)))
-      (hret : p.processVariables.returned = false) :
-      GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r j (.grade2 v) bnd)))
-        (PMF.pure (p.setProcessVariables { p.processVariables with returned := true }))
-  /-- A Byzantine grade-1 return (D11): the correct transition's witness, denial and
-  guard, and the same write to the variables (`Algorithm.retGrade1`). -/
-  | byzantineRetGrade1 (p : GBCA.ByABDY.RoundVariables P.n) (v : Bool) (bnd : Bool)
-      (hin : p.processVariables.input ≠ none)
-      (hlv : p.processVariables.sentEcho5 ≠ none)
-      (hnotGrade2 : ∀ v, p.receivedCount (.echo5 (some v)) < P.n - P.f)
-      (hcnt : P.n - P.f ≤ p.echo5Count)
-      (honce : ∃ k, GBCA.ByABDY.Message.echo5 (some v) ∈ p.received k)
-      (hbind : P.f + 1 ≤ p.receivedCount (.bind (some v)))
-      (hval : p.bothValid P)
-      (hret : p.processVariables.returned = false) :
-      GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r j (.grade1 v) bnd)))
-        (PMF.pure (p.setProcessVariables { p.processVariables with returned := true }))
-  /-- A Byzantine grade-0 return (D11): the correct transition's witness, denials and
-  guard, and the same write to the variables (`Algorithm.retGrade0`). -/
-  | byzantineRetGrade0 (p : GBCA.ByABDY.RoundVariables P.n) (bnd : Bool)
-      (hin : p.processVariables.input ≠ none)
-      (hlv : p.processVariables.sentEcho5 ≠ none)
-      (hnotGrade2 : ∀ v, p.receivedCount (.echo5 (some v)) < P.n - P.f)
-      (hnotGrade1 : ∀ v, (∃ k, GBCA.ByABDY.Message.echo5 (some v) ∈ p.received k) →
-        p.receivedCount (.bind (some v)) < P.f + 1)
-      (hcnt : P.n - P.f ≤ p.receivedCount (.echo5 none))
-      (hval : p.bothValid P)
-      (hret : p.processVariables.returned = false) :
-      GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r j .grade0 bnd)))
-        (PMF.pure (p.setProcessVariables { p.processVariables with returned := true }))
-  /-- A Byzantine return at another process: not `j`'s business. -/
-  | byzantineRetIdle (p : GBCA.ByABDY.RoundVariables P.n) (k : Fin P.n) (out : GBCAOutput) (bnd :
-      Bool)
-      (hk : k ≠ j) :
-      GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r k out bnd))) (PMF.pure p)
   /-- `INPUT b`: the process's own input, not yet multicast. ABDY22 Algorithm 6 line 2 and the
   first statement of LeslieBP Algorithm 2 (`Algorithm.input`). -/
   | sendInput (p : GBCA.ByABDY.RoundVariables P.n) (b : Bool)
@@ -349,10 +327,11 @@ inductive GBCAProgramStep (P : Parameters) (r : ℕ) (j : Fin P.n) :
 
 /-! ### The round's network
 
-The one local state of the instance that holds what no program may see: the per-sender sent sets and
-the corrupted set. It participates in every send by recording the message and in every delivery by
-checking that the message is sent, and it is where a corrupted sender's injections enter (D5). Its
-state `NetworkState` stands beside the round's variables in
+The one local state of the instance that holds what no program may see: the per-sender sent sets,
+the corrupted set and the round's bound bit. It participates in every send by recording the message
+and in every delivery by checking that the message is sent, and it is where a corrupted sender's
+injections enter (D5). It writes the bound bit at the round's first return and announces it
+(D29). Its state `NetworkState` stands beside the round's variables in
 `GBCA/ABDY/MessagesAndVariables.lean`, the two of them being the components of a round's state; what
 follows is its step relation. -/
 
@@ -375,31 +354,23 @@ inductive GBCANetworkStep (P : Parameters) (r : ℕ) :
   /-- The network's half of the call: it sends nothing (`Algorithm.call`). -/
   | callG (w : NetworkState P.n) (id : Fin P.n) (b : Bool) :
       GBCANetworkStep P r w (Sum.inl (Sum.inl (.callG r id b))) (PMF.pure w)
-  /-- A return sends nothing, and writes the round's bound bit: the label's
-  `bnd` is the bit `bound` holds if there is one and `boundOf`'s otherwise, and
-  it is written there (`Algorithm.retGrade2`/`retGrade1`/`retGrade0`). -/
-  | retGIdle (w : NetworkState P.n) (id : Fin P.n) (out : GBCAOutput) (bnd : Bool)
-      (hbnd : bnd = w.bound.getD (GBCA.ByABDY.boundOf w.sent w.F out)) :
-      GBCANetworkStep P r w (Sum.inl (Sum.inl (.retG r id out bnd)))
-        (PMF.pure (w.setBound bnd))
-  /-- A call against variables already called sends nothing
-  (`Algorithm.callLoop`). -/
-  | gbcaCallLoop (w : NetworkState P.n) (id : Fin P.n) (b : Bool) :
-      GBCANetworkStep P r w (Sum.inl (Sum.inr (.gbcaCallLoop r id b))) (PMF.pure w)
-  /-- A Byzantine call (D11): it sends nothing, and there is no `k ∈ F` guard on this
-  transition. The authorisation belongs to the network outside the instance, where the call
-  label stays visible. A corrupted process's `⟨INPUT, b⟩` enters by `byzantineGBCA`. -/
+  /-- The network's half of a corrupted process's call (D11): it sends nothing, and there is no
+  `k ∈ F` guard on this transition. The ABA network outputs the label under `k ∈ F` at a round a
+  correct process has started (D37). A corrupted process's `⟨INPUT, b⟩` enters by
+  `byzantineGBCA`. -/
   | byzantineCallG (w : NetworkState P.n) (k : Fin P.n) (b : Bool) :
       GBCANetworkStep P r w (Sum.inl (Sum.inr (.byzantineCallG r k b))) (PMF.pure w)
-  /-- A Byzantine call against variables already called sends nothing (D11). -/
-  | byzantineCallGLoop (w : NetworkState P.n) (k : Fin P.n) (b : Bool) :
-      GBCANetworkStep P r w (Sum.inl (Sum.inr (.byzantineCallGLoop r k b))) (PMF.pure w)
-  /-- A Byzantine return sends nothing, and writes the round's bound bit
-  exactly as the correct return does (D11). -/
-  | byzantineRetG (w : NetworkState P.n) (k : Fin P.n) (out : GBCAOutput) (bnd : Bool)
-      (hbnd : bnd = w.bound.getD (GBCA.ByABDY.boundOf w.sent w.F out)) :
-      GBCANetworkStep P r w (Sum.inl (Sum.inr (.byzantineRetG r k out bnd)))
-        (PMF.pure (w.setBound bnd))
+  /-- The network's half of a return: it sends nothing, and it writes the round's bound bit. At
+  the round's first return the bit is `boundOf` at the sent sets, the corrupted set and the
+  outcome; at a later return the recorded bit stands (`Algorithm.retGrade2`/`retGrade1`/
+  `retGrade0`; D29). -/
+  | retG (w : NetworkState P.n) (id : Fin P.n) (out : GBCAOutput) :
+      GBCANetworkStep P r w (Sum.inl (Sum.inl (.retG r id out)))
+        (PMF.pure (w.setBound (w.bound.getD (GBCA.ByABDY.boundOf w.sent w.F out))))
+  /-- The announcement of the round's bound bit `b`, under `bound = some b`: a Dirac self-loop,
+  enabled at every state from the round's first return on (`Algorithm.announceBound`; D29). -/
+  | announceBound (w : NetworkState P.n) (b : Bool) (h : w.bound = some b) :
+      GBCANetworkStep P r w (Sum.inl (Sum.inl (.boundG r b))) (PMF.pure w)
 
 /-! ### The program and the round's network as systems -/
 

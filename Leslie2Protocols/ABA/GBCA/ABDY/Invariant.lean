@@ -549,7 +549,7 @@ private theorem Invariant.setProcessVariables_unchanged {s : RoundState P.n} (hI
   · intro j' b hF hm'
     exact hne j' (hI.input_called j' b hF hm')
 
-/-- **The invariant is preserved by the bound bit's write.** The ghost write touches the network
+/-- **The invariant is preserved by the bound bit's write.** The write touches the network
 state's own field alone, and no clause of `Invariant` reads it. -/
 private theorem Invariant.setBound {s : RoundState P.n} (hI : Invariant P s) (β : Bool) :
     Invariant P (s.setBound β) := { hI with }
@@ -577,7 +577,11 @@ theorem Invariant.step {r : ℕ} {s : RoundState P.n} {l : Label P.n}
       (Or.inl ⟨fun w heq => by simp at heq, rfl⟩)
       (Or.inl ⟨fun w heq => by simp at heq, rfl⟩)
       (Or.inl ⟨fun w heq => by simp at heq, rfl⟩)
-  | callLoop id b =>
+  | callLoop id b _ =>
+    rw [PMF.mem_support_pure_iff] at hs'
+    subst hs'
+    exact hI
+  | announceBound b _ =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     exact hI
@@ -738,20 +742,20 @@ theorem Invariant.step {r : ℕ} {s : RoundState P.n} {l : Label P.n}
         hI.input_origin b G hFG hGc j' hjG (hsentG G hFG j' _ hjG hm')
     · exact fun b j' hF hm' => hI.input_support b j' hF (hs j' _ hF hm')
     · exact fun j' b hF hm' => hI.input_called j' b hF (hs j' _ hF hm')
-  | retGrade2 id v bnd _hin _hlv hcnt hr _hbnd =>
+  | retGrade2 id v _hin _hlv hcnt hr =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    refine Invariant.setBound ?_ bnd
+    refine Invariant.setBound ?_ _
     exact hI.setProcessVariables_unchanged (fun _ hb => hb) rfl rfl rfl rfl
-  | retGrade1 id v bnd _hin _hlv _hnotGrade2 hcnt honce hbind hval hr _hbnd =>
+  | retGrade1 id v _hin _hlv _hnotGrade2 hcnt honce hbind hval hr =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    refine Invariant.setBound ?_ bnd
+    refine Invariant.setBound ?_ _
     exact hI.setProcessVariables_unchanged (fun _ hb => hb) rfl rfl rfl rfl
-  | retGrade0 id bnd _hin _hlv _hnotGrade2 _hnotGrade1 hcnt hval hr _hbnd =>
+  | retGrade0 id _hin _hlv _hnotGrade2 _hnotGrade1 hcnt hval hr =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
-    refine Invariant.setBound ?_ bnd
+    refine Invariant.setBound ?_ _
     exact hI.setProcessVariables_unchanged (fun _ hb => hb) rfl rfl rfl rfl
   | fail id =>
     rw [PMF.mem_support_pure_iff] at hs'

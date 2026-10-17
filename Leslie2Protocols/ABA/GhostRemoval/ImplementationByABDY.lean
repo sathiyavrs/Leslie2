@@ -10,22 +10,26 @@ import Leslie2Protocols.ABA.Results
 /-!
 # The ghost-free ABDY22 protocol
 
-The network of `ABDY.protocol` holds one bit per round that no program reads:
-the round's bound bit, written by `ABDY.abdyGhostStep` and announced on every
-graded-agreement return by `ABDY.abdyAnnouncedBound`. `ABDY.ghostFreeProtocol` is the protocol as
-it runs with that ghost dropped and the adversary free to announce either bit on a
-return.
+The network of `ABDY.protocol` holds, for every round, a ghost of type `Option Bool`: the round's
+bound bit, `none` at a round that has not returned (D30). `ABDY.abdyGhostStep` writes it at the
+round's first return, and no guard of a program reads it. The ghost enables one transition, the
+network's announcement `boundG r b`, enabled exactly when the ghost of round `r` is `some b` (D29).
+The announcement lies in `Label.hiddenAPI`, so it is hidden at protocol level.
+`ABDY.ghostFreeProtocol` is the protocol with the ghost removed: its network holds the one-element
+ghost `Unit` and announces nothing.
 
-`ABDY.protocol_ghostRemoval` is the statement that the ghost costs nothing: the ghost never
-blocks a step and never adds one, so the two systems have the same achievable trace
-distributions. Every headline about the protocol therefore holds of the ghost-free
-protocol, and the rest of this file re-derives them.
+`ABDY.protocol_ghostRemoval` states that the protocol and the ghost-free protocol achieve the same
+trace distributions. Every headline about the protocol therefore holds of the ghost-free protocol,
+and the rest of this file derives them: the composition inclusion into `ABDY.composed`,
+trace-distribution refinement into the ABA specification, Validity and Agreement of every
+positive-probability trace, and trace conservativity against the protocol-shaped specification
+`hybrid`.
 
-The proof is the auxiliary variable removal of `ABA/GhostRemoval/GhostFreeSystem.lean` carried
-through the composition pipeline. Its hypothesis is that every round, process and graded outcome
-admits an announced bit, which here is the equation `bnd = ABDY.abdyGhostOutput P s r id out` read
-at its own right-hand side. The announced bit is silent at protocol level — a `retG` label lies in
-`Label.hiddenAPI` — which is why no label map appears in the statement.
+The proof is the removal of an auxiliary variable, `Implementation.system_ghostRemoval`
+(`ABA/GhostRemoval/GhostFreeSystem.lean`), at ABDY22's ghost: the type `Option Bool`, the write
+`ABDY.abdyGhostStep` and the read `id`, the arguments `ABDY.protocol` passes. Since the
+announcement labels are hidden, the removal is at the identity on labels, and no label map appears
+in the statement.
 -/
 
 namespace PLTS
@@ -34,25 +38,23 @@ namespace ABDY
 
 open Implementation
 
-/-- **The ghost-free ABDY22 protocol**: the `n` programs and the common coin of
-`ABDY.protocol` beside the network over the trivial ghost, whose
-graded-agreement returns announce any bit. -/
+/-- **The ghost-free ABDY22 protocol**: the `n` programs and the common coin of `ABDY.protocol`
+beside the network over the one-element ghost `Unit`, which holds no bit, so that the announcement
+`boundG` never fires. -/
 noncomputable def ghostFreeProtocol (P : Parameters) :
     System (Implementation.State P GBCA.ByABDY.Message (GBCA.ByABDY.RoundVariables P.n) Unit)
     (Label P.n) :=
   Implementation.systemGhostFree P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundVariables P.n)
     (ABDY.RoundStep P)
 
-/-- **The ghost costs nothing.** The bound bit the network records is written
-by no guard and read by no program, and the label that announces it is hidden at protocol
-level, so the protocol and the ghost-free protocol achieve the same trace
-distributions. -/
+/-- **The ghost changes no trace distribution.** The ghost of a round holds the round's bound bit,
+no guard of a program reads it, and the network's announcement `boundG` is the one transition it
+enables. The announcement is hidden at protocol level, so the protocol and the ghost-free protocol
+achieve the same trace distributions. -/
 theorem protocol_ghostRemoval (P : Parameters) :
     achievableTraceDists (protocol P) = achievableTraceDists (ghostFreeProtocol P) :=
   Implementation.system_ghostRemoval P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundVariables P.n)
-    (Option Bool) (ABDY.RoundStep P)
-    (ABDY.abdyGhostStep P) (ABDY.abdyAnnouncedBound P)
-    (fun s r id out => ⟨ABDY.abdyGhostOutput P s r id out, rfl⟩)
+    (Option Bool) (ABDY.RoundStep P) (ABDY.abdyGhostStep P) id
 
 /-! ### The headlines at the ghost-free protocol -/
 

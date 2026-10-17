@@ -8,12 +8,19 @@ import Leslie2Protocols.ABA.HybridRefinesSpecification.Relation
 import Leslie2Protocols.ABA.Composition.Hybrid
 
 /-!
-# `Invariant` across the round loops' `τ` transitions of `hybrid`
+# `Invariant` across the silent DECIDED transitions of `hybrid`
 
-`Invariant.step_roundLoopTau`, preservation of `Invariant` at a core `τ`: DECIDED delivery, echo,
-or byzantine injection. All three leave `processes` and `F` untouched, so only `received_sound` and
-`decided_source` need real work. The `echo` case's correct sender comes from an `f + 1`-vs-`≤ f`
-pigeonhole on the delivered senders.
+`Invariant.step_roundLoopTau`, preservation of `Invariant` at a silent DECIDED transition of the
+round loops and the ABA network. There are three cases: the delivery of a payload the receiver does
+not hold; the `f + 1` relay of a correct process, which writes both records of its DECIDED sends,
+the round loop's own and the network's (`ABAState.relayDecided`); and the injection or the relay of
+a process of `F`, which writes the network's record alone (`ABAState.recordDecided`). All three
+leave `processes` and `F` untouched, so only `received_sound`, `decided_source` and
+`decidedSent_recorded` (I4') need an argument. At the relay of a correct process, more than `f`
+senders are counted and at most `f` lie in `F`, so a counted sender is correct, and its
+`decided_source` supplies the witness of the relayed bit. `decidedSent_recorded` holds at the relay
+since the two records of the relaying process gain the same bit, and at the write of the network's
+record alone since that write is at a process of `F`, which the clause does not read.
 -/
 
 namespace PLTS
@@ -23,9 +30,9 @@ open Implementation Composition
 
 variable {P : Parameters}
 
-/-- The round loops' `τ` transitions: `Invariant` is preserved and the abstract state is unchanged
-at a
-DECIDED delivery, an echo or a byzantine injection. -/
+/-- The silent DECIDED transitions: `Invariant` is preserved and the abstract state is unchanged
+at a DECIDED delivery, at the relay of a correct process, and at the injection or the relay of a
+process of `F`. -/
 theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w)
     {μc : PMF (ABAState P)}
@@ -33,7 +40,7 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
       (∃ i j b, b ∈ c.decidedSent j ∧ b ∉ c.decidedReceived i j ∧
           μc = PMF.pure (c.deliverDecided i j b)) ∨
         (∃ id b, P.f + 1 ≤ c.decidedCount id b ∧ b ∉ c.decidedSent id ∧
-          μc = PMF.pure (c.recordDecided id b)) ∨
+          μc = PMF.pure (c.relayDecided id b)) ∨
         (∃ id b, id ∈ c.F ∧ μc = PMF.pure (c.recordDecided id b)))
     {c' : ABAState P} (hc' : c' ∈ μc.support) :
     Invariant P g c' w ∧ AbstractStateUnchanged P g g c c' := by
@@ -45,6 +52,13 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
     have hFeq : (c.deliverDecided i j b).F = c.F := ABAState.deliverDecided_F _ _ _ _
     have hDS : (c.deliverDecided i j b).decidedSent = c.decidedSent :=
       ABAState.deliverDecided_decidedSent _ _ _ _
+    have hRecorded : ∀ k, k ∉ (c.deliverDecided i j b).F →
+        ((c.deliverDecided i j b).1 k).decidedSent = (c.deliverDecided i j b).decidedSent k := by
+      intro k hk
+      rw [hDS, ← hI.decidedSent_recorded k (hFeq ▸ hk)]
+      by_cases hki : k = i
+      · rw [hki]; simp [ABAState.deliverDecided]
+      · simp [ABAState.deliverDecided, Function.update_of_ne hki]
     have hCert : ∀ r' b',
       Grade2Witness P g c r' b' → Grade2Witness P g (c.deliverDecided i j b) r' b' := fun r'
         b' => Grade2Witness.of_unchanged rfl (fun _ => rfl) (fun _ _ => rfl)
@@ -56,8 +70,9 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
     refine ⟨fun id' => by
         rw [ABAState.deliverDecided_corrupted, hFeq]; exact hI.corrupted_F id',
       fun r => by rw [hFeq]; exact hI.F_gbca r, fun r => by rw [hFeq]; exact hI.F_wcc r,
-      hFeq ▸ hI.F_card, ?_, ?_, ?_, hI.down_settled, hI.quiescent, hI.wcc_bound, ?_, ?_, ?_, ?_, ?_,
-      hI.grade2_needs_bind, ?_, ?_, ?_, ?_, ?_, ?_, hI.bind_succ, ?_, ?_, hI.grade0_chain, ?_,
+      hFeq ▸ hI.F_card, ?_, ?_, ?_, hI.down_settled, hI.quiescent, hI.wcc_bound, ?_, ?_,
+      hRecorded, ?_, ?_, ?_, hI.grade2_needs_bind, ?_, ?_, ?_, ?_, ?_, ?_, hI.bind_succ, ?_, ?_,
+      hI.grade0_chain, ?_,
       hI.wcc_order, ?_, ?_, ?_, ?_, ?_, ?_, hI.bound_quorum,
       fun r v hb => (hI.bind_support r v hb).mono
         (fun id' b' h => by rw [hProcs]; exact h) (fun x hx => by rw [hFeq]; exact hx),
@@ -131,13 +146,22 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
       rcases hI.wccCalled_witness r id' (hFeq ▸ hmem) hcalled with hg | hd
       · left; exact hg
       · right; exact DissentWitness.preserved rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
-  · -- echo: a correct sender among the `f + 1` counted deliveries
+  · -- the relay of a correct process: a correct sender among the `f + 1` counted deliveries
     rw [PMF.mem_support_pure_iff] at hc'; subst hc'
-    have hProcs : (c.recordDecided id b).processes = c.processes :=
-      ABAState.recordDecided_processes _ _ _
-    have hFeq : (c.recordDecided id b).F = c.F := ABAState.recordDecided_F _ _ _
-    have hDR : (c.recordDecided id b).decidedReceived = c.decidedReceived :=
-      ABAState.recordDecided_decidedReceived _ _ _
+    have hProcs : (c.relayDecided id b).processes = c.processes :=
+      ABAState.relayDecided_processes _ _ _
+    have hFeq : (c.relayDecided id b).F = c.F := ABAState.relayDecided_F _ _ _
+    have hDR : (c.relayDecided id b).decidedReceived = c.decidedReceived :=
+      ABAState.relayDecided_decidedReceived _ _ _
+    have hRecorded : ∀ k, k ∉ (c.relayDecided id b).F →
+        ((c.relayDecided id b).1 k).decidedSent = (c.relayDecided id b).decidedSent k := by
+      intro k hk
+      rw [ABAState.relayDecided_decidedSent]
+      by_cases hkid : k = id
+      · rw [hkid, ABAState.relayDecided_fst_decidedSent_self, Function.update_self,
+          hI.decidedSent_recorded id (hFeq ▸ hkid ▸ hk)]
+      · rw [ABAState.relayDecided_fst_ne _ _ _ hkid, Function.update_of_ne hkid]
+        exact hI.decidedSent_recorded k (hFeq ▸ hk)
     have hcnt' : P.f + 1 ≤ (Finset.univ.filter (fun j => b ∈ c.decidedReceived id j)).card :=
       hcnt
     have hcard : c.F.card < (Finset.univ.filter (fun j => b ∈ c.decidedReceived id j)).card := by
@@ -150,16 +174,16 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
     have hjsent : b ∈ c.decidedSent j := hI.received_sound id j b hjmem.2
     obtain ⟨r0, hcert0⟩ := hI.decided_source j b hjF hjsent
     have hCert : ∀ r' b',
-      Grade2Witness P g c r' b' → Grade2Witness P g (c.recordDecided id b) r' b' := fun r' b'
+      Grade2Witness P g c r' b' → Grade2Witness P g (c.relayDecided id b) r' b' := fun r' b'
         => Grade2Witness.of_unchanged rfl (fun _ => rfl) (fun _ _ => rfl)
         (by rw [hFeq] : c.F ⊆ _) (fun id' => by rw [hProcs]) (fun id' => by rw [hProcs])
         (fun id0 v hcar => by unfold OutcomeHolder at hcar ⊢; rwa [hProcs] at hcar)
-    have hHold : ∀ i0 b0, i0 ∉ c.F → Grade2Holder P (c.recordDecided id b) i0 b0 →
+    have hHold : ∀ i0 b0, i0 ∉ c.F → Grade2Holder P (c.relayDecided id b) i0 b0 →
         ∃ j0, j0 ∉ c.F ∧ Grade2Holder P c j0 b0 := by
       intro i0 b0 hm h
       rcases h with h | h
       · rw [hProcs] at h; exact ⟨i0, hm, Or.inl h⟩
-      · rcases (ABAState.mem_recordDecided_decidedSent_iff _ _ _ _ _).mp h with ⟨-, rfl⟩ | h
+      · rcases (ABAState.mem_relayDecided_decidedSent_iff _ _ _ _ _).mp h with ⟨-, rfl⟩ | h
         · exact ⟨j, hjF, Or.inr hjsent⟩
         · exact ⟨i0, hm, Or.inr h⟩
     refine And.intro ?_ ⟨fun r0 b0 hc => ⟨r0, hCert r0 b0 hc⟩,
@@ -167,10 +191,11 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
         obtain ⟨j0, hj0, hh0⟩ := hHold j b' (hFeq ▸ hj) hh
         exact hpin j0 b' hj0 hh0⟩
     refine ⟨fun id' => by
-        rw [ABAState.recordDecided_corrupted, hFeq]; exact hI.corrupted_F id',
+        rw [ABAState.relayDecided_corrupted, hFeq]; exact hI.corrupted_F id',
       fun r => by rw [hFeq]; exact hI.F_gbca r, fun r => by rw [hFeq]; exact hI.F_wcc r,
-      hFeq ▸ hI.F_card, ?_, ?_, ?_, hI.down_settled, hI.quiescent, hI.wcc_bound, ?_, ?_, ?_, ?_, ?_,
-      hI.grade2_needs_bind, ?_, ?_, ?_, ?_, ?_, ?_, hI.bind_succ, ?_, ?_, hI.grade0_chain, ?_,
+      hFeq ▸ hI.F_card, ?_, ?_, ?_, hI.down_settled, hI.quiescent, hI.wcc_bound, ?_, ?_,
+      hRecorded, ?_, ?_, ?_, hI.grade2_needs_bind, ?_, ?_, ?_, ?_, ?_, ?_, hI.bind_succ, ?_, ?_,
+      hI.grade0_chain, ?_,
       hI.wcc_order, ?_, ?_, ?_, ?_, ?_, ?_, hI.bound_quorum,
       fun r v hb => (hI.bind_support r v hb).mono
         (fun id' b' h => by rw [hProcs]; exact h) (fun x hx => by rw [hFeq]; exact hx),
@@ -190,9 +215,10 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
       rw [hProcs] at hne ⊢; exact hI.phase_input id' (hFeq ▸ hmem) hne
     · intro i' j' b' h
       rw [hDR] at h
-      exact ABAState.recordDecided_decidedSent_mono _ _ _ (hI.received_sound i' j' b' h)
+      exact (ABAState.mem_relayDecided_decidedSent_iff _ _ _ _ _).mpr
+        (Or.inr (hI.received_sound i' j' b' h))
     · intro id' b' hmem h
-      rw [ABAState.recordDecided_decidedSent] at h
+      rw [ABAState.relayDecided_decidedSent] at h
       by_cases hid : id' = id
       · subst hid
         rw [Function.update_self, Finset.mem_insert] at h
@@ -218,9 +244,9 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
     · intro id' hmem hround hphase
       rw [hProcs] at hround hphase ⊢; exact hI.estimate0 id' (hFeq ▸ hmem) hround hphase
     · intro id' b' hlg
-      rw [hProcs] at hlg; exact hI.grade2_source id' b' hlg
+      rw [hProcs] at hlg; exact (hI.grade2_source id' b' hlg).imp (fun r => hCert r b')
     · intro r id' hmem hround hphase
-      rw [hProcs] at hround hphase; exact hI.estimate_ret r id' (hFeq ▸ hmem) hround hphase
+      rw [hProcs] at hround hphase ⊢; exact hI.estimate_ret r id' (hFeq ▸ hmem) hround hphase
     · intro r id' v hmem hcall; exact hI.call_of_previousRound r id' v (hFeq ▸ hmem) hcall
     · intro r id' hmem hround hphase v hest
       rw [hProcs] at hround hphase hest
@@ -244,13 +270,20 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
       rcases hI.wccCalled_witness r id' (hFeq ▸ hmem) hcalled with hg | hd
       · left; exact hg
       · right; exact DissentWitness.preserved rfl rfl (fun h => h) (fun id' => by rw [hProcs]) hd
-  · -- byzantine DECIDED injection: `id ∈ F`, so correct `decided_source` at `id` is vacuous
+  · -- the injection or the relay of a process of `F`: `decided_source` and
+    -- `decidedSent_recorded` at `id` are vacuous
     rw [PMF.mem_support_pure_iff] at hc'; subst hc'
     have hProcs : (c.recordDecided id b).processes = c.processes :=
       ABAState.recordDecided_processes _ _ _
     have hFeq : (c.recordDecided id b).F = c.F := ABAState.recordDecided_F _ _ _
     have hDR : (c.recordDecided id b).decidedReceived = c.decidedReceived :=
       ABAState.recordDecided_decidedReceived _ _ _
+    have hRecorded : ∀ k, k ∉ (c.recordDecided id b).F →
+        ((c.recordDecided id b).1 k).decidedSent = (c.recordDecided id b).decidedSent k := by
+      intro k hk
+      have hkid : k ≠ id := fun h => hk (by rw [hFeq, h]; exact hF)
+      rw [ABAState.recordDecided_decidedSent, Function.update_of_ne hkid]
+      exact hI.decidedSent_recorded k (hFeq ▸ hk)
     have hCert : ∀ r' b',
       Grade2Witness P g c r' b' → Grade2Witness P g (c.recordDecided id b) r' b' := fun r' b'
         => Grade2Witness.of_unchanged rfl (fun _ => rfl) (fun _ _ => rfl)
@@ -269,8 +302,9 @@ theorem Invariant.step_roundLoopTau {P : Parameters} {g : ℕ → GBCA.SpecState
     refine ⟨fun id' => by
         rw [ABAState.recordDecided_corrupted, hFeq]; exact hI.corrupted_F id',
       fun r => by rw [hFeq]; exact hI.F_gbca r, fun r => by rw [hFeq]; exact hI.F_wcc r,
-      hFeq ▸ hI.F_card, ?_, ?_, ?_, hI.down_settled, hI.quiescent, hI.wcc_bound, ?_, ?_, ?_, ?_, ?_,
-      hI.grade2_needs_bind, ?_, ?_, ?_, ?_, ?_, ?_, hI.bind_succ, ?_, ?_, hI.grade0_chain, ?_,
+      hFeq ▸ hI.F_card, ?_, ?_, ?_, hI.down_settled, hI.quiescent, hI.wcc_bound, ?_, ?_,
+      hRecorded, ?_, ?_, ?_, hI.grade2_needs_bind, ?_, ?_, ?_, ?_, ?_, ?_, hI.bind_succ, ?_, ?_,
+      hI.grade0_chain, ?_,
       hI.wcc_order, ?_, ?_, ?_, ?_, ?_, ?_, hI.bound_quorum,
       fun r v hb => (hI.bind_support r v hb).mono
         (fun id' b' h => by rw [hProcs]; exact h) (fun x hx => by rw [hFeq]; exact hx),

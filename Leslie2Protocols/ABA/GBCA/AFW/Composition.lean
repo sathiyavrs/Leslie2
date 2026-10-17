@@ -5,6 +5,7 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.GBCA.AFW.Components
+import Leslie2Protocols.ABA.Gather.Composition
 import Leslie2Protocols.Framework.Relabel
 import Leslie2Protocols.Framework.SynchronisedProduct
 import Leslie2Protocols.Framework.LoopsAndInstanceFamilies
@@ -16,14 +17,14 @@ import Leslie2Protocols.Framework.LoopsAndInstanceFamilies
 assembled from the round's programs of `ABA/GBCA/AFW/Components.lean` — the `n` graded-agreement
 programs beside the round's network — and two gather instances, both in the binding form (D33),
 each lifted along the pullback that names it. `roundOverGathersExtended` is the three factors in
-parallel over the round-internal alphabet; `roundOverGathers` hides the round's three events there
+parallel over the round-internal alphabet; `roundOverGathers` hides the round's four events there
 and reads the result back over the family alphabet `ExtendedLabel n Empty`.
 
 The composition is generic in the two gather instances: `roundOverGathers` takes them as arguments,
 `roundOverBracha` supplies the gather instances over Bracha's broadcast,
 `roundOverBroadcastSpecification` supplies the gather instances over the broadcast specification,
-and `roundOverGatherSpecifications` supplies the lifted gather specifications
-(`Gather.specificationOverInstanceAlphabet`). All three run on `RoundStateOverGathers n G₁ G₂`, and
+and `roundOverGatherSpecifications` supplies the gather specifications (`Gather.specInst`). All
+three run on `RoundStateOverGathers n G₁ G₂`, and
 the four `init` lemmas are the states they start from. `roundOverBracha` is the gather-based GBCA
 implementation: AFW25's Algorithm 4 in its case `R ≥ 2`, at `R = 2`, with the grade computed from
 the second gather's counts in place of the approximate-agreement subroutine of its lines 7 and 8
@@ -31,10 +32,10 @@ the second gather's counts in place of the approximate-agreement subroutine of i
 
 ## Projections of the round's state
 
-`programs`, `bound`, `firstGather` and `secondGather` read the four components of the round's
-state, and `setPrograms`, `setBound`, `setFirstGather` and `setSecondGather` are the four writes
+`programs`, `network`, `firstGather` and `secondGather` read the four components of the round's
+state, and `setPrograms`, `setNetwork`, `setFirstGather` and `setSecondGather` are the four writes
 that reach one of them. `corruptAll` corrupts the two gather coordinates at once, the programs and
-the round's bound bit untouched (D1).
+the round's network untouched (D1).
 
 ## Determinacy
 
@@ -53,32 +54,31 @@ open Composition
 
 /-- The state of the round whose gather instances have states `G₁` and `G₂`. -/
 abbrev RoundStateOverGathers (n : ℕ) (G₁ G₂ : Type) : Type :=
-  ((∀ _ : Fin n, ProcessVariables n) × Option Bool) × (G₁ × G₂)
+  ((∀ _ : Fin n, ProcessVariables n) × NetworkState n) × (G₁ × G₂)
 
 /-- The round's programs beside the two gather instances, over the round-internal alphabet. -/
 noncomputable def roundOverGathersExtended (P : Parameters) (r : ℕ) {G₁ G₂ : Type}
-    (firstGather : System G₁ (Gather.InstanceLabel P.n Bool))
-    (secondGather : System G₂ (Gather.InstanceLabel P.n (Option Bool))) :
+    (firstGather : System G₁ (Gather.Label P.n Bool))
+    (secondGather : System G₂ (Gather.Label P.n (Option Bool))) :
     System (RoundStateOverGathers P.n G₁ G₂) (RoundLabel P.n) :=
   (roundPrograms P r).parallel ((firstGather.mapIdle (firstGatherLabelMap P.n)).parallel
-    (secondGather.mapIdle
-    (secondGatherLabelMap P.n)))
+    (secondGather.mapIdle (secondGatherLabelMap P.n)))
 
 /-- **The round-`r` graded-agreement round** over the gather instances `firstGather`,
 `secondGather`: the round's programs beside the two of them, the round's events hidden, the result
 read over the family alphabet. -/
 noncomputable def roundOverGathers (P : Parameters) (r : ℕ) {G₁ G₂ : Type}
-    (firstGather : System G₁ (Gather.InstanceLabel P.n Bool))
-    (secondGather : System G₂ (Gather.InstanceLabel P.n (Option Bool))) :
+    (firstGather : System G₁ (Gather.Label P.n Bool))
+    (secondGather : System G₂ (Gather.Label P.n (Option Bool))) :
     System (RoundStateOverGathers P.n G₁ G₂) (ExtendedLabel P.n Empty) :=
   ((roundOverGathersExtended P r firstGather secondGather).abstract (roundEvents P.n)).relabel
 
 @[simp] theorem roundOverGathers_init (P : Parameters) (r : ℕ) {G₁ G₂ : Type}
-    (firstGather : System G₁ (Gather.InstanceLabel P.n Bool))
-    (secondGather : System G₂ (Gather.InstanceLabel P.n (Option Bool))) :
+    (firstGather : System G₁ (Gather.Label P.n Bool))
+    (secondGather : System G₂ (Gather.Label P.n (Option Bool))) :
     (roundOverGathers P r firstGather secondGather).init =
-      (((fun _ => ProcessVariables.initial P.n), none), (firstGather.init, secondGather.init)) :=
-        rfl
+      (((fun _ => ProcessVariables.initial P.n), NetworkState.initial P.n),
+        (firstGather.init, secondGather.init)) := rfl
 
 /-- The state of the round over the gather instances over Bracha's
 broadcast. -/
@@ -111,24 +111,23 @@ noncomputable def roundOverBroadcastSpecification (P : Parameters) (r : ℕ) :
 /-- **The round over the gather specifications.** -/
 noncomputable def roundOverGatherSpecifications (P : Parameters) (r : ℕ) :
     System (RoundStateOverGatherSpecifications P.n) (ExtendedLabel P.n Empty) :=
-  roundOverGathers P r (Gather.specificationOverInstanceAlphabet P Bool)
-    (Gather.specificationOverInstanceAlphabet P (Option Bool))
+  roundOverGathers P r (Gather.specInst P Bool) (Gather.specInst P (Option Bool))
 
 @[simp] theorem roundOverBracha_init (P : Parameters) (r : ℕ) :
     (roundOverBracha P r).init =
-      (((fun _ => ProcessVariables.initial P.n), none),
+      (((fun _ => ProcessVariables.initial P.n), NetworkState.initial P.n),
         ((Gather.instanceOverBracha P Bool).init,
           (Gather.instanceOverBracha P (Option Bool)).init)) := rfl
 
 @[simp] theorem roundOverBroadcastSpecification_init (P : Parameters) (r : ℕ) :
     (roundOverBroadcastSpecification P r).init =
-      (((fun _ => ProcessVariables.initial P.n), none),
+      (((fun _ => ProcessVariables.initial P.n), NetworkState.initial P.n),
         ((Gather.instanceOverBroadcastSpecification P Bool).init,
           (Gather.instanceOverBroadcastSpecification P (Option Bool)).init)) := rfl
 
 @[simp] theorem roundOverGatherSpecifications_init (P : Parameters) (r : ℕ) :
     (roundOverGatherSpecifications P r).init =
-      (((fun _ => ProcessVariables.initial P.n), none),
+      (((fun _ => ProcessVariables.initial P.n), NetworkState.initial P.n),
         (Gather.SpecState.initial P.n Bool, Gather.SpecState.initial P.n (Option Bool))) := rfl
 
 /-! ### Projections of the round's state
@@ -144,8 +143,8 @@ variable {n : ℕ} {G₁ G₂ : Type}
 /-- The programs. -/
 def programs (s : RoundStateOverGathers n G₁ G₂) : ∀ _ : Fin n, ProcessVariables n := s.1.1
 
-/-- The round's bound bit. -/
-def bound (s : RoundStateOverGathers n G₁ G₂) : Option Bool := s.1.2
+/-- The round's network. -/
+def network (s : RoundStateOverGathers n G₁ G₂) : NetworkState n := s.1.2
 
 /-- The first gather instance. -/
 def firstGather (s : RoundStateOverGathers n G₁ G₂) : G₁ := s.2.1
@@ -157,9 +156,9 @@ def secondGather (s : RoundStateOverGathers n G₁ G₂) : G₂ := s.2.2
 def setPrograms (s : RoundStateOverGathers n G₁ G₂) (u : ∀ _ : Fin n, ProcessVariables n) :
     RoundStateOverGathers n G₁ G₂ := ((u, s.1.2), s.2)
 
-/-- Overwrite the round's bound bit. -/
-def setBound (s : RoundStateOverGathers n G₁ G₂) (v : Option Bool) : RoundStateOverGathers n G₁ G₂
-  :=
+/-- Overwrite the round's network. -/
+def setNetwork (s : RoundStateOverGathers n G₁ G₂) (v : NetworkState n) :
+    RoundStateOverGathers n G₁ G₂ :=
   ((s.1.1, v), s.2)
 
 /-- Overwrite the first gather instance. -/
@@ -172,26 +171,26 @@ def setSecondGather (s : RoundStateOverGathers n G₁ G₂) (d : G₂) : RoundSt
 
 @[simp] theorem programs_setPrograms (s : RoundStateOverGathers n G₁ G₂) (u : ∀ _ : Fin n,
     ProcessVariables n) : programs (setPrograms s u) = u := rfl
-@[simp] theorem bound_setPrograms (s : RoundStateOverGathers n G₁ G₂) (u : ∀ _ : Fin n,
-    ProcessVariables n) : bound (setPrograms s u) = bound s := rfl
+@[simp] theorem network_setPrograms (s : RoundStateOverGathers n G₁ G₂) (u : ∀ _ : Fin n,
+    ProcessVariables n) : network (setPrograms s u) = network s := rfl
 @[simp] theorem firstGather_setPrograms (s : RoundStateOverGathers n G₁ G₂) (u : ∀ _ : Fin n,
     ProcessVariables n) : firstGather (setPrograms s u) = firstGather s := rfl
 @[simp] theorem secondGather_setPrograms (s : RoundStateOverGathers n G₁ G₂) (u : ∀ _ : Fin n,
     ProcessVariables n) : secondGather (setPrograms s u) = secondGather s := rfl
 
-@[simp] theorem programs_setBound (s : RoundStateOverGathers n G₁ G₂) (v : Option Bool) :
-    programs (setBound s v) = programs s := rfl
-@[simp] theorem bound_setBound (s : RoundStateOverGathers n G₁ G₂) (v : Option Bool) :
-    bound (setBound s v) = v := rfl
-@[simp] theorem firstGather_setBound (s : RoundStateOverGathers n G₁ G₂) (v : Option Bool) :
-    firstGather (setBound s v) = firstGather s := rfl
-@[simp] theorem secondGather_setBound (s : RoundStateOverGathers n G₁ G₂) (v : Option Bool) :
-    secondGather (setBound s v) = secondGather s := rfl
+@[simp] theorem programs_setNetwork (s : RoundStateOverGathers n G₁ G₂) (v : NetworkState n) :
+    programs (setNetwork s v) = programs s := rfl
+@[simp] theorem network_setNetwork (s : RoundStateOverGathers n G₁ G₂) (v : NetworkState n) :
+    network (setNetwork s v) = v := rfl
+@[simp] theorem firstGather_setNetwork (s : RoundStateOverGathers n G₁ G₂) (v : NetworkState n) :
+    firstGather (setNetwork s v) = firstGather s := rfl
+@[simp] theorem secondGather_setNetwork (s : RoundStateOverGathers n G₁ G₂) (v : NetworkState n) :
+    secondGather (setNetwork s v) = secondGather s := rfl
 
 @[simp] theorem programs_setFirstGather (s : RoundStateOverGathers n G₁ G₂) (c : G₁) :
     programs (setFirstGather s c) = programs s := rfl
-@[simp] theorem bound_setFirstGather (s : RoundStateOverGathers n G₁ G₂) (c : G₁) :
-    bound (setFirstGather s c) = bound s := rfl
+@[simp] theorem network_setFirstGather (s : RoundStateOverGathers n G₁ G₂) (c : G₁) :
+    network (setFirstGather s c) = network s := rfl
 @[simp] theorem firstGather_setFirstGather (s : RoundStateOverGathers n G₁ G₂) (c : G₁) :
   firstGather (setFirstGather s c) = c := rfl
 @[simp] theorem secondGather_setFirstGather (s : RoundStateOverGathers n G₁ G₂) (c : G₁) :
@@ -199,15 +198,15 @@ def setSecondGather (s : RoundStateOverGathers n G₁ G₂) (d : G₂) : RoundSt
 
 @[simp] theorem programs_setSecondGather (s : RoundStateOverGathers n G₁ G₂) (d : G₂) :
     programs (setSecondGather s d) = programs s := rfl
-@[simp] theorem bound_setSecondGather (s : RoundStateOverGathers n G₁ G₂) (d : G₂) :
-    bound (setSecondGather s d) = bound s := rfl
+@[simp] theorem network_setSecondGather (s : RoundStateOverGathers n G₁ G₂) (d : G₂) :
+    network (setSecondGather s d) = network s := rfl
 @[simp] theorem firstGather_setSecondGather (s : RoundStateOverGathers n G₁ G₂) (d : G₂) :
     firstGather (setSecondGather s d) = firstGather s := rfl
 @[simp] theorem secondGather_setSecondGather (s : RoundStateOverGathers n G₁ G₂) (d : G₂) :
   secondGather (setSecondGather s d) = d := rfl
 
 /-- Corruption (deviation D1): the two gather instances corrupted at `id`, the
-programs and the round's bound bit untouched. -/
+programs and the round's network untouched. -/
 def corruptAll (P : Parameters) (id : Fin P.n) (corruptFirstGather : Fin P.n → G₁ → G₁)
     (corruptSecondGather : Fin P.n → G₂ → G₂) (s : RoundStateOverGathers P.n G₁ G₂) :
     RoundStateOverGathers P.n G₁ G₂ :=
@@ -217,10 +216,10 @@ def corruptAll (P : Parameters) (id : Fin P.n) (corruptFirstGather : Fin P.n →
     (corruptFirstGather : Fin P.n → G₁ → G₁) (corruptSecondGather : Fin P.n → G₂ → G₂)
     (s : RoundStateOverGathers P.n G₁ G₂) :
     programs (corruptAll P id corruptFirstGather corruptSecondGather s) = programs s := rfl
-@[simp] theorem bound_corruptAll (P : Parameters) (id : Fin P.n)
+@[simp] theorem network_corruptAll (P : Parameters) (id : Fin P.n)
     (corruptFirstGather : Fin P.n → G₁ → G₁) (corruptSecondGather : Fin P.n → G₂ → G₂)
     (s : RoundStateOverGathers P.n G₁ G₂) :
-    bound (corruptAll P id corruptFirstGather corruptSecondGather s) = bound s := rfl
+    network (corruptAll P id corruptFirstGather corruptSecondGather s) = network s := rfl
 @[simp] theorem firstGather_corruptAll (P : Parameters) (id : Fin P.n)
     (corruptFirstGather : Fin P.n → G₁ → G₁) (corruptSecondGather : Fin P.n → G₂ → G₂)
     (s : RoundStateOverGathers P.n G₁ G₂) :
@@ -250,8 +249,8 @@ theorem programStep_dirac {j : Fin P.n} {p : ProcessVariables P.n} {l : ProgramL
   cases h <;> exact ⟨_, rfl⟩
 
 /-- Every transition of the round's network is Dirac. -/
-theorem networkStep_dirac {w : Option Bool} {l : ProgramLabel P.n} {μ : PMF (Option Bool)}
-    (h : NetworkStep P r w l μ) : ∃ w', μ = PMF.pure w' := by
+theorem networkStep_dirac {w : NetworkState P.n} {l : ProgramLabel P.n}
+    {μ : PMF (NetworkState P.n)} (h : NetworkStep P r w l μ) : ∃ w', μ = PMF.pure w' := by
   cases h <;> exact ⟨_, rfl⟩
 
 /-- A program is an LTS. -/
@@ -275,16 +274,16 @@ theorem roundPrograms_isLTS (P : Parameters) (r : ℕ) : (roundPrograms P r).IsL
 
 /-- The round's programs beside the two gather instances is an LTS. -/
 theorem roundOverGathersExtended_isLTS (P : Parameters) (r : ℕ) {G₁ G₂ : Type}
-    {firstGather : System G₁ (Gather.InstanceLabel P.n Bool)}
-    {secondGather : System G₂ (Gather.InstanceLabel P.n (Option Bool))} (h1 : firstGather.IsLTS)
+    {firstGather : System G₁ (Gather.Label P.n Bool)}
+    {secondGather : System G₂ (Gather.Label P.n (Option Bool))} (h1 : firstGather.IsLTS)
     (h2 : secondGather.IsLTS) : (roundOverGathersExtended P r firstGather secondGather).IsLTS :=
   System.parallel_isLTS (roundPrograms_isLTS P r)
     (System.parallel_isLTS (System.mapIdle_isLTS _ h1) (System.mapIdle_isLTS _ h2))
 
 /-- The round is an LTS. -/
 theorem roundOverGathers_isLTS (P : Parameters) (r : ℕ) {G₁ G₂ : Type}
-    {firstGather : System G₁ (Gather.InstanceLabel P.n Bool)}
-    {secondGather : System G₂ (Gather.InstanceLabel P.n (Option Bool))} (h1 : firstGather.IsLTS)
+    {firstGather : System G₁ (Gather.Label P.n Bool)}
+    {secondGather : System G₂ (Gather.Label P.n (Option Bool))} (h1 : firstGather.IsLTS)
     (h2 : secondGather.IsLTS) : (roundOverGathers P r firstGather secondGather).IsLTS :=
   System.relabel_isLTS (System.abstract_isLTS (roundOverGathersExtended_isLTS P r h1 h2) _)
 
@@ -302,8 +301,7 @@ theorem roundOverBroadcastSpecification_isLTS (P : Parameters) (r : ℕ) :
 /-- The round over the gather specifications is an LTS. -/
 theorem roundOverGatherSpecifications_isLTS (P : Parameters) (r : ℕ) :
     (roundOverGatherSpecifications P r).IsLTS :=
-  roundOverGathers_isLTS P r (Gather.specificationOverInstanceAlphabet_isLTS P)
-    (Gather.specificationOverInstanceAlphabet_isLTS P)
+  roundOverGathers_isLTS P r (Gather.specInst_isLTS P) (Gather.specInst_isLTS P)
 
 /-- No program transition fires on the silent label: a program only ever moves on one
 of the round's ports or one of its events. -/
@@ -312,7 +310,7 @@ theorem programStep_no_tau {j : Fin P.n} {p : ProcessVariables P.n} {ν : PMF (P
   rw [programLabel_tau] at h; cases h
 
 /-- No transition of the round's network fires on the silent label. -/
-theorem networkStep_no_tau {w : Option Bool} {μ : PMF (Option Bool)}
+theorem networkStep_no_tau {w : NetworkState P.n} {μ : PMF (NetworkState P.n)}
     (h : NetworkStep P r w (Silent.τ : ProgramLabel P.n) μ) : False := by
   rw [programLabel_tau] at h; cases h
 
@@ -322,7 +320,7 @@ theorem programStep_outside {j : Fin P.n} {p : ProcessVariables P.n} {ν : PMF (
     (h : ProgramStep P r j p ProgramLabel.outside ν) : False := by cases h
 
 /-- No transition of the round's network fires on a family label outside the round's interface. -/
-theorem networkStep_outside {w : Option Bool} {μ : PMF (Option Bool)}
+theorem networkStep_outside {w : NetworkState P.n} {μ : PMF (NetworkState P.n)}
     (h : NetworkStep P r w ProgramLabel.outside μ) : False := by cases h
 
 /-- The program group has no silent transition. -/
@@ -337,8 +335,8 @@ theorem programsProduct_no_tau {u : ∀ _ : Fin P.n, ProcessVariables P.n}
 
 /-- The round's programs have no silent transition: neither a program nor the round's network fires
 on the silent label. -/
-theorem roundPrograms_no_tau {u : ∀ _ : Fin P.n, ProcessVariables P.n} {v : Option Bool}
-    {μ : PMF ((∀ _ : Fin P.n, ProcessVariables P.n) × Option Bool)}
+theorem roundPrograms_no_tau {u : ∀ _ : Fin P.n, ProcessVariables P.n} {v : NetworkState P.n}
+    {μ : PMF ((∀ _ : Fin P.n, ProcessVariables P.n) × NetworkState P.n)}
     (h : (roundPrograms P r).step (u, v) (Silent.τ : RoundLabel P.n) μ) : False := by
   rw [roundPrograms, System.parallel_step] at h
   rcases h with ⟨hτ, -⟩ | ⟨-, μ₁, hs, -⟩ | ⟨-, μ₂, hn, -⟩

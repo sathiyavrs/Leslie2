@@ -25,8 +25,11 @@ synchronise while everyone else no-ops in place.
 
 * `callG/retG r id …`, `callW/retW r id …` — the calls and returns between a round loop
   and the round-`r` instance of the respective family. A `retG` label names the
-  round, the process being answered, the graded outcome it receives and the
-  round's bound bit.
+  round, the process being answered and the graded outcome it receives; the
+  graded return carries the returned value alone.
+* `boundG r b` — the announcement of round `r`'s bound bit `b`, output by the
+  component that holds the bit (D29). No program reads it, and every program
+  idles on it.
 * `fail id` — corruption; a genuine synchronisation of **all** components. In the
   implementation the network holds the corrupted set `F` and the program at `id` sets its flag
   `RoundLoopVariables.corrupted`. In the composed and hybrid systems the ABA network, every
@@ -63,13 +66,15 @@ inductive Label (n : ℕ) : Type
   | retABA (id : Fin n) (b : Bool)
   /-- Process `id` calls round-`r` GBCA with input `b`. -/
   | callG (r : ℕ) (id : Fin n) (b : Bool)
-  /-- Round-`r` GBCA returns to process `id` the graded outcome `out` and the
-  round's bound bit `bnd`. The graded outcome is program data: a round loop
-  reads it and retains it. The bound bit is a ghost output — the bound value the
-  round's specification holds, announced on the label — and no program reads
-  it. Announcing it makes binding, a property of the branching structure, a
-  property of the trace alone. -/
-  | retG (r : ℕ) (id : Fin n) (out : GBCAOutput) (bnd : Bool)
+  /-- Round-`r` GBCA returns to process `id` the graded outcome `out`. The graded
+  outcome is program data: a round loop reads it and retains it. The graded return
+  carries the returned value alone; the bound bit is announced by `boundG` (D29). -/
+  | retG (r : ℕ) (id : Fin n) (out : GBCAOutput)
+  /-- Round-`r` GBCA announces its bound bit `b`, the bit every return of a value at
+  round `r` returns. The component that holds the bit outputs the announcement, and no
+  program reads it. The announcement puts binding, a property of the extensions of an
+  execution, on a single trace (D29). -/
+  | boundG (r : ℕ) (b : Bool)
   /-- Process `id` calls round-`r` WCC. -/
   | callW (r : ℕ) (id : Fin n)
   /-- Round-`r` WCC returns the coin bit `b` to `id`. -/
@@ -89,7 +94,8 @@ variable {n : ℕ}
 /-- The GBCA round a label belongs to, if any. -/
 def gbcaRound : Label n → Option ℕ
   | callG r _ _ => some r
-  | retG r _ _ _ => some r
+  | retG r _ _ => some r
+  | boundG r _ => some r
   | _ => none
 
 /-- The WCC round a label belongs to, if any. -/
@@ -97,6 +103,12 @@ def wccRound : Label n → Option ℕ
   | callW r _ => some r
   | retW r _ _ => some r
   | _ => none
+
+@[simp] theorem gbcaRound_boundG (r : ℕ) (b : Bool) :
+    (boundG r b : Label n).gbcaRound = some r := rfl
+
+@[simp] theorem wccRound_boundG (r : ℕ) (b : Bool) :
+    (boundG r b : Label n).wccRound = none := rfl
 
 /-- A label is global iff it is a corruption event: every component of the
 composition (and every instance of a family) steps on it simultaneously. -/
@@ -120,8 +132,12 @@ def hiddenAPI (n : ℕ) : Set (Label n) :=
     Label.callG r id b ∈ hiddenAPI n := by
   simp [hiddenAPI, gbcaRound]
 
-@[simp] theorem retG_mem_hiddenAPI (r : ℕ) (id : Fin n) (out : GBCAOutput)
-    (bnd : Bool) : Label.retG r id out bnd ∈ hiddenAPI n := by
+@[simp] theorem retG_mem_hiddenAPI (r : ℕ) (id : Fin n) (out : GBCAOutput) :
+    Label.retG r id out ∈ hiddenAPI n := by
+  simp [hiddenAPI, gbcaRound]
+
+@[simp] theorem boundG_mem_hiddenAPI (r : ℕ) (b : Bool) :
+    Label.boundG r b ∈ hiddenAPI n := by
   simp [hiddenAPI, gbcaRound]
 
 @[simp] theorem callW_mem_hiddenAPI (r : ℕ) (id : Fin n) :

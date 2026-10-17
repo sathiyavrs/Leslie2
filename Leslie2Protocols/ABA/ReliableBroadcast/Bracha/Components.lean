@@ -27,15 +27,15 @@ instance's network. `broadcastProgram` and `broadcastNetwork` are the two automa
 
 ## The alphabets
 
-The specification's `call m` carries two transitions, the call and the input-enabledness loop.
-The composition takes the loop on a label of its own, `LoopLabel.callLoop m`, and the interface
-alphabet is `InstanceLabel n M = Label n M ⊕ LoopLabel M`. The call writes the leader's `input`
-and the network records nothing. The leader's `⟨INIT, m⟩` is a multicast of its own, guarded by
-that `input`.
+The interface alphabet is the specification's `Label n M`. The specification's `call m` carries
+two transitions, the call and the input-enabledness loop, and the leader's program carries the
+same two: `ProgramStep.call` records the payload at a leader holding no input, and
+`ProgramStep.callLoop` writes nothing at a leader holding one. Every other program and the network
+take `call m` on a Dirac self-loop, so the call posts no message. The leader's `⟨INIT, m⟩` is a
+multicast of its own, guarded by the recorded `input`.
 
-The instance-internal alphabet `BroadcastLabel n M = InstanceLabel n M ⊕ BroadcastEvent n M` puts
-the two synchronisation labels, the multicast and the delivery, beside the interface. Its silent
-label is
+The instance-internal alphabet `BroadcastLabel n M = Label n M ⊕ BroadcastEvent n M` puts the two
+synchronisation labels, the multicast and the delivery, beside the interface. Its silent label is
 `Sum.inl τ`, so every `Sum.inr` label is observable and hence hideable, and `broadcastEvents`
 collects the labels the instance hides.
 
@@ -56,19 +56,7 @@ namespace BRB
 
 variable {M : Type} [DecidableEq M]
 
-/-! ### The interface alphabet and the instance-internal alphabet -/
-
-/-- The interface label of the call loop. The specification's `call m` carries
-the call and the input-enabledness loop; the composition takes the loop on a
-label of its own. -/
-inductive LoopLabel (M : Type) : Type
-  /-- The input-enabledness loop of `call m`. -/
-  | callLoop (m : M)
-  deriving DecidableEq
-
-/-- The instance's interface alphabet: the specification's alphabet with the
-call loop beside it. -/
-abbrev InstanceLabel (n : ℕ) (M : Type) : Type := Label n M ⊕ LoopLabel M
+/-! ### The instance-internal alphabet -/
 
 /-- The labels a program and the instance's network synchronise on: the multicast and the
 delivery. -/
@@ -79,16 +67,16 @@ inductive BroadcastEvent (n : ℕ) (M : Type) : Type
   | deliver (i j : Fin n) (m : Message M)
   deriving DecidableEq
 
-/-- The instance-internal alphabet: the interface alphabet plus the two
+/-- The instance-internal alphabet: the specification's alphabet plus the two
 synchronisation labels. Its silent label is `Sum.inl τ`, so every `Sum.inr` label is
 observable and hence hideable. -/
-abbrev BroadcastLabel (n : ℕ) (M : Type) : Type := InstanceLabel n M ⊕ BroadcastEvent n M
+abbrev BroadcastLabel (n : ℕ) (M : Type) : Type := Label n M ⊕ BroadcastEvent n M
 
 /-- The synchronisation labels, hidden by the instance. -/
 def broadcastEvents (n : ℕ) (M : Type) : Set (BroadcastLabel n M) := {l | ∃ e : BroadcastEvent n M,
   l = Sum.inr e}
 
-@[simp] theorem inl_notMem_broadcastEvents {n : ℕ} {M : Type} (l : InstanceLabel n M) :
+@[simp] theorem inl_notMem_broadcastEvents {n : ℕ} {M : Type} (l : Label n M) :
     Sum.inl l ∉ broadcastEvents n M := by
   simp [broadcastEvents]
 
@@ -96,7 +84,7 @@ def broadcastEvents (n : ℕ) (M : Type) : Set (BroadcastLabel n M) := {l | ∃ 
     Sum.inr e ∈ broadcastEvents n M := ⟨e, rfl⟩
 
 @[simp] theorem broadcastLabel_tau (n : ℕ) (M : Type) :
-    (Silent.τ : BroadcastLabel n M) = Sum.inl (Sum.inl Label.tau) := rfl
+    (Silent.τ : BroadcastLabel n M) = Sum.inl Label.tau := rfl
 
 /-! ### The local program
 
@@ -110,16 +98,18 @@ delivery the write of the delivered set. -/
 inductive ProgramStep (P : Parameters) (ldr j : Fin P.n) :
     LocalState P.n (ProcessVariables M) (Message M) → BroadcastLabel P.n M →
       PMF (LocalState P.n (ProcessVariables M) (Message M)) → Prop
-  /-- The call arrives at the leader: record the payload (`BrachaAlgorithm.call`). -/
+  /-- The call arrives at a leader holding no input: record the payload
+  (`BrachaAlgorithm.call`). -/
   | call (p) (m : M) (hj : j = ldr) (h : p.processVariables.input = none) :
-      ProgramStep P ldr j p (Sum.inl (Sum.inl (.call m)))
+      ProgramStep P ldr j p (Sum.inl (.call m))
         (PMF.pure (p.setProcessVariables { p.processVariables with input := some m }))
+  /-- The input-enabledness loop of the call, at a leader holding an input: the variables do not
+  move (`BrachaAlgorithm.callLoop`). -/
+  | callLoop (p) (m : M) (hj : j = ldr) (hin : p.processVariables.input ≠ none) :
+      ProgramStep P ldr j p (Sum.inl (.call m)) (PMF.pure p)
   /-- A call at the leader is not a non-leader's business. -/
   | callIdle (p) (m : M) (hj : j ≠ ldr) :
-      ProgramStep P ldr j p (Sum.inl (Sum.inl (.call m))) (PMF.pure p)
-  /-- The call loop: the variables do not move (`BrachaAlgorithm.callLoop`). -/
-  | callLoop (p) (m : M) :
-      ProgramStep P ldr j p (Sum.inl (Sum.inr (.callLoop m))) (PMF.pure p)
+      ProgramStep P ldr j p (Sum.inl (.call m)) (PMF.pure p)
   /-- `INIT m`: the leader holds the payload `m` it was called with, and has sent no `INIT`
   yet (`BrachaAlgorithm.init`). -/
   | sendInit (p) (m : M) (hj : j = ldr) (hin : p.processVariables.input = some m)
@@ -162,15 +152,15 @@ inductive ProgramStep (P : Parameters) (ldr j : Fin P.n) :
   | ret (p) (m : M) (hcnt : 2 * P.f + 1 ≤ p.receivedCount (.vote m)) (hr :
       p.processVariables.returned =
     false) :
-      ProgramStep P ldr j p (Sum.inl (Sum.inl (.ret j m)))
+      ProgramStep P ldr j p (Sum.inl (.ret j m))
         (PMF.pure (p.setProcessVariables { p.processVariables with returned := true }))
   /-- A return at another process: not `j`'s business. -/
   | retIdle (p) (i : Fin P.n) (m : M) (hi : i ≠ j) :
-      ProgramStep P ldr j p (Sum.inl (Sum.inl (.ret i m))) (PMF.pure p)
+      ProgramStep P ldr j p (Sum.inl (.ret i m)) (PMF.pure p)
   /-- Corruption is the network's own write, and the programs' variables are
   corruption-blind (D1). -/
   | failIdle (p) (i : Fin P.n) :
-      ProgramStep P ldr j p (Sum.inl (Sum.inl (.fail i))) (PMF.pure p)
+      ProgramStep P ldr j p (Sum.inl (.fail i)) (PMF.pure p)
 
 /-! ### The instance's network
 
@@ -182,12 +172,9 @@ sent, and it is where a corrupted sender's injections enter (D5). -/
 /-- The step relation of the instance's network. All transitions are Dirac. -/
 inductive NetworkStep (P : Parameters) (ldr : Fin P.n) :
     NetworkState P.n (Message M) → BroadcastLabel P.n M → PMF (NetworkState P.n (Message M)) → Prop
-  /-- The call sends nothing (`BrachaAlgorithm.call`). -/
+  /-- The call sends nothing (`BrachaAlgorithm.call`, `BrachaAlgorithm.callLoop`). -/
   | call (w) (m : M) :
-      NetworkStep P ldr w (Sum.inl (Sum.inl (.call m))) (PMF.pure w)
-  /-- The call loop sends nothing (`BrachaAlgorithm.callLoop`). -/
-  | callLoop (w) (m : M) :
-      NetworkStep P ldr w (Sum.inl (Sum.inr (.callLoop m))) (PMF.pure w)
+      NetworkStep P ldr w (Sum.inl (.call m)) (PMF.pure w)
   /-- The network's half of a multicast: sent the message under its sender.
   Authenticity is the sender's participation in the synchronised step (D5). -/
   | send (w) (j : Fin P.n) (m : Message M) :
@@ -199,13 +186,13 @@ inductive NetworkStep (P : Parameters) (ldr : Fin P.n) :
   /-- Byzantine injection: a corrupted sender multicasts anything, at any time
   (`BrachaAlgorithm.byzantine`; D5). -/
   | byzantine (w) (j : Fin P.n) (m : Message M) (h : j ∈ w.F) :
-      NetworkStep P ldr w (Sum.inl (Sum.inl .tau)) (PMF.pure (w.recordSent j m))
+      NetworkStep P ldr w (Sum.inl .tau) (PMF.pure (w.recordSent j m))
   /-- A return sends nothing (`BrachaAlgorithm.ret`). -/
   | retIdle (w) (i : Fin P.n) (m : M) :
-      NetworkStep P ldr w (Sum.inl (Sum.inl (.ret i m))) (PMF.pure w)
+      NetworkStep P ldr w (Sum.inl (.ret i m)) (PMF.pure w)
   /-- Corruption (deviation D1). -/
   | fail (w) (i : Fin P.n) :
-      NetworkStep P ldr w (Sum.inl (Sum.inl (.fail i))) (PMF.pure (w.corrupt P i))
+      NetworkStep P ldr w (Sum.inl (.fail i)) (PMF.pure (w.corrupt P i))
 
 /-! ### The instance -/
 

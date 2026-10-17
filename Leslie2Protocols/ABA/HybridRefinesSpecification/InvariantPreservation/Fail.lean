@@ -11,12 +11,17 @@ import Leslie2Protocols.ABA.HybridRefinesSpecification.InvariantPreservation.Spe
 /-!
 # `Invariant` across the `fail` transitions of `hybrid`
 
-`Invariant.step_fail`, preservation of `Invariant` at a synchronised corruption of all three
-components, under the transition's own guards: the named process is not corrupted yet and the
-budget has
-room. `F` only grows and every other projection is untouched, so the correctness hypotheses
-transfer by `F`-monotonicity. The two guards are what puts the replacement flag and the corrupted
-set together (I0, D23), the flag going up at `id` and `F` gaining exactly `id`.
+`Invariant.step_fail`, preservation of `Invariant` at a synchronised corruption of the two
+families, the round loops and the ABA network, under the transition's own guards: the named
+process is not corrupted yet and the budget has room. Each family takes the corruption on its
+broadcast, whose accessor is the family's accessor with every round corrupted
+(`GBCA.instanceState_applyBroadcast_fail`, `WCC.instanceState_applyBroadcast_fail`), so the
+statement below reads the two families as `fun r => (g r).corrupt P id` and
+`fun r => (w r).corrupt P id`. `F` only grows and every other projection is untouched, so the
+correctness hypotheses transfer by `F`-monotonicity. The two guards put the replacement flag and
+the corrupted set together (I0, D23): the flag is set at `id` and `F` gains exactly `id`. The
+corruption writes neither record of DECIDED sends, so `decidedSent_recorded` (I4'), which reads
+the processes outside `F`, passes through.
 -/
 
 namespace PLTS
@@ -27,7 +32,7 @@ open Implementation Composition
 variable {P : Parameters}
 
 /-- `fail`: `Invariant` is preserved and the abstract state is unchanged at a synchronised
-corruption of all three components. -/
+corruption of the two families, the round loops and the ABA network. -/
 theorem Invariant.step_fail {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (id : Fin P.n)
     (hnew : id ∉ c.F) (hbud : c.F.card < P.f) :
@@ -40,10 +45,16 @@ theorem Invariant.step_fail {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
   have hbind : ∀ r, (g' r).excluded = (g r).excluded := fun r => GBCA.corrupt_excluded P (g r) id
   have hgrade : ∀ r, (g' r).grade = (g r).grade := fun r => GBCA.corrupt_grade P (g r) id
   have hval : ∀ r, (w' r).val = (w r).val := fun r => WCC.corrupt_val id (w r)
-  have hcalled : ∀ r, (w' r).called = (w r).called := fun r => WCC.corrupt_called id (w r)
+  have hcalled : ∀ r, (w' r).called = (w r).called := fun r =>
+    WCC.SpecState.corrupt_called P id (w r)
   have hprocs : c'.processes = c.processes := ABAState.corrupt_processes c id
   have hDS : c'.decidedSent = c.decidedSent := ABAState.corrupt_decidedSent c id
   have hDR : c'.decidedReceived = c.decidedReceived := ABAState.corrupt_decidedReceived c id
+  have hRecorded : ∀ j, (c'.1 j).decidedSent = (c.1 j).decidedSent := by
+    intro j
+    by_cases hj : j = id
+    · rw [hj, hc'def]; simp [ABAState.corrupt]
+    · rw [hc'def]; simp [ABAState.corrupt, Function.update_of_ne hj]
   have hFg : ∀ r, (g' r).F = c'.F := fun r => GBCA.corrupt_F_eq id (g r) c (hI.F_gbca r)
   have hFw : ∀ r, (w' r).F = c'.F := fun r => WCC.corrupt_F_eq id (w r) c (hI.F_wcc r)
   have hFsub : c.F ⊆ c'.F := by
@@ -83,7 +94,10 @@ theorem Invariant.step_fail {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
     by_cases h : id' = id
     · subst h; rw [hc'def, ABAState.corrupt_corrupted_self]; simp
     · rw [hc'def, ABAState.corrupt_corrupted_ne c id h, hI.corrupted_F id']; simp [h]
-  refine ⟨hCorr, fun r => hFg r, fun r => hFw r, hFcard, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
+  refine ⟨hCorr, fun r => hFg r, fun r => hFw r, hFcard, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
+    fun j hj => by
+      rw [hRecorded j, hDS]; exact hI.decidedSent_recorded j (fun h => hj (hFsub h)),
+    ?_, ?_,
     ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
     fun r v hb => (hI.bind_support r v (by rw [← hbind r]; exact hb)).mono
       (fun id' b' h => by rw [hprocs]; exact h) hFsub,

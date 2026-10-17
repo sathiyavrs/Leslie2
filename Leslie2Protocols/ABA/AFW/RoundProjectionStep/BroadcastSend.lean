@@ -13,8 +13,7 @@ import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ProjectionAfterOneWrite
 `roundProjection_secondGatherInputBroadcastSend`: the projection of the composed round after a
 Bracha send in one input-broadcast instance of either gather. The transition writes the sender's
 local state in that instance and records on the instance's network state, and the composed round
-reaches the instance through `Gather.setInputBroadcasts`. The returned value does not move, so the
-return flag the projection supplies stands.
+reaches the instance through `Gather.setInputBroadcasts`.
 -/
 
 namespace PLTS
@@ -36,8 +35,7 @@ A Bracha transition writes the sender's local state in one input-broadcast insta
 that instance's network state. Each is the instance's `send` event, which
 `BRB.BrachaAlgorithm.echo`, `BRB.BrachaAlgorithm.voteQuorum` and
 `BRB.BrachaAlgorithm.voteAmplification` write, and the composed round reaches it through
-`Gather.setInputBroadcasts`. The return flag the projection supplies is the returned value's, which
-a local write does not move. -/
+`Gather.setInputBroadcasts`. -/
 
 /-- A send in an input-broadcast instance of the first gather, read through the
 projection. -/

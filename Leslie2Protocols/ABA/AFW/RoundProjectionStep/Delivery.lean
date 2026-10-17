@@ -10,10 +10,12 @@ import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ProjectionAfterOneWrite
 # A delivery
 
 `roundProjection_deliverFirstGather` and its three companions: the projection of the composed round
-after a delivery. The transition files the message in the receiver's own local state of the
-network state the message's tag names. A gather message moves the gather instance alone, and a
-broadcast message moves the broadcast instance alone. `afterFirstGatherInputBroadcastDeliver` and
-its companion at the second gather name the state a broadcast delivery reaches.
+after a delivery at a program that has not terminated. The transition files the message in the
+receiver's own local state of the network state the message's tag names. A gather message moves the
+gather instance alone, and a broadcast message moves the broadcast instance alone.
+`afterFirstGatherInputBroadcastDeliver` and its companion at the second gather name the state a
+broadcast delivery reaches. `roundProjection_deliverLoop` is the delivery at a terminated program,
+whose variables stand where they are (D22): every round projects as it did.
 -/
 
 namespace PLTS
@@ -31,10 +33,10 @@ variable {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} {w : NetworkState P.n} 
 
 /-! ### A delivery
 
-A delivery of the implementation files the message in the receiver's own local state of the network
-state the message's tag names. A gather message moves the gather instance alone. A broadcast message
-moves the broadcast instance alone: the instance's return to the receiver is a transition of its
-own, `AFW/RoundProjectionStep/BroadcastReturn.lean`. -/
+A delivery of the implementation at a program that has not terminated files the message in the
+receiver's own local state of the network state the message's tag names. A gather message moves the
+gather instance alone. A broadcast message moves the broadcast instance alone: the instance's return
+to the receiver is a transition of its own, `AFW/RoundProjectionStep/BroadcastReturn.lean`. -/
 
 /-- A delivery on the first gather's network, read through the projection. -/
 theorem roundProjection_deliverFirstGather (hu : (u j).2 = p) (r : ℕ) (k : Fin P.n)
@@ -248,6 +250,25 @@ theorem roundProjection_deliverSecondGatherInputBroadcast (hu : (u j).2 = p) (r 
       · rw [Function.update_of_ne hk, Function.update_of_ne hk]
         exact Prod.ext (Function.update_eq_self _ _) rfl
     · simp
+
+/-! ### A delivery at a terminated program
+
+A terminated program takes a round delivery on `RoundStep.deliverLoop`, and its variables stand
+where they are (D22). The ghost write at a delivery is the identity, so every round projects as it
+did, and the composed round matches the delivery by the empty silent run. -/
+
+/-- A delivery at a terminated program, read through the projection: the program's round
+variables stand where they are (D22), and every round projects as it did. -/
+theorem roundProjection_deliverLoop (hu : (u j).2 = p) (r r' : ℕ) (k : Fin P.n) (m : Message P.n)
+    (c' : RoundLoopVariables P.n) :
+    roundProjection P (Function.update u j (c', p))
+        (w.writeGhost (ghostStep P) (Sum.inr (.gbcaDeliver r j k m))) r'
+      = roundProjection P u w r' := by
+  rw [roundProjection_ghostId (Sum.inr (.gbcaDeliver r j k m)) (fun _ _ => rfl)]
+  refine roundProjection_congr (fun i => ?_)
+  by_cases hi : i = j
+  · subst hi; rw [Function.update_self, ← hu]
+  · rw [Function.update_of_ne hi]
 
 end Transitions
 

@@ -39,7 +39,7 @@ An input-broadcast instance's return to the acting process writes that instance'
 the process and files the returned value in the process's variables in the gather. -/
 
 /-- **The round after an input-broadcast instance of the first gather returns
-`v` to `j`**: the instance's return flag goes on at `j` and `j`'s variables
+`v` to `j`**: the instance's return flag is set at `j` and `j`'s variables
 in the gather file the value. -/
 noncomputable def afterFirstGatherInputBroadcastReturn (P : Parameters)
     (s : GBCA.ByAFW.RoundStateOverBracha P.n) (i j : Fin P.n) (v : Bool) :
@@ -116,7 +116,7 @@ theorem roundProjection_firstGatherInputBroadcastReturn (hu : (u j).2 = p) (r : 
     · simp
 
 /-- **The round after an input-broadcast instance of the second gather returns
-`v` to `j`**: the instance's return flag goes on at `j` and `j`'s variables
+`v` to `j`**: the instance's return flag is set at `j` and `j`'s variables
 in the gather file the value. -/
 noncomputable def afterSecondGatherInputBroadcastReturn (P : Parameters)
     (s : GBCA.ByAFW.RoundStateOverBracha P.n) (i j : Fin P.n) (v : Option Bool) :

@@ -15,32 +15,30 @@ import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.MessagesAndVariables
 The gather-based graded agreement, read as a protocol rather than as a composition: `n` programs
 beside one network and the common coin. This is the implementation of
 `ABA/Implementation/System.lean` at the gather-based implementation, as `ABA/ABDY/System.lean` is
-that implementation at ABDY22's, and it supplies the same three things — a round message type, the
-round's variables, and the implementation's transitions. It sits in the namespace `AFW`, after
-Attiya, Flam and Welch, and so `AFW.protocol` is what `ABDY.protocol` is at ABDY22's.
+that implementation at ABDY22's. It supplies a round message type, the round's variables, the
+round's transitions, and the network's ghost with its write and its read. It sits in the namespace
+`AFW`, after Attiya, Flam and Welch, and so `AFW.protocol` is what `ABDY.protocol` is at ABDY22's.
 
 ## One sent for every network state
 
 A round of the gather-based implementation carries `2n + 2` network states:
 one for each of the two gather instances, which carries that gather's `ECHO`, `VOTE` and `BIND`
 messages, and one for each of the `2n` Bracha instances, `n` carrying the inputs in each of the
-two gathers. The adversary here holds one sent family per round
-instead, over the tagged message type `Message`, whose tag names the network state a
-message belongs to and, for a Bracha message, the instance it belongs to. The
-sent index stays the sender, so a threshold still counts distinct senders
-(D5).
+two gathers. The network of the implementation holds one sent family per round, over the tagged
+message type `Message`, whose tag names the network state a message belongs to and, for a Bracha
+message, the instance it belongs to. The sent index is the sender, so a threshold counts distinct
+senders (D5).
 
 ## The variables of one process
 
-A process's data is scattered across those instances: `j` holds its own local state in
-each of the `2n + 2` of them, and the composed system indexes those local states by
-instance and then by process. A program must hold its own data and no one
-else's, so `RoundVariables` holds them the other way round — `j`'s local state in each
-gather instance, and `j`'s local state in each of the `n` instances of each Bracha
-family. Every guard of the gather-based implementation reads the acting
-process's own local states and the network states, and the two transitions that read a network
-state are the adversary's delivery and its Byzantine injection, so the transposition
-loses nothing.
+A process's data lies in those instances: `j` holds its own local state in each of the `2n + 2` of
+them, and the composed system indexes those local states by instance and then by process. A
+program holds its own data and no one else's, so `RoundVariables` holds them the other way round:
+`j`'s local state in each gather instance, and `j`'s local state in each of the `n` instances of
+each Bracha family. Every guard of the gather-based implementation reads the acting process's own
+local states and the network states, and the two transitions that read a network state are the
+network's delivery and its Byzantine injection, so every guard reads the same values after the
+transposition.
 
 ## The transitions
 
@@ -48,7 +46,7 @@ The round's transitions are the transitions of the programs of `GBCA.ByAFW.round
 written over the tagged message type: the transitions of its graded-agreement programs
 (`GBCA.ByAFW.ProgramStep`), of its gather programs (`Gather.ProgramStep`) and of the Bracha
 programs beneath them (`BRB.ProgramStep`). Each is the process's half of a step whose network half
-is a transition of the adversary. A send writes the sender's own variables and the network records
+is a transition of the network. A send writes the sender's own variables and the network records
 the message; a delivery files the message in the receiver's own local state, dispatched on the tag.
 Every call and every return of a sub-protocol is a transition of its own. The graded-agreement
 call, the call of the process's own input-broadcast instance in each of the two gathers, the first
@@ -65,27 +63,36 @@ and the gather messages delivered here, as the guard of the composed gather prog
 `Gather.approvedBy` and `Gather.holdsInputBroadcastReturn` are the guards on the variables, and the
 gather's return waits for `n − f` delivered `BIND` payloads (AFW25's Algorithm 5, line 18).
 
+The round takes its call label `callG r j b` on two transitions. `callG` records the estimate as
+the first gather's input at a round whose first gather holds no input, and `callGLoop` moves the
+round loop alone at a round whose first gather holds one, as `input` and `inputLoop` take the ABA
+call (D36). A terminated program takes a round delivery on `deliverLoop`, which leaves its
+variables where they stand (D22), so an unreplaced program takes every round delivery addressed to
+it. A corrupted process's graded-agreement call `byzantineCallG` and its coin call
+`byzantineCallW` are outputs of the network, and every program takes them on an idle transition
+(D11).
+
 ## The network's ghost
 
-The ghost the adversary holds for round `r` is `AFW.Ghost`: the first gather's recorded core, the
-second gather's recorded core, and the round's bound bit, each written once. `AFW.ghostStep` writes
-it. The first gather's return — the label `gbcaRoundEvent r j (firstGatherReturn _)` — writes the
-first core at `Gather.coreOf` of the round's first gather network state and the bound bit at
-`GBCA.boundOfCore` of that core; the second gather's return writes the second core the same way,
-and so does a Byzantine graded return, at a process whose program has been replaced. Every other
-label leaves the ghost where it stands.
+The ghost the network holds for round `r` is `AFW.Ghost`: the first gather's recorded core, the
+second gather's recorded core, and the round's bound bit, each written once (D30). `AFW.ghostStep`
+writes it. The round's first `gbcaRoundEvent r _ (firstGatherReturn _)` records the first core,
+`Gather.coreOf` of the round's first gather network state. The round's first
+`gbcaRoundEvent r _ (secondGatherReturn _)` records the second core the same way. A return
+`retG r _ _` at a ghost holding no bit records the bit `GBCA.boundOfCore P C` of the recorded first
+core `C`. A process returns only after its own first gather has returned, so the round's first
+return records the bit, and a replaced program takes no transition on `retG` (D23), so that return
+is a return by an unreplaced program. Every other label leaves the ghost where it stands.
 
-The network state `Gather.coreOf` is read on is `AFW.firstGatherOf`, the first
-gather's messages out of the adversary's tagged sent sets beside its corrupted set,
-and `AFW.secondGatherOf` is the second's. `Gather.coreOf` reads the sent sets and the
-corrupted set alone (`Gather.coreOf_networkState_only`), which is what lets the
-adversary compute the core from its own state.
+The network state `Gather.coreOf` is read on is `AFW.firstGatherOf`, the first gather's messages
+out of the network's tagged sent sets beside its corrupted set, and `AFW.secondGatherOf` is the
+second's. `Gather.coreOf` reads the sent sets and the corrupted set alone
+(`Gather.coreOf_networkState_only`), so the network computes the core from its own state.
 
-`AFW.ghostOutput` reads the bit back, and `AFW.announcedBound`, the guard of the two
-graded-agreement return transitions, is the equation between the bit their label carries and it.
-`AFW.ghostOutput` is total: where the ghost holds no bit it computes one from the first gather's
-core, and on a reachable state the returner's own first gather return has already written the
-bit. -/
+`AFW.ghostBound` reads the bit. The network's announcement `boundG r b` is enabled exactly when
+`ghostBound` of the round's ghost is `some b`, which holds at every state from the round's first
+return on, and it may repeat (D29). The return label carries the graded outcome alone, and no
+program reads the ghost. -/
 
 namespace PLTS
 namespace ABA
@@ -112,7 +119,7 @@ inductive Message (n : ℕ) : Type
 /-! ### The round's own calls and returns -/
 
 /-- The calls and returns at the boundaries between a round's program and its sub-protocol
-instances, each carrying the value the boundary hands over, as `upon X.return(v)` of LeslieBP's
+instances, each carrying the value of the call or of the return, as `upon X.return(v)` of LeslieBP's
 Algorithm 4 carries it. An event carries a value and no map, so the alphabet built over it is
 decidable. -/
 inductive RoundEvent (n : ℕ) : Type
@@ -215,9 +222,8 @@ abbrev ProcessVariables (n : ℕ) : Type := Implementation.ProcessVariables n (R
 
 /-! ### The network's ghost -/
 
-/-- The adversary's ghost for one round: the first gather's recorded core, the
-second gather's recorded core, and the round's bound bit. No program reads
-it. -/
+/-- The network's ghost for one round: the first gather's recorded core, the second gather's
+recorded core, and the round's bound bit. No program reads it (D30). -/
 abbrev Ghost (n : ℕ) : Type :=
   Option (AcceptedPairs n Bool) × Option (AcceptedPairs n (Option Bool)) × Option Bool
 
@@ -265,7 +271,7 @@ theorem secondGatherMessageOf_inj : ∀ a a' (b : Gather.Message n (Option Bool)
   cases a <;> cases a' <;> simp_all [secondGatherMessageOf]
 
 end TaggedMessages
-/-- The first gather's instance state of round `r`, computed from the adversary's
+/-- The first gather's instance state of round `r`, computed from the network's
 tagged sent sets and its corrupted set. The local states are the initial
 ones: `Gather.coreOf` reads the network state alone
 (`Gather.coreOf_networkState_only`). -/
@@ -274,7 +280,7 @@ def firstGatherOf (P : Parameters) (w : NetworkState P.n) (r : ℕ) :
   (fun _ => LocalState.initial P.n _ (Gather.BaseProcessVariables.initial P.n Bool),
     ⟨messagesOf firstGatherMessageOf firstGatherMessageOf_inj (w.sent r), w.F⟩)
 
-/-- The second gather's instance state of round `r`, computed from the adversary's
+/-- The second gather's instance state of round `r`, computed from the network's
 tagged sent sets and its corrupted set. -/
 def secondGatherOf (P : Parameters) (w : NetworkState P.n) (r : ℕ) :
     InstanceState P.n (Gather.BaseProcessVariables P.n (Option Bool))
@@ -282,36 +288,25 @@ def secondGatherOf (P : Parameters) (w : NetworkState P.n) (r : ℕ) :
   (fun _ => LocalState.initial P.n _ (Gather.BaseProcessVariables.initial P.n (Option Bool)),
     ⟨messagesOf secondGatherMessageOf secondGatherMessageOf_inj (w.sent r), w.F⟩)
 
-/-- The ghost write: the first gather's return writes that gather's core and the round's bound
-bit, the second gather's return writes the second gather's core, and a Byzantine graded return
-writes it at a process whose program has been replaced. Every other label leaves the ghost where
-it stands, and each field is written once. -/
+/-- The ghost write. A first gather's return records that gather's core, `Gather.coreOf` of the
+round's first gather network state, where the ghost holds no first core; a second gather's return
+records the second gather's core the same way; a graded-agreement return records the bound bit
+`GBCA.boundOfCore P C` of the recorded first core `C` where the ghost holds no bit. Every other
+label leaves the ghost where it stands, and each field is written once (D30). -/
 noncomputable def ghostStep (P : Parameters) :
     ExtendedLabel P.n (Message P.n) (RoundEvent P.n) → NetworkState P.n → Ghost P.n → Ghost P.n
   | Sum.inr (.gbcaRoundEvent r _ (.firstGatherReturn _)), w, G =>
-      (some (G.1.getD (Gather.coreOf P (firstGatherOf P w r))), G.2.1,
-        some (G.2.2.getD (GBCA.boundOfCore P
-          (G.1.getD (Gather.coreOf P (firstGatherOf P w r))))))
+      (some (G.1.getD (Gather.coreOf P (firstGatherOf P w r))), G.2.1, G.2.2)
   | Sum.inr (.gbcaRoundEvent r _ (.secondGatherReturn _)), w, G =>
       (G.1, some (G.2.1.getD (Gather.coreOf P (secondGatherOf P w r))), G.2.2)
-  | Sum.inr (.byzantineRetG r _ _ _), w, G =>
-      (G.1, some (G.2.1.getD (Gather.coreOf P (secondGatherOf P w r))), G.2.2)
+  | Sum.inl (.retG _ _ _), _, G => (G.1, G.2.1, G.2.2.or (G.1.map (GBCA.boundOfCore P)))
   | _, _, G => G
 
-/-- The bound bit the round's graded returns announce: the one the ghost
-holds, and the bit of the first gather's core where it holds none. -/
-noncomputable def ghostOutput (P : Parameters) (w : NetworkState P.n) (r : ℕ) (_id : Fin P.n)
-    (_out : GBCAOutput) : Bool :=
-  ((w.ghost r).2.2).getD
-    (GBCA.boundOfCore P ((w.ghost r).1.getD (Gather.coreOf P (firstGatherOf P w r))))
+/-- The bit the ghost of a round holds, if any: its third field. It enables the network's
+announcement `boundG`, and no other transition reads it (D29, D30). -/
+def ghostBound {n : ℕ} (G : Ghost n) : Option Bool := G.2.2
 
-/-- The bit the network announces on a return: `AFW.ghostOutput` of the
-round, and no other. This is the relation the implementation's `ghostOutput`
-parameter takes at this instantiation. It is reducible, so the guard of the two
-return transitions is the equation itself. -/
-noncomputable abbrev announcedBound (P : Parameters) (w : NetworkState P.n) (r : ℕ)
-    (id : Fin P.n) (out : GBCAOutput) (bnd : Bool) : Prop :=
-  bnd = ghostOutput P w r id out
+@[simp] theorem ghostBound_apply {n : ℕ} (G : Ghost n) : ghostBound G = G.2.2 := rfl
 
 /-! ### The round's transitions -/
 
@@ -320,9 +315,9 @@ instances, the `2n` Bracha instances beneath them, and the delivery. -/
 inductive RoundStep (P : Parameters) (j : Fin P.n) :
     ProcessVariables P.n → ExtendedLabel P.n (Message P.n) (RoundEvent P.n) →
       PMF (ProcessVariables P.n) → Prop
-  /-- The graded-agreement call: the round loop hands its estimate to the
-  round's first gather, which records it (AFW25's Algorithm 5, line 5). The call sends no
-  message. -/
+  /-- The graded-agreement call at a round whose first gather holds no input: the round's first
+  gather records the round loop's estimate as its input (AFW25's Algorithm 5, line 5). The call
+  sends no message. -/
   | callG (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (b : Bool)
       (hh : c.corrupted = false)
       (hph : c.processVariables.phase = .toCallG) (hr : c.processVariables.round = r)
@@ -335,14 +330,16 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
             { (p.roundVariables r) with
               firstGather := (p.roundVariables r).firstGather.setProcessVariables
                 { ((p.roundVariables r).firstGather.processVariables) with input := some b } }))
-  /-- The graded-agreement call against variables already called: the round
-  loop moves, the round's variables do not. -/
-  | gbcaCallLoop (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (b : Bool)
+  /-- The graded-agreement call at a round whose first gather holds an input: the round loop
+  moves, and the round's variables stand where they are. `callG` and `callGLoop` are the two
+  transitions of the call on the label `callG r j b`, as `input` and `inputLoop` are at the ABA
+  call (D36). -/
+  | callGLoop (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (b : Bool)
       (hh : c.corrupted = false)
       (hph : c.processVariables.phase = .toCallG) (hr : c.processVariables.round = r)
       (hest : c.processVariables.estimate = some b)
       (hin : ((p.roundVariables r).firstGather.processVariables).input ≠ none) :
-      RoundStep P j (c, p) (Sum.inr (.gbcaCallLoop r j b))
+      RoundStep P j (c, p) (Sum.inl (.callG r j b))
         (PMF.pure (c.setProcessVariables { c.processVariables with phase := .awaitG }, p))
   /-- The process calls the input-broadcast instance of the first gather with the payload its
   gather variables hold, and that instance records it as the leader's input (AFW25's Algorithm 5,
@@ -576,15 +573,15 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
               { ((p.roundVariables r).secondGather.processVariables) with returned := true } }))
   /-- The round returns the recorded graded outcome to the round loop (AFW25's Algorithm 4,
   line 3 and line 8). The outcome leaves the round's variables, which is what marks the round
-  returned. -/
-  | retG (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (out : GBCAOutput) (bnd :
-      Bool)
+  returned. The label carries the outcome alone, and the network announces the bound bit on
+  `boundG` (D29). -/
+  | retG (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (out : GBCAOutput)
       (hh : c.corrupted = false)
       (hph : c.processVariables.phase = .awaitG) (hr : c.processVariables.round = r)
       (hterm : p.terminated = false)
       (hout : (p.roundVariables r).output = some out)
       (hr2 : ((p.roundVariables r).secondGather.processVariables).returned = true) :
-      RoundStep P j (c, p) (Sum.inl (.retG r j out bnd))
+      RoundStep P j (c, p) (Sum.inl (.retG r j out))
         (PMF.pure (c.setProcessVariables { c.processVariables with
             estimate := out.estimate, lastGrade := some out, phase := .toCallW },
           p.setRoundVariables r { (p.roundVariables r) with output := none }))
@@ -760,10 +757,17 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
       (m : Message P.n) (hh : c.corrupted = false) (hterm : p.terminated = false) :
       RoundStep P j (c, p) (Sum.inr (.gbcaDeliver r j k m))
         (PMF.pure (c, p.deliverTo r k m))
+  /-- Delivery at a terminated program: the program takes the message, and its variables stand
+  where they are (D22). `gbcaDeliverReceive` and `deliverLoop` take every round delivery
+  addressed to `j` at an unreplaced program. -/
+  | deliverLoop (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (k : Fin P.n)
+      (m : Message P.n) (hh : c.corrupted = false) (hterm : p.terminated = true) :
+      RoundStep P j (c, p) (Sum.inr (.gbcaDeliver r j k m)) (PMF.pure (c, p))
 
 /-- The transitions above meet the implementation's conditions: each carries a label of
-`roundOwn j`, each fires only at an unreplaced program, each is Dirac, and the
-return takes the announced bit free (D29). -/
+`roundOwn j`, each fires only at an unreplaced program, each is Dirac, and
+`gbcaDeliverReceive` at a program that has not terminated and `deliverLoop` at a terminated one
+take every round delivery addressed to `j` at an unreplaced program. -/
 instance instIsRoundStep (P : Parameters) :
     IsRoundStep P (Message P.n) (RoundEvent P.n) (RoundVariables P.n) (RoundStep P) where
   own h := by
@@ -772,7 +776,12 @@ instance instIsRoundStep (P : Parameters) :
     cases h <;> assumption
   dirac h := by
     cases h <;> exact ⟨_, rfl⟩
-  boundBitFree h := by cases h; constructor <;> assumption
+  deliveryEnabled := by
+    intro j q r k m hh
+    obtain ⟨c, p⟩ := q
+    cases hterm : p.terminated
+    · exact ⟨_, RoundStep.gbcaDeliverReceive c p r k m hh hterm⟩
+    · exact ⟨_, RoundStep.deliverLoop c p r k m hh hterm⟩
 
 /-! ### The transposed variables write one local state at a time
 
@@ -825,12 +834,10 @@ abbrev ProgramStep (P : Parameters) (j : Fin P.n) :
 abbrev NetworkStep (P : Parameters) :
     NetworkState P.n → ExtendedLabel P.n (Message P.n) (RoundEvent P.n) →
       PMF (NetworkState P.n) → Prop :=
-  Implementation.NetworkStep P (Message P.n) (RoundEvent P.n) (Ghost P.n)
-    (ghostStep P)
-    (announcedBound P)
+  Implementation.NetworkStep P (Message P.n) (RoundEvent P.n) (Ghost P.n) (ghostStep P) ghostBound
 
-/-- The state of the gather-based protocol: the process family, the network
-adversary and the common coin. -/
+/-- The state of the gather-based protocol: the process family, the network and the instance
+family of the common coin. -/
 abbrev ProtocolState (P : Parameters) : Type :=
   Implementation.State P (Message P.n) (RoundVariables P.n) (Ghost P.n)
 
@@ -838,22 +845,19 @@ abbrev ProtocolState (P : Parameters) : Type :=
 noncomputable def protocolExtended (P : Parameters) :
     System (ProtocolState P) (Implementation.ExtendedLabel P.n (Message P.n) (RoundEvent P.n)) :=
   Implementation.systemExtended P (Message P.n) (RoundEvent P.n) (RoundVariables P.n) (Ghost P.n)
-    (RoundStep P)
-    (ghostStep P) (announcedBound P)
+    (RoundStep P) (ghostStep P) ghostBound
 
 /-- The gather-based protocol group: the labels the components synchronise on
 hidden, the result read back over `Label n`. -/
 noncomputable def protocolHidden (P : Parameters) : System (ProtocolState P) (Label P.n) :=
   Implementation.systemHidden P (Message P.n) (RoundEvent P.n) (RoundVariables P.n) (Ghost P.n)
-    (RoundStep P)
-    (ghostStep P) (announcedBound P)
+    (RoundStep P) (ghostStep P) ghostBound
 
 /-- **The gather-based protocol**: the group with the sub-protocol API
 hidden. -/
 noncomputable def protocol (P : Parameters) : System (ProtocolState P) (Label P.n) :=
   Implementation.system P (Message P.n) (RoundEvent P.n) (RoundVariables P.n) (Ghost P.n)
-    (RoundStep P)
-    (ghostStep P) (announcedBound P)
+    (RoundStep P) (ghostStep P) ghostBound
 
 end AFW
 

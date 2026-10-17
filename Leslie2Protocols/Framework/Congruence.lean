@@ -51,7 +51,10 @@ open Stream'
 
 namespace PLTS
 
-/-! ### Prepending and dropping the first transition of a run -/
+/-! ### Prepending and dropping the first transition of a run
+
+Prepending a transition is `AlterSeq.endState_cons` and `is_partial_exec_cons`
+(`Framework/FamilySimulation.lean`). -/
 
 section Executions
 
@@ -76,50 +79,6 @@ theorem AlterSeq.endState_ofList (q : State) (L : List (Label × State)) :
       = AlterSeq.endStateOfList q L := by
   rw [AlterSeq.endState_eq_getLast?, Stream'.Seq.toList_ofList]
   rfl
-
-/-- Prepending a transition does not change the end state: the run
-`⟨q, cons (l₀, q₁) T⟩` ends where `⟨q₁, T⟩` ends. -/
-theorem AlterSeq.endState_cons (q q₁ : State) (l₀ : Label) {T : Seq (Label × State)}
-    (hT : T.Terminates) (h : (Seq.cons (l₀, q₁) T).Terminates) :
-    (⟨q, Seq.cons (l₀, q₁) T⟩ : AlterSeq State Label).endState h
-      = (⟨q₁, T⟩ : AlterSeq State Label).endState hT := by
-  have h1 : (⟨q, Seq.cons (l₀, q₁) T⟩ : AlterSeq State Label).endState h
-      = (((Seq.cons (l₀, q₁) T).toList h).getLast?).elim q Prod.snd :=
-    AlterSeq.endState_eq_getLast? _ h
-  have h2 : (⟨q₁, T⟩ : AlterSeq State Label).endState hT
-      = ((T.toList hT).getLast?).elim q₁ Prod.snd :=
-    AlterSeq.endState_eq_getLast? _ hT
-  rw [h1, h2, Stream'.Seq.toList_cons h]
-  exact getLast?_elim_cons (l₀, q₁) (T.toList _) q
-
-/-- Prepending a transition preserves validity: consing a genuine first
-transition onto a valid partial execution yields a valid partial execution. -/
-theorem is_partial_exec_cons {q q₁ : State} {l₀ : Label} {T : Seq (Label × State)}
-    {μ : PMF State} (hstep : sys.step q l₀ μ) (hmem : q₁ ∈ μ.support)
-    (hpe : is_partial_exec ⟨q₁, T⟩ sys) :
-    is_partial_exec ⟨q, Seq.cons (l₀, q₁) T⟩ sys := by
-  intro n l s' hn
-  cases n with
-  | zero =>
-    rw [Stream'.Seq.get?_cons_zero] at hn
-    injection hn with hn
-    injection hn with ha hb
-    subst ha
-    subst hb
-    exact ⟨q, μ, rfl, hstep, hmem⟩
-  | succ k =>
-    rw [Stream'.Seq.get?_cons_succ] at hn
-    obtain ⟨s, μ', hst, hstep', hmem'⟩ := hpe k l s' hn
-    refine ⟨s, μ', ?_, hstep', hmem'⟩
-    cases k with
-    | zero =>
-      change ((Seq.cons (l₀, q₁) T).get? 0).map Prod.snd = some s
-      rw [Stream'.Seq.get?_cons_zero]
-      exact hst
-    | succ m =>
-      change ((Seq.cons (l₀, q₁) T).get? (m + 1)).map Prod.snd = some s
-      rw [Stream'.Seq.get?_cons_succ]
-      exact hst
 
 /-- Dropping the first transition preserves validity: the tail `⟨q₁, T⟩` of a
 valid partial execution `⟨q, cons (l₀, q₁) T⟩` is again a valid partial

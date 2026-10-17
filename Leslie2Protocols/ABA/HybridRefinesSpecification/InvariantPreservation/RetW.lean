@@ -10,13 +10,21 @@ import Leslie2Protocols.ABA.Composition.Hybrid
 /-!
 # `Invariant` across the `retW` transitions of `hybrid`
 
-`Invariant.step_retW`, preservation of `Invariant` at a return of the coin. `g` is untouched
-entirely, the coin instance touches only `.ret`, a field `Invariant` does not inspect, and the
-round advance `ABAState.stepRound` touches `estimate`, `round` and `phase` at `id`, and clears
-`lastGrade` unless the round's outcome was grade 2. On a grade-2 outcome `id` enters
-`toSendDecided` with its grade kept, so the set of grade-2 holders is unchanged; the DECIDED send
-that follows is `Invariant.step_decidedSend`. `round_bound`'s freshly included round is covered by
-`wcc_bound`, the coin having resolved closing the round.
+`Invariant.step_retW`, preservation of `Invariant` at a return of the coin. `g` is untouched, and
+the coin instance writes only `.ret`, a field `Invariant` does not read. There are two cases.
+
+First, the round loop of `id` stands at `awaitW` and round `r`, and it takes the return on its
+round advance `ABAState.stepRound`. The advance writes `estimate`, `round` and `phase` at
+`id`, and clears `lastGrade` unless the round's outcome is grade 2. On a grade-2 outcome `id`
+enters `toSendDecided` with its grade kept, so the set of grade-2 holders is unchanged; the
+DECIDED send that follows is `Invariant.step_decidedSend`. The round `r` that `round_bound` gains
+at `id` is closed by `wcc_bound`, since round `r`'s coin is resolved.
+
+Second, `id` lies in `F`, or its round loop stands at another phase or round. The round loop takes
+the return on its self-loop or on its loop `retWLoop`, the round loops and the network are
+unchanged, and the coin records the return.
+
+Neither case writes a record of DECIDED sends, so `decidedSent_recorded` (I4') passes through.
 -/
 
 namespace PLTS
@@ -27,7 +35,8 @@ open Implementation Composition
 variable {P : Parameters}
 
 /-- `retW`: `Invariant` is preserved and the abstract state is unchanged at a return of the
-coin. -/
+coin, taken by the round loop of `id` on its round advance at `awaitW` and round `r`, and on its
+loop or its self-loop elsewhere. -/
 theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
     {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (r : ℕ) (id : Fin P.n) (b : Bool)
     {μw' : PMF (WCC.SpecState P.n)} (hstepW : WCC.Step P r (w r) (.retW r id b) μw')
@@ -35,7 +44,8 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
     (hstepC :
       ((c.processes id).phase = .awaitW ∧ (c.processes id).round = r ∧
           μc = PMF.pure (c.stepRound id b)) ∨
-        (id ∈ c.F ∧ μc = PMF.pure c))
+        ((id ∈ c.F ∨ ¬((c.processes id).phase = .awaitW ∧ (c.processes id).round = r)) ∧
+          μc = PMF.pure c))
     {wr' : WCC.SpecState P.n} (hwr' : wr' ∈ μw'.support)
     {c' : ABAState P} (hc' : c' ∈ μc.support) :
     Invariant P g c' (Function.update w r wr') ∧ AbstractStateUnchanged P g g c c' := by
@@ -69,7 +79,7 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
       cases hstepW with
       | ret _ _ _ _ => rw [PMF.mem_support_pure_iff] at hwr'; rw [hwr']
     · rw [hWNe r' h]
-  rcases hstepC with ⟨hph, hr, rfl⟩ | ⟨hF, rfl⟩
+  rcases hstepC with ⟨hph, hr, rfl⟩ | ⟨-, rfl⟩
   · rw [PMF.mem_support_pure_iff] at hc'
     have hFeq : (c.stepRound id b).F = c.F := ABAState.stepRound_F _ _ _
     have hDReq : (c.stepRound id b).decidedReceived = c.decidedReceived :=
@@ -171,6 +181,11 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
         · rw [hid1] at h1 ⊢; exact Or.inl (hLGEq b1 h1)
         · rw [hProcNe i1 hid1] at h1; exact Or.inl h1
       · exact Or.inr h1
+    have hRecorded : ∀ j, ((c.stepRound id b).1 j).decidedSent = (c.1 j).decidedSent := by
+      intro j
+      by_cases hj : j = id
+      · subst hj; simp [ABAState.stepRound]
+      · simp [ABAState.stepRound, Function.update_of_ne hj]
     rw [hc']
     refine And.intro ?_ ⟨fun r0 b0 hc => ⟨r0, hCertW r0 b0 hc⟩,
       fun v _ hpin j b' hj hh => hpin j b' (hFeq ▸ hj) (hRedHW j b' hh)⟩
@@ -178,8 +193,11 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
         rw [ABAState.stepRound_corrupted, hFeq]; exact hI.corrupted_F id',
       fun r' => hFeq ▸ hI.F_gbca r', fun r' => (hFweq r').trans (hFeq ▸ hI.F_wcc r'),
       hFeq ▸ hI.F_card, ?_, ?_, ?_, hI.down_settled, hI.quiescent,
-      fun r' h => hI.wcc_bound r' (by rw [← hValeq r']; exact h),
-      ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, hI.grade0_chain, ?_,
+      fun r' h => hI.wcc_bound r' (by rw [← hValeq r']; exact h), ?_, ?_,
+      fun j hj => by
+        rw [hRecorded j, ABAState.stepRound_decidedSent]
+        exact hI.decidedSent_recorded j (hFeq ▸ hj),
+      ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, hI.grade0_chain, ?_,
       ?_, ?_, ?_, ?_, ?_, ?_, ?_, hI.bound_quorum,
       fun r' v hb2 => (hI.bind_support r' v hb2).mono
         (fun id2 b2 h => by
@@ -325,12 +343,12 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
           exact Option.some_inj.mp hcopy
         have hep := hI.estimate_ret r id (hFeq ▸ (hid ▸ hmem)) hr (Or.inr hph)
         rcases Option.eq_none_or_eq_some ((c.processes id).estimate) with hoe | ⟨bv, hoe⟩
-        · rw [hoe] at hveq; simp at hveq
+        · rw [hoe] at hveq; simp only [Option.getD_none] at hveq
           obtain ⟨hg0, -⟩ := hep.1 hoe
           have hWtb : (w r).val = .top ∨ (w r).val = .bit b := by
             cases hstepW with | ret _ _ h1 _ => exact h1
           rw [← hveq]; exact Or.inr ⟨hg0, hWtb.symm⟩
-        · rw [hoe] at hveq; simp at hveq
+        · rw [hoe] at hveq; simp only [Option.getD_some] at hveq
           have hbveq := hep.2 bv hoe
           rw [← hveq]; exact Or.inl hbveq
       · rw [hProcNe id' hid] at hround hphase hest
@@ -407,7 +425,8 @@ theorem Invariant.step_retW {P : Parameters} {g : ℕ → GBCA.SpecState P.n} {c
     refine ⟨hI.corrupted_F, hI.F_gbca, fun r' => (hFweq r').trans (hI.F_wcc r'), hI.F_card,
       hI.input_gbcaRound0, hI.input_called, hI.phase_input, hI.down_settled, hI.quiescent,
       fun r' h => hI.wcc_bound r' (by rw [← hValeq r']; exact h),
-      hI.received_sound, hI.decided_source, hI.grade2Bound_commit, hI.round_bound, ?_,
+      hI.received_sound, hI.decided_source, hI.decidedSent_recorded, hI.grade2Bound_commit,
+      hI.round_bound, ?_,
       hI.grade2_needs_bind, hI.call_round, ?_, ?_, hI.estimate0, hI.grade2_source, hI.estimate_ret,
       ?_, ?_, ?_, hI.grade0_chain, hI.estimate_previous_ne,
       ?_, hI.input_gbcaRound0_permanent, ?_, ?_, ?_, hI.retG_witness, ?_, hI.bound_quorum,

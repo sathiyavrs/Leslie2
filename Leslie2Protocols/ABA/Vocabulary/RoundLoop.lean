@@ -51,22 +51,27 @@ diffusion state (conjunct 6), and input coherence
 * **D9 (0-based rounds).** `round : ℕ` starts at `0` where Algorithm 1 starts
   at `r = 1`; the `GBCA_r`/`WCC_r` instance indices shift accordingly.
 * **The coin return and the DECIDED send.** The coin return `retW` is the round advance
-  `RoundLoopVariables.stepRound`: it adopts the coin when `estimate = ⊥` and opens the next round.
+  `RoundLoopVariables.stepRound`: it adopts the coin when `estimate = ⊥` and starts the next round.
   When the round's outcome was `grade2 b`, the advance keeps `lastGrade` and enters the phase
   `toSendDecided`. Algorithm 1's `elif g = A: send ⟨DECIDED, b⟩` is the transition `decidedSend`
-  taken from that phase: it clears `lastGrade` and enters `toCallG`, and its network half inserts
-  `b` into the process's DECIDED set. The DECIDED sets carry no round index, so the send taken
-  after the round counter has advanced is the send of the round just closed.
-* **D11 (Byzantine call and return transitions).** Corrupted processes may make their sub-protocol
-  calls and returns arbitrarily: each of `callG`/`retG`/`callW`/`retW` has a Byzantine
-  transition, authorised by `k ∈ F` at the network and constrained by no phase or estimate. The
-  round loop contributes an idle transition to each of them, so the family's calls and returns for
-  corrupted ids are never blocked by it.
+  taken from that phase: it clears `lastGrade`, enters `toCallG` and records `b` in the
+  process's `decidedSent`, and its network half inserts `b` into the process's DECIDED set. The
+  DECIDED sets carry no round index, so the send taken after the round counter has advanced is the
+  send of the round just closed.
+* **D11 (Byzantine call transitions).** The network outputs a corrupted process's sub-protocol
+  calls on labels of its own, `byzantineCallG` and `byzantineCallW`, under `k ∈ F` at a round a
+  correct process has started (D37), constrained by no phase or estimate. Every round loop idles
+  on them. A return to a corrupted process is the output of the instance that computes it, on the
+  instance's own return label.
 * **D12′ (per-process DECIDED sets, equivocation-capable).** The DECIDED multicast state is the
   network's per-process sent `decidedSent : Fin n → Finset Bool`, read in the ABA component as
   `decidedSent` (`ABA/Composition/ABAState.lean`) and mirroring graded agreement's D5 sent-set
   pattern. Correct sends insert into the sent: the DECIDED send `decidedSend` of a grade-2 round,
-  and the `f + 1` relay `decidedRelay`. In reachable states DECIDED coherence keeps every correct
+  and the `f + 1` relay `decidedRelay`. The process keeps its own record of the bits it has
+  multicast, `RoundLoopVariables.decidedSent`, written on the same two sends; it guards the relay
+  by `b ∉ decidedSent` and the return by `b ∈ decidedSent`, LeslieBP Algorithm 1's "having not sent
+  it" and "having sent it", and it agrees with the network's `decidedSent j` at every process
+  outside `F`. In reachable states DECIDED coherence keeps every correct
   sent at card ≤ 1, so the insert is a first write or a re-send of the same bit. Byzantine injection
   (`byzantineDecided`, guarded only by `k ∈ F`) may insert either or both bits at any time — a
   corrupted process may send `DECIDED 0` to one receiver and `DECIDED 1` to another (delivery is
@@ -80,17 +85,17 @@ diffusion state (conjunct 6), and input coherence
   program of the process it names. `RoundLoopVariables.corrupted` carries the
   replacement: the process's own half of `fail` writes the flag, every
   transition that reads or writes the process's own variables is guarded by
-  `corrupted = false`, and the replaced program self-loops on every label of
-  the alphabet other than `τ` and the labels on which the process would act on
-  its own sub-protocol messages. Those messages are the business of the Byzantine
-  call and return transitions (D11), which carry it with no round-loop transition of the named
-  process.
+  `corrupted = false`, and the replaced program takes no transition on the outputs of
+  `Implementation.actsAt j` (its graded-agreement call and return, its round sends and round
+  events, its coin call and its DECIDED send; `Composition.roundLoopActsAt j` at a round loop) and
+  self-loops on every other non-silent label. It thereby outputs `decidedRelay j b` and
+  `retABA j b` at either bit, and takes every input.
 
-Two further notes: the return transition has **no** correctness check — corrupted
-returns must pass the same `n − f` DECIDED count as correct ones, and the
-specification's return transition is likewise blind to correctness — and
-`lastGrade` always refers to the GBCA return of the round in progress or of the round just
-closed. It is cleared by the round advance, or, on a grade-2 outcome, by the DECIDED send.
+Two further notes: the return transition reads no corrupted set — a correct return asks for the
+`n − f` DECIDED count and for `b ∈ decidedSent`, and the specification's return transition is
+likewise blind to correctness — and `lastGrade` always refers to the GBCA return of the round in
+progress or of the round just closed. It is cleared by the round advance, or, on a grade-2
+outcome, by the DECIDED send.
 -/
 
 namespace PLTS
@@ -179,17 +184,23 @@ end RoundLoopState
 /-! ### The round-loop variables
 
 A process's control variables are not by themselves what the composition moves: a round loop also
-holds the DECIDED payloads delivered to it. The structure below pairs the two, and is one component
-of the ABA state the core simulation reads (`ABA/Composition/ABAState.lean`). -/
+holds the DECIDED payloads delivered to it and the DECIDED bits it has multicast. The structure
+below gathers the three with the replacement flag, and is one component of the ABA state the core
+simulation reads (`ABA/Composition/ABAState.lean`). -/
 
-/-- The round-loop variables of one process: its own control variables and the
-DECIDED payloads delivered to it, indexed by sender. They hold nothing of
-what it has multicast — the DECIDED sets live in the network. -/
+/-- The round-loop variables of one process: its own control variables, the DECIDED payloads
+delivered to it, indexed by sender, the DECIDED bits it has multicast, and the replacement
+flag. -/
 structure RoundLoopVariables (n : ℕ) : Type where
   /-- The process's own control variables. -/
   processVariables : RoundLoopState n
   /-- The DECIDED payloads delivered to this process, indexed by sender. -/
   decidedDelivered : Fin n → Finset Bool
+  /-- The DECIDED bits this process has multicast, by its DECIDED send and by its relay:
+  LeslieBP Algorithm 1's "having sent it". The record guards the relay by `b ∉ decidedSent` and
+  the return by `b ∈ decidedSent`, and it agrees with the network's `decidedSent j` at every
+  process outside `F` (D12′). -/
+  decidedSent : Finset Bool
   /-- Whether this process's program has been replaced (D23). The process's own
   half of `fail` writes the flag, and the guard of every correct transition reads it.
   The variables beneath the flag are unchanged from that point on. -/
@@ -200,12 +211,15 @@ namespace RoundLoopVariables
 
 variable {n : ℕ}
 
-/-- The initial round-loop variables: idle control variables, no received messages, program
-not replaced. -/
+/-- The initial round-loop variables: idle control variables, no received messages, no DECIDED
+bit multicast, program not replaced. -/
 def initial (n : ℕ) : RoundLoopVariables n where
   processVariables := RoundLoopState.initial n
   decidedDelivered := fun _ => ∅
+  decidedSent := ∅
   corrupted := false
+
+@[simp] theorem initial_decidedSent (n : ℕ) : (initial n).decidedSent = ∅ := rfl
 
 @[simp] theorem initial_corrupted (n : ℕ) : (initial n).corrupted = false := rfl
 
@@ -218,6 +232,9 @@ def setProcessVariables (q : RoundLoopVariables n) (p : RoundLoopState n) : Roun
   { q with
   processVariables := p }
 
+@[simp] theorem setProcessVariables_decidedSent (q : RoundLoopVariables n)
+    (p : RoundLoopState n) : (q.setProcessVariables p).decidedSent = q.decidedSent := rfl
+
 @[simp] theorem setProcessVariables_corrupted (q : RoundLoopVariables n) (p : RoundLoopState n) :
     (q.setProcessVariables p).corrupted = q.corrupted := rfl
 
@@ -227,11 +244,31 @@ def receiveDecided (q : RoundLoopVariables n) (k : Fin n) (b : Bool) : RoundLoop
     decidedDelivered :=
       Function.update q.decidedDelivered k (insert b (q.decidedDelivered k)) }
 
+@[simp] theorem receiveDecided_decidedSent (q : RoundLoopVariables n) (k : Fin n) (b : Bool) :
+    (q.receiveDecided k b).decidedSent = q.decidedSent := rfl
+
 @[simp] theorem receiveDecided_corrupted (q : RoundLoopVariables n) (k : Fin n) (b : Bool) :
     (q.receiveDecided k b).corrupted = q.corrupted := rfl
 
+/-- Record a multicast `⟨DECIDED, b⟩` of this process: its DECIDED send or its relay. -/
+def recordDecided (q : RoundLoopVariables n) (b : Bool) : RoundLoopVariables n :=
+  { q with
+    decidedSent := insert b q.decidedSent }
+
+@[simp] theorem recordDecided_processVariables (q : RoundLoopVariables n) (b : Bool) :
+    (q.recordDecided b).processVariables = q.processVariables := rfl
+
+@[simp] theorem recordDecided_decidedDelivered (q : RoundLoopVariables n) (b : Bool) :
+    (q.recordDecided b).decidedDelivered = q.decidedDelivered := rfl
+
+@[simp] theorem recordDecided_decidedSent (q : RoundLoopVariables n) (b : Bool) :
+    (q.recordDecided b).decidedSent = insert b q.decidedSent := rfl
+
+@[simp] theorem recordDecided_corrupted (q : RoundLoopVariables n) (b : Bool) :
+    (q.recordDecided b).corrupted = q.corrupted := rfl
+
 /-- The round advance on receiving the coin `c`: adopt the coin if the
-estimate is `⊥` and open the next round. On a grade-2 outcome the advance keeps the grade and
+estimate is `⊥` and start the next round. On a grade-2 outcome the advance keeps the grade and
 enters `toSendDecided`, where the DECIDED send of the round just closed is taken; otherwise it
 clears the grade and enters `toCallG`. -/
 def stepRound (q : RoundLoopVariables n) (c : Bool) : RoundLoopVariables n :=
@@ -271,6 +308,10 @@ theorem stepRound_of_not_grade2 (q : RoundLoopVariables n) (c : Bool)
   split
   · next b' hb => exact absurd hb (h b')
   · rfl
+
+@[simp] theorem stepRound_decidedSent (q : RoundLoopVariables n) (c : Bool) :
+    (q.stepRound c).decidedSent = q.decidedSent := by
+  unfold stepRound; split <;> rfl
 
 @[simp] theorem stepRound_corrupted (q : RoundLoopVariables n) (c : Bool) :
     (q.stepRound c).corrupted = q.corrupted := by

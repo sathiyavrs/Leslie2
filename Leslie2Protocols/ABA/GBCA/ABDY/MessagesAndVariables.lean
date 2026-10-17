@@ -10,7 +10,7 @@ import Leslie2Protocols.ABA.GBCA.Specification
 # The messages and the state of a GBCA round (ABDY22 Algorithm 6)
 
 The data one round of the Graded Binding Crusader Agreement protocol runs on: the messages its
-processes multicast, the bit a return announces, the two parts a round's state has, and
+processes multicast, the round's bound bit, the two parts a round's state has, and
 the counting the algorithm's guards read.
 
 `Message` is the five message levels of ABDY22's Algorithm 6, under the level mapping
@@ -26,9 +26,10 @@ INPUT = echo,  ECHO = echo2,  VOTE = echo3,  BIND = echo4,  ECHO5 = echo5
 The data of one round sits in two parts. `RoundVariables` is what one process holds: its own
 protocol state — the input it was called with, the `INPUT` payloads it has multicast, its
 write-once `ECHO`, `VOTE`, `BIND` and `ECHO5` payloads and its return flag, gathered in
-`ProcessVariables` — together with the messages delivered to it, indexed by sender. It does not
-record what it has multicast: a sender's sent set is the round network's. `NetworkState` is
-the round's network: the per-sender sent sets, the corrupted set and the round's bound bit.
+`ProcessVariables` — together with the messages delivered to it, indexed by sender. The process
+records its own sends in these send fields; the sent sets that a delivery reads belong to the
+round's network. `NetworkState` is the round's network: the per-sender sent sets, the corrupted set
+and the round's bound bit.
 `RoundState` is the pair of the `n` processes' round variables and the network state, so the network
 is a component of a round's state and not a field of it, and a weaker network is a different
 second component that leaves the rest of the round alone.
@@ -49,20 +50,20 @@ received messages at possibly different receivers share a correct sender.
 
 ## The round's bound bit
 
-`NetworkState.bound` is the bit the round announces on its return labels (D29). It is auxiliary
-state: no program reads it, and the three return transitions of the algorithm
-(`GBCA/ABDY/Algorithm.lean`) are the only transitions that touch it. `boundOf` computes the bit
-from the round's sent sets, the corrupted set and the outcome; a return announces the bit already
-recorded if the round has returned before, and `boundOf`'s otherwise, and writes it back, so one
-round announces one bit on all of its returns.
+`NetworkState.bound` is the round's bound bit (D29), an auxiliary variable: no program reads
+it. The round's network writes it at the round's first return, whichever process returns, and
+announces it on `boundG r b` from then on (`GBCA/ABDY/Components.lean`). `boundOf` computes the
+bit from the round's sent sets, the corrupted set and the outcome of that return. A later return
+leaves the recorded bit as it stands, so a round records one bit.
 
 ## Model and deviations
 
 * **D1 (determinised `fail`).** Corruption is the total Dirac function `NetworkState.corrupt`,
   guarded by `id ∉ F ∧ |F| < f`, and `RoundState.corrupt` is it on the pair — `F` stays
   equal to every other component under the `fail` broadcast.
-* **D5 (set-based network).** Multicasts are idempotent: each sender owns a *set* `sent j` of
-  messages it has multicast, and `received i j` is the set of messages from `j` delivered to `i`.
+* **D5 (set-based network).** Multicasts are idempotent: the network holds, for each sender `j`,
+  the *set* `sent j` of the messages `j` has multicast, and `received i j` is the set of messages
+  from `j` delivered to `i`.
   Thresholds count distinct senders in the receiver's delivered sets, so message duplication and
   point-to-point scheduling are absorbed into the set model. A corrupted sender may put any
   message into its sent set.
@@ -87,19 +88,19 @@ inductive Message : Type
   | echo5 (v : Option Bool)
   deriving DecidableEq
 
-/-- **The round's bound bit**, as a function of the round's messages. It is the
-bit a return of outcome `out` announces on its label.
+/-- **The round's bound bit**, as a function of the round's messages and the outcome of the
+round's first return.
 
-A grade-1 or grade-2 outcome announces the value it returns. An outcome carrying no
-value announces the payload of a correct `⟨VOTE, b⟩` sender, and `true` where
+A grade-1 or grade-2 outcome gives the value it returns. An outcome carrying no
+value gives the payload of a correct `⟨VOTE, b⟩` sender, and `true` where
 there is none. A correct `⟨VOTE, b⟩` sender holds an `n − f` quorum of received
 `⟨ECHO, b⟩` messages and at most one bit carries such a quorum, so on a reachable
 state the two bit cases are exclusive and the order in which they are tested
-is immaterial. Where neither case applies no bit is ever returned, and the
-announced bit is the bit not excluded in a round that returns no bit.
+is immaterial. Where neither case applies no process returns a value, and the
+bound bit is the bit not excluded in a round that returns no value.
 
-The bit is a ghost output: no program reads it, and the three return transitions
-are the only transitions that read it. -/
+No program reads the bit. The round's network writes it at the round's first return and
+announces it on `boundG` (D29). -/
 def boundOf {n : ℕ} (sent : Fin n → Finset Message) (F : Finset (Fin n)) :
     GBCAOutput → Bool
   | .grade2 v => v
@@ -153,17 +154,17 @@ def ProcessVariables.initial : ProcessVariables where
 /-! ### The two halves of a round's state
 
 The data of one round sits in two parts. Each process holds its own protocol
-state together with the messages delivered to it, and nothing else — what it has
-multicast is not recorded there. The round's network state holds the
-per-sender sent sets and the corrupted set. The instance's state below is their
+state, which records its own sends in its send fields, together with the messages
+delivered to it. The round's network state holds the per-sender sent sets that a
+delivery reads, and the corrupted set. The instance's state below is their
 pair, so every field of the algorithm is a field of one local state or the other.
 
 The network state carries the name of the instance that composes it beside the
 programs (`ABA/GBCA/ABDY/Components.lean`). -/
 
 /-- The round variables of one process: its own local state and the messages delivered to it,
-indexed by sender. What it has sent is not recorded here — the sender's sent set is held
-by the network. -/
+indexed by sender. The local state records the process's own sends in its send fields; the sent
+sets that a delivery reads are held by the round's network. -/
 structure RoundVariables (n : ℕ) : Type where
   /-- The process's own protocol state. -/
   processVariables : ProcessVariables
@@ -222,9 +223,9 @@ structure NetworkState (n : ℕ) : Type where
   sent : Fin n → Finset GBCA.ByABDY.Message
   /-- The corrupted set. -/
   F : Finset (Fin n)
-  /-- The round's bound bit, `none` before the round's first return. A ghost:
-  no program reads it, it is written at the first return of the round and
-  announced on every return of the round. -/
+  /-- The round's bound bit, `none` before the round's first return. An auxiliary variable:
+  no program reads it, the network writes it at the round's first return and announces it on
+  `boundG` from then on (D29). -/
   bound : Option Bool
   deriving DecidableEq
 
@@ -311,8 +312,8 @@ def received (s : RoundState n) : Fin n → Fin n → Finset Message := fun i =>
 /-- The corrupted set (the network state's, kept equal by `fail` broadcast). -/
 def F (s : RoundState n) : Finset (Fin n) := s.2.F
 
-/-- The round's bound bit (the network state's). A ghost: no transition but the
-three returns reads it, and no program holds it. -/
+/-- The round's bound bit (the network state's). No program holds it: the network writes it at
+the round's first return and announces it (D29). -/
 def bound (s : RoundState n) : Option Bool := s.2.bound
 
 /-- The round's bound bit is written: the network state records `β`. -/
@@ -587,7 +588,7 @@ theorem corrupt_F {P : Parameters} (s : RoundState P.n) (id : Fin P.n) :
 @[simp] theorem setBound_bothValid {P : Parameters} (s : RoundState P.n) (β : Bool)
     (i : Fin P.n) : (s.setBound β).bothValid P i ↔ s.bothValid P i := Iff.rfl
 
-/-! The bound bit is written by no transition but the three returns. -/
+/-! The bound bit is written by no transition but a return. -/
 
 @[simp] theorem setProcessVariables_bound (s : RoundState n) (j : Fin n) (p : ProcessVariables) :
     (s.setProcessVariables j p).bound = s.bound := rfl

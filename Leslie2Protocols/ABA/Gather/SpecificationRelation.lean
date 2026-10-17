@@ -60,7 +60,7 @@ structure SpecificationRelation (P : Parameters) (s : StateOverBroadcastSpecific
 /-- The relation holds initially. -/
 theorem specificationRelation_init :
     SpecificationRelation P ((instanceOverBroadcastSpecification P X).init)
-    ((specificationOverInstanceAlphabet P X).init) := by
+    ((specInst P X).init) := by
   refine ⟨Invariant.initial, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
     simp [gatherProgramsAndNetwork, inputBroadcasts, core, SpecState.initial, BRB.SpecState.initial,
       ProcessVariables.initial, BaseProcessVariables.initial, NetworkState.initial,

@@ -27,14 +27,15 @@ import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ProjectionAfterOneWrite
 of the composed system from a state of `AFW.protocol P`. The files of
 `AFW/RoundProjectionStep/` say where that state stands after one transition of the
 implementation. `RoundProjectionStep/ProjectionAfterOneWrite.lean` is the write every transition
-performs, read through the projection. Each of the fourteen files beside it then states, for its
+performs, read through the projection. Thirteen of the files beside it each state, for one
 class of transitions, the projection after the transition as the projection before it with the
 composed round's own effect applied, written through the updaters `GBCA.ByAFW.setPrograms`,
-`GBCA.ByAFW.setBound`, `GBCA.ByAFW.setFirstGather`, `GBCA.ByAFW.setSecondGather`,
+`GBCA.ByAFW.setNetwork`, `GBCA.ByAFW.setFirstGather`, `GBCA.ByAFW.setSecondGather`,
 `Gather.setGatherProgramsAndNetwork`, `Gather.setInputBroadcasts` and `Gather.setCore` exactly as
 the composed transitions write them. Each transition is matched by one
-event of the composed round. `RoundProjectionStep/ProtocolRelationConjuncts.lean` holds the
-conjunct of `AFW.ProtocolRelation` that no projection lemma supplies.
+event of the composed round, the first gather's return by its return event followed by the round
+network's `firstGatherCore` event. `RoundProjectionStep/ProtocolRelationConjuncts.lean` carries the
+four conjuncts of `AFW.ProtocolRelation` that are not projections across a transition.
 `ABA/AFW/SimulationOfEachTransition.lean` matches each transition of the implementation from
 these.
 -/

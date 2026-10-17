@@ -12,25 +12,27 @@ import Leslie2Protocols.ABA.GBCA.Specification
 
 The graded agreement specification is over the shared alphabet `Label n`. The alphabet of a
 graded-agreement round is the extended alphabet `Composition.ExtendedLabel n M`, over the type `M`
-of the messages the round exchanges, in which the three Byzantine call and return transitions and
-the call loop of round `r` are separate labels. `specificationLabelMap` is the projection that
-identifies them with the specification labels they stand for: a Byzantine call is a
-call, a Byzantine return is a return, and the two call loops are calls, which the specification
-takes on its input-enabledness transitions (D11). Every other extended label idles: the protocol
-network's synchronisation and the coin's call and return are off the specification's interface.
+of the messages the round exchanges, in which a corrupted process's call of round `r` is a label of
+its own, `byzantineCallG r k b`, output by the ABA network (D11). `specificationLabelMap` is the
+projection that identifies it with the specification's call `callG r k b`, which the specification
+takes on its call or on its input-enabledness loop. Every other network event idles: the
+synchronisation of the protocol's networks and the coin's calls are off the specification's
+interface.
 
 `specificationOverRoundAlphabet` is the specification read back along `specificationLabelMap`. It
 is the system a round is replaced by, and both graded-agreement implementations reach it:
 ABDY22's round through `GBCA/ABDY/RefinesSpecification.lean` and the two-gather round through
-`GBCA/AFW/RefinesSpecification.lean`. The call and return labels stay visible at this boundary,
-and their authorisation is the surrounding network's business.
+`GBCA/AFW/RefinesSpecification.lean`. Its inputs at round `r` are the calls `callG r _ _` and
+`byzantineCallG r _ _`, and its outputs the returns `retG r _ _` and the announcements
+`boundG r _` (D29). It takes both calls and the corruption `fail` at every state
+(`specificationOverRoundAlphabet_inputEnabled`).
 
 A weak run of the specification is read back over the extended alphabet along a section of
 `specificationLabelMap`. `labelSection l₀ l` sends every label to its own copy on the left, except
 `l₀`, which it sends to `l`. `weakLSilent_specificationOverRoundAlphabet` carries a silent weak run.
 `weakLStep_specificationOverRoundAlphabet` carries a labelled one to any extended label projecting
-to the same specification label, which is what answers a Byzantine call or return by the
-specification's own call or return.
+to the same specification label, which is what matches a corrupted process's call by the
+specification's own call.
 -/
 
 namespace PLTS
@@ -42,36 +44,20 @@ open Composition
 
 /-! ### The specification read over the round's interface -/
 
-/-- The projection of the extended alphabet onto the specification's alphabet. `M` is the type of
-the messages a graded-agreement round exchanges. -/
+/-- The projection of the extended alphabet onto the specification's alphabet: a shared label is
+its own, a corrupted process's graded-agreement call is the specification's call, and every other
+network event has no image. `M` is the type of the messages a graded-agreement round exchanges. -/
 def specificationLabelMap (n : ℕ) {M : Type} : ExtendedLabel n M → Option (Label n)
   | Sum.inl l => some l
-  | Sum.inr (.gbcaCallLoop r id b) => some (.callG r id b)
   | Sum.inr (.byzantineCallG r k b) => some (.callG r k b)
-  | Sum.inr (.byzantineCallGLoop r k b) => some (.callG r k b)
-  | Sum.inr (.byzantineRetG r k out bnd) => some (.retG r k out bnd)
   | Sum.inr _ => none
 
 @[simp] theorem specificationLabelMap_inl {n : ℕ} {M : Type} (l : Label n) :
     specificationLabelMap (M := M) n (Sum.inl l) = some l := rfl
 
-@[simp] theorem specificationLabelMap_gbcaCallLoop {n : ℕ} {M : Type} (r : ℕ) (id : Fin n)
-    (b : Bool) :
-    specificationLabelMap (M := M) n (Sum.inr (.gbcaCallLoop r id b)) = some (.callG r id b) := rfl
-
 @[simp] theorem specificationLabelMap_byzantineCallG {n : ℕ} {M : Type} (r : ℕ) (k : Fin n)
     (b : Bool) :
     specificationLabelMap (M := M) n (Sum.inr (.byzantineCallG r k b)) = some (.callG r k b) := rfl
-
-@[simp] theorem specificationLabelMap_byzantineCallGLoop {n : ℕ} {M : Type} (r : ℕ) (k : Fin n)
-    (b : Bool) :
-    specificationLabelMap (M := M) n (Sum.inr (.byzantineCallGLoop r k b))
-      = some (.callG r k b) := rfl
-
-@[simp] theorem specificationLabelMap_byzantineRetG {n : ℕ} {M : Type} (r : ℕ) (k : Fin n)
-    (out : GBCAOutput) (bnd : Bool) :
-    specificationLabelMap (M := M) n (Sum.inr (.byzantineRetG r k out bnd))
-      = some (.retG r k out bnd) := rfl
 
 @[simp] theorem specificationLabelMap_gbcaSend {n : ℕ} {M : Type} (r : ℕ) (j : Fin n) (m : M) :
     specificationLabelMap n (Sum.inr (.gbcaSend r j m)) = none := rfl
@@ -92,16 +78,12 @@ def specificationLabelMap (n : ℕ) {M : Type} : ExtendedLabel n M → Option (L
 @[simp] theorem specificationLabelMap_byzantineCallW {n : ℕ} {M : Type} (r : ℕ) (k : Fin n) :
     specificationLabelMap (M := M) n (Sum.inr (.byzantineCallW r k)) = none := rfl
 
-@[simp] theorem specificationLabelMap_byzantineRetW {n : ℕ} {M : Type} (r : ℕ) (k : Fin n)
-    (b : Bool) :
-    specificationLabelMap (M := M) n (Sum.inr (.byzantineRetW r k b)) = none := rfl
-
 /-- The silent label projects to the silent label. -/
 @[simp] theorem specificationLabelMap_tau (n : ℕ) {M : Type} :
     specificationLabelMap n (Silent.τ : ExtendedLabel n M) = some (Silent.τ : Label n) := rfl
 
-/-- Only the silent label projects to the silent label: a call or a return projects to a call or a
-return port, and every other extended label idles. -/
+/-- Only the silent label projects to the silent label: a corrupted process's call projects to a
+call, and every other network event has no image. -/
 theorem specificationLabelMap_eq_tau {n : ℕ} {M : Type} {l : ExtendedLabel n M}
     (h : specificationLabelMap n l = some Label.tau) :
     l = Sum.inl Label.tau := by
@@ -113,7 +95,8 @@ theorem specificationLabelMap_eq_tau {n : ℕ} {M : Type} {l : ExtendedLabel n M
     all_goals simp at h
 
 /-- **The specification over the round's alphabet**: the round-`r` graded agreement specification
-read over the round's interface. -/
+read over the round's interface. Its inputs are the calls `callG r _ _` and `byzantineCallG r _ _`,
+and its outputs the returns `retG r _ _` and the announcements `boundG r _`. -/
 noncomputable def specificationOverRoundAlphabet (P : Parameters) (M : Type) [DecidableEq M]
     (r : ℕ) : System (GBCA.SpecState P.n) (ExtendedLabel P.n M) :=
   (GBCA.specInst P r).mapIdle (specificationLabelMap P.n)
@@ -127,15 +110,31 @@ theorem specificationOverRoundAlphabet_isLTS (P : Parameters) (M : Type) [Decida
     (specificationOverRoundAlphabet P M r).IsLTS :=
   System.mapIdle_isLTS _ (GBCA.specInst_isLTS P r)
 
+/-- **The specification over the round's alphabet is input-enabled** on the calls of round `r`,
+on a corrupted process's calls of round `r` and on the corruptions. `specificationLabelMap` sends
+each of these labels to an input of `GBCA.specInst` (`GBCA.specInst_inputEnabled`), and the
+specification read back takes it on the transition the specification takes on the image
+(`System.InputEnabled.mapIdle`). -/
+theorem specificationOverRoundAlphabet_inputEnabled (P : Parameters) (M : Type) [DecidableEq M]
+    (r : ℕ) :
+    (specificationOverRoundAlphabet P M r).InputEnabled
+      {l | (∃ id b, l = Sum.inl (.callG r id b)) ∨ (∃ k b, l = Sum.inr (.byzantineCallG r k b)) ∨
+        ∃ id, l = Sum.inl (.fail id)} := by
+  refine ((specInst_inputEnabled P r).mapIdle (specificationLabelMap P.n)).mono ?_
+  rintro l (⟨id, b, rfl⟩ | ⟨k, b, rfl⟩ | ⟨id, rfl⟩)
+  · exact Or.inr ⟨.callG r id b, Or.inl ⟨id, b, rfl⟩, rfl⟩
+  · exact Or.inr ⟨.callG r k b, Or.inl ⟨k, b, rfl⟩, rfl⟩
+  · exact Or.inr ⟨.fail id, Or.inr ⟨id, rfl⟩, rfl⟩
+
 /-! ### Weak runs of the specification over the round's alphabet
 
 A weak run of the specification is read back along a section of `specificationLabelMap`. The
 section sends every label to its own copy on the left, except the one label the round's step
 projects from, which it sends to the interface label the round took. This is what turns a
-specification `callG` run into the matching run for a Byzantine call. -/
+specification `callG` run into the matching run for a corrupted process's call. -/
 
-/-- The section of `specificationLabelMap` that answers the interface label `l` over the
-specification label `l₀`. -/
+/-- The section of `specificationLabelMap` that sends the specification label `l₀` to the
+interface label `l`. -/
 def labelSection {n : ℕ} {M : Type} (l₀ : Label n) (l : ExtendedLabel n M) :
     Label n → ExtendedLabel n M :=
   fun x => if x = l₀ then l else Sum.inl x

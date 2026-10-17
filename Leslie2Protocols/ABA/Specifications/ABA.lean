@@ -5,6 +5,7 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.Vocabulary.Labels
+import Leslie2Protocols.Framework.InputEnabledness
 
 /-!
 # The ABA specification (blueprint Transition System 1)
@@ -57,6 +58,11 @@ The ghost holds each process's first genuine call (D16). `SpecStep.callSet`
 writes at an empty entry and `SpecStep.callLoop`, the input-enabledness loop,
 loops at a filled one, so the label is enabled at every state and every ghost
 write is a first write.
+
+The calls `callABA` are the input labels of the system, and `spec_inputEnabled` states that each
+of them is enabled at every state. The returns `retABA` and the corruptions `fail` are its output
+labels (`specInputOutputLabels`): `SpecStep.fail` is guarded by the budget, so the specification
+decides whether a corruption fires (D1). The system has no transition on a sub-protocol label.
 -/
 
 namespace PLTS
@@ -225,7 +231,7 @@ example :
   decide
 
 /-- **First-write check (D16).** A call at an uncorrupted process holding no
-input is answered by `SpecStep.callSet` alone: `SpecStep.callLoop` asks for a filled entry and
+input is taken by `SpecStep.callSet` alone: `SpecStep.callLoop` asks for a filled entry and
 `SpecStep.callByzantine` for a corrupted caller, so the bit reaches the
 ghost. -/
 example (P : Parameters) (s : SpecState P.n) (id : Fin P.n) (b : Bool)
@@ -246,6 +252,22 @@ noncomputable def spec (P : Parameters) : System (SpecState P.n) (Label P.n) whe
 
 @[simp] theorem spec_step (P : Parameters) (s : SpecState P.n) (l : Label P.n)
     (μ : PMF (SpecState P.n)) : (spec P).step s l μ ↔ SpecStep P s l μ := Iff.rfl
+
+/-- The input labels and the output labels of Transition System 1. The calls are its inputs.
+The returns are its outputs, and so is `fail`: `SpecStep.fail` is guarded by the budget, so the
+specification decides whether a corruption fires (D1). -/
+def specInputOutputLabels (P : Parameters) : InputOutputLabels (Label P.n) where
+  inputLabels := {l | ∃ id b, l = .callABA id b}
+  outputLabels := {l | ∃ id b, l = .retABA id b} ∪ {l | ∃ id, l = .fail id}
+
+/-- **Transition System 1 is input-enabled.** A call is taken by `SpecStep.callSet` at an empty
+entry and by `SpecStep.callLoop` at a filled one. -/
+theorem spec_inputEnabled (P : Parameters) :
+    (spec P).InputEnabled (specInputOutputLabels P).inputLabels := by
+  rintro s _ ⟨id, b, rfl⟩
+  cases h : s.input id with
+  | none => exact ⟨_, SpecStep.callSet s id b h⟩
+  | some b' => exact ⟨_, SpecStep.callLoop s id b (by simp [h])⟩
 
 end ABA
 end PLTS

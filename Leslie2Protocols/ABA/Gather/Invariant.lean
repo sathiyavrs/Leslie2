@@ -200,7 +200,11 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
         exact absurd h0 (by simp)
       · rw [InstanceState.setProcessVariables_processVariables_ne _ _ _ hkid]
         exact h0
-  | callLoop id x =>
+  | callLoop id x hin =>
+    rw [PMF.mem_support_pure_iff] at hs'
+    subst hs'
+    exact hInv
+  | announceCore C h =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     exact hInv
@@ -245,7 +249,7 @@ theorem Conformance.step {s : StateOverBroadcastSpecification P.n X} {l : Label 
         exact hin
       · rw [Function.update_of_ne hkj] at hy
         exact hInv.inputBroadcastCall_backed k hk y hy
-  | inputBroadcastCallSpecificationLoop j x hin =>
+  | inputBroadcastCallLoop j x hin =>
     rw [PMF.mem_support_pure_iff] at hs'
     subst hs'
     exact hInv

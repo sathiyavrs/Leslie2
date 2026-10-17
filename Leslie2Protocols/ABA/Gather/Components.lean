@@ -29,23 +29,23 @@ is the programs beside the network.
 
 ## The alphabets
 
-The specification's `call id x` carries two transitions, the call and the input-enabledness loop.
-The composition splits them across two labels, as the reliable-broadcast composition does one level
-down (`ABA/ReliableBroadcast/Bracha/Components.lean`). A gather program's variables and the
-broadcast instance
-are different components, so a single label carrying both transitions would also carry the mixed
-pairs. The loop therefore has a label of its own, `LoopLabel.callLoop id x`. The interface alphabet
-is `InstanceLabel n X = Label n X ⊕ LoopLabel n X`.
+The interface alphabet is the specification's `Label n X`. The specification's `call id x` carries
+two transitions, the call and the input-enabledness loop, and the gather program of `id` carries
+the same two: `ProgramStep.call` records the payload at a program holding no input, and
+`ProgramStep.callLoop` writes nothing at a program holding one. Every other program and the gather
+network take `call id x` on a Dirac self-loop, so the call posts no message.
 
-The instance-internal alphabet is `GatherLabel n X = InstanceLabel n X ⊕ GatherEvent n X`. Its
-four events are the gather multicast and delivery, and the call and the return of an input
-instance. They are hidden before anything outside sees the instance, and `gatherEvents` collects
-the labels hidden there.
+The instance-internal alphabet is `GatherLabel n X = Label n X ⊕ GatherEvent n X`. Its four events
+are the gather multicast and delivery, and the call and the return of an input instance. They are
+hidden before anything outside sees the instance, and `gatherEvents` collects the labels hidden
+there.
 
-An input instance has its own interface alphabet and joins the composition along the pullback
-`inputBroadcastLabelMap k`, which names the instance broadcasting `k`'s input. A label carrying
-another instance's index has no image, and that instance is unchanged. Corruption and the silent
-label have an image at every instance, so `fail` is a broadcast across the whole composition.
+An input instance is over the BRB specification's alphabet `BRB.Label n X` and joins the
+composition along the pullback `inputBroadcastLabelMap k`, which names the instance broadcasting
+`k`'s input. A label carrying another instance's index has no image, and that instance is
+unchanged. Corruption and the silent label have an image at every instance, so `fail` is a
+broadcast across the whole composition. A process's `inputBroadcastCall` asks only that its
+variables hold the payload, so a repeated call reaches the instance's own loop on its call label.
 
 ## What the input instances returned
 
@@ -58,9 +58,11 @@ instance `k` returned here. The four transitions that read what has been returne
 ## The core
 
 The core is a function of the gather network state alone (`coreOf_networkState_only`), so the
-gather network holds it. `coreOfNetwork` computes it from the network state,
-`coreOf_eq_coreOfNetwork` identifies the two systems, and the network's `ret` transition writes the
-core and carries it on the label.
+gather network holds it, in the field `core` that no program reads (D29). `coreOfNetwork` computes
+it from the network state, and `coreOf_eq_coreOfNetwork` identifies the two systems. The network's
+`ret` transition writes the core at the instance's first return, whichever process returns, and
+the return label carries the returned map alone. `announceCore` announces the written core on
+`core C`, as a Dirac self-loop that may repeat; every program takes the announcement on `coreIdle`.
 
 ## Model and deviations
 
@@ -78,18 +80,7 @@ namespace Gather
 
 variable {X : Type}
 
-/-! ### The interface alphabet and the instance-internal alphabet -/
-
-/-- The interface label of the call loop. The specification's `call id x`
-carries the call and the input-enabledness loop; the composition takes the loop
-on a label of its own. -/
-inductive LoopLabel (n : ℕ) (X : Type) : Type
-  /-- The input-enabledness loop of `call id x`. -/
-  | callLoop (id : Fin n) (x : X)
-
-/-- The instance's interface alphabet: the specification's alphabet with the
-call loop beside it. -/
-abbrev InstanceLabel (n : ℕ) (X : Type) : Type := Label n X ⊕ LoopLabel n X
+/-! ### The instance-internal alphabet -/
 
 /-- The instance's own events: the gather multicast and delivery, and the call and the return of
 an input instance. -/
@@ -105,16 +96,16 @@ inductive GatherEvent (n : ℕ) (X : Type) : Type
   /-- The instance broadcasting `k`'s input returns `v` to `j`. -/
   | inputBroadcastRet (k j : Fin n) (v : X)
 
-/-- The instance-internal alphabet: the interface alphabet plus the four
-events. Its silent label is `Sum.inl (Sum.inl tau)`, so every `Sum.inr` label is
+/-- The instance-internal alphabet: the specification's alphabet plus the four
+events. Its silent label is `Sum.inl tau`, so every `Sum.inr` label is
 observable and hence hideable. -/
-abbrev GatherLabel (n : ℕ) (X : Type) : Type := InstanceLabel n X ⊕ GatherEvent n X
+abbrev GatherLabel (n : ℕ) (X : Type) : Type := Label n X ⊕ GatherEvent n X
 
 /-- The event labels, hidden by the instance. -/
 def gatherEvents (n : ℕ) (X : Type) : Set (GatherLabel n X) := {l | ∃ e : GatherEvent n X,
   l = Sum.inr e}
 
-@[simp] theorem inl_notMem_gatherEvents {n : ℕ} {X : Type} (l : InstanceLabel n X) :
+@[simp] theorem inl_notMem_gatherEvents {n : ℕ} {X : Type} (l : Label n X) :
     Sum.inl l ∉ gatherEvents n X := by
   simp [gatherEvents]
 
@@ -122,14 +113,7 @@ def gatherEvents (n : ℕ) (X : Type) : Set (GatherLabel n X) := {l | ∃ e : Ga
     Sum.inr e ∈ gatherEvents n X := ⟨e, rfl⟩
 
 @[simp] theorem gatherLabel_tau (n : ℕ) (X : Type) :
-    (Silent.τ : GatherLabel n X) = Sum.inl (Sum.inl Label.tau) := rfl
-
-@[simp] theorem instanceLabel_tau (n : ℕ) (X : Type) :
-    (Silent.τ : InstanceLabel n X) = Sum.inl Label.tau := rfl
-
-/-- The silent label of a broadcast instance's interface alphabet. -/
-@[simp] theorem broadcastInstanceLabel_tau (n : ℕ) (M : Type) :
-    (Silent.τ : BRB.InstanceLabel n M) = Sum.inl BRB.Label.tau := rfl
+    (Silent.τ : GatherLabel n X) = Sum.inl Label.tau := rfl
 
 /-! ### The variables -/
 
@@ -193,8 +177,8 @@ set beside the instance's core. -/
 structure NetworkState (n : ℕ) (X : Type) : Type where
   /-- The gather network state. -/
   network : ABA.NetworkState n (Message n X)
-  /-- The instance's core, written at the first return and carried on every
-  return label. -/
+  /-- The instance's core, written at the instance's first return and announced on
+  `core C`. -/
   core : Option (AcceptedPairs n X)
 
 /-- The initial gather network state: nothing multicast, nobody corrupted, the
@@ -217,33 +201,30 @@ theorem coreOf_eq_coreOfNetwork {X : Type} (P : Parameters)
 
 /-! ### The pullback
 
-An input instance has its own interface alphabet `BRB.InstanceLabel`. It joins
-the composition along a pullback that names it: a label carrying another
-instance's index has no image and leaves that instance idle. -/
+An input instance is over the BRB specification's alphabet `BRB.Label`. It joins the composition
+along a pullback that names it: a label carrying another instance's index has no image and leaves
+that instance idle. -/
 
 /-- The pullback along which the instance broadcasting `k`'s input is read. The gather's own
-`call` and its call loop have no image here: the call of the instance is the event
-`inputBroadcastCall`. -/
+`call` has no image here: the call of the instance is the event `inputBroadcastCall`. -/
 def inputBroadcastLabelMap (n : ℕ) (X : Type) (k : Fin n) : GatherLabel n X → Option
-  (BRB.InstanceLabel n X)
-  | Sum.inl (Sum.inl .tau) => some (Sum.inl .tau)
-  | Sum.inl (Sum.inl (.fail id)) => some (Sum.inl (.fail id))
-  | Sum.inr (.inputBroadcastCall j x) => if k = j then some (Sum.inl (.call x)) else none
-  | Sum.inr (.inputBroadcastRet k' j v) => if k = k' then some (Sum.inl (.ret j v)) else none
+  (BRB.Label n X)
+  | Sum.inl .tau => some .tau
+  | Sum.inl (.fail id) => some (.fail id)
+  | Sum.inr (.inputBroadcastCall j x) => if k = j then some (.call x) else none
+  | Sum.inr (.inputBroadcastRet k' j v) => if k = k' then some (.ret j v) else none
   | _ => none
 
 @[simp] theorem inputBroadcastLabelMap_tau (n : ℕ) (X : Type) (k : Fin n) :
-    inputBroadcastLabelMap n X k (Silent.τ : GatherLabel n X) = some (Silent.τ : BRB.InstanceLabel n
-      X) := rfl
+    inputBroadcastLabelMap n X k (Silent.τ : GatherLabel n X) = some (Silent.τ : BRB.Label n X) :=
+  rfl
 
 /-- Only the silent label of the composition reaches the silent label of an
 input instance. -/
 theorem inputBroadcastLabelMap_eq_tau {n : ℕ} {X : Type} {k : Fin n} {l : GatherLabel n X}
-    (h : inputBroadcastLabelMap n X k l = some (Silent.τ : BRB.InstanceLabel n X)) : l = Silent.τ :=
-      by
-  rcases l with (l | e) | e
+    (h : inputBroadcastLabelMap n X k l = some (Silent.τ : BRB.Label n X)) : l = Silent.τ := by
+  rcases l with l | e
   · cases l <;> simp_all [inputBroadcastLabelMap]
-  · cases e; simp_all [inputBroadcastLabelMap]
   · cases e <;> simp_all [inputBroadcastLabelMap]
 
 section Transitions
@@ -262,19 +243,17 @@ Dirac. -/
 inductive ProgramStep (P : Parameters) (j : Fin P.n) :
     LocalState P.n (ProcessVariables P.n X) (Message P.n X) → GatherLabel P.n X →
       PMF (LocalState P.n (ProcessVariables P.n X) (Message P.n X)) → Prop
-  /-- The call arrives: record the payload. -/
+  /-- The call arrives at a program holding no input: record the payload. -/
   | call (p) (x : X) (h : p.processVariables.input = none) :
-      ProgramStep P j p (Sum.inl (Sum.inl (.call j x)))
+      ProgramStep P j p (Sum.inl (.call j x))
         (PMF.pure (p.setProcessVariables { p.processVariables with input := some x }))
+  /-- The input-enabledness loop of the call, at a program holding an input: the variables do not
+  move. -/
+  | callLoop (p) (x : X) (hin : p.processVariables.input ≠ none) :
+      ProgramStep P j p (Sum.inl (.call j x)) (PMF.pure p)
   /-- A call at another process is not `j`'s business. -/
   | callIdle (p) (i : Fin P.n) (x : X) (hi : i ≠ j) :
-      ProgramStep P j p (Sum.inl (Sum.inl (.call i x))) (PMF.pure p)
-  /-- The call loop: the variables do not move. -/
-  | callLoop (p) (x : X) :
-      ProgramStep P j p (Sum.inl (Sum.inr (.callLoop j x))) (PMF.pure p)
-  /-- A call loop at another process is not `j`'s business. -/
-  | callLoopIdle (p) (i : Fin P.n) (x : X) (hi : i ≠ j) :
-      ProgramStep P j p (Sum.inl (Sum.inr (.callLoop i x))) (PMF.pure p)
+      ProgramStep P j p (Sum.inl (.call i x)) (PMF.pure p)
   /-- `ECHO`: `j` is called (D8) and its accepted pairs number at least `n − f`, the
   source blueprint's `|AP| ≥ n − f`. The payload is those pairs, `T_i ← AP_i` of
   AFW25's Algorithm 5, line 9. -/
@@ -326,8 +305,8 @@ inductive ProgramStep (P : Parameters) (j : Fin P.n) :
   | inputBroadcastRetIdle (p) (k i : Fin P.n) (v : X) (hi : i ≠ j) :
       ProgramStep P j p (Sum.inr (.inputBroadcastRet k i v)) (PMF.pure p)
   /-- `j` calls the instance broadcasting its input: the payload is the one its own variables
-  hold, and they do not move. The instance's own guard decides whether the call lands.
-  AFW25's Algorithm 5, line 6. -/
+  hold, and they do not move. The instance takes it on its own two transitions of the call, the
+  call and the input-enabledness loop. AFW25's Algorithm 5, line 6. -/
   | inputBroadcastCall (p) (x : X) (hin : p.processVariables.input = some x) :
       ProgramStep P j p (Sum.inr (.inputBroadcastCall j x)) (PMF.pure p)
   /-- Another process's input-broadcast call is not `j`'s business. -/
@@ -335,41 +314,40 @@ inductive ProgramStep (P : Parameters) (j : Fin P.n) :
       ProgramStep P j p (Sum.inr (.inputBroadcastCall i x)) (PMF.pure p)
   /-- Return: `j` is called (D8), the output's entries are held here, `n − f` senders'
   `BIND` payloads delivered here are sub-maps of it, and `j` has multicast its own `BIND`. The
-  `BIND` multicast of AFW25's Algorithm 5, line 17, precedes the wait of line 18. The
-  core on the label is the network's. -/
-  | ret (p) (g : Fin P.n → Option X) (C : AcceptedPairs P.n X) (hin : p.processVariables.input ≠
-      none)
+  `BIND` multicast of AFW25's Algorithm 5, line 17, precedes the wait of line 18. -/
+  | ret (p) (g : Fin P.n → Option X) (hin : p.processVariables.input ≠ none)
       (hbind : p.processVariables.sentBind ≠ none)
       (hsub : ∀ k x, g k = some x → holdsInputBroadcastReturn p.processVariables k x)
       (hQ : ∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
         ∀ q ∈ Q, ∃ U, Message.bind U ∈ p.received q ∧ AcceptedPairs.subMap U g)
       (hr : p.processVariables.returned = false) :
-      ProgramStep P j p (Sum.inl (Sum.inl (.ret j g C)))
+      ProgramStep P j p (Sum.inl (.ret j g))
         (PMF.pure (p.setProcessVariables { p.processVariables with returned := true }))
   /-- A return at another process is not `j`'s business. -/
-  | retIdle (p) (i : Fin P.n) (g : Fin P.n → Option X) (C : AcceptedPairs P.n X) (hi : i ≠ j) :
-      ProgramStep P j p (Sum.inl (Sum.inl (.ret i g C))) (PMF.pure p)
+  | retIdle (p) (i : Fin P.n) (g : Fin P.n → Option X) (hi : i ≠ j) :
+      ProgramStep P j p (Sum.inl (.ret i g)) (PMF.pure p)
+  /-- The announcement of the instance's core is not `j`'s business. -/
+  | coreIdle (p) (C : AcceptedPairs P.n X) :
+      ProgramStep P j p (Sum.inl (.core C)) (PMF.pure p)
   /-- Corruption is the network's own write, and the programs' variables are
   corruption-blind (D1). -/
   | failIdle (p) (i : Fin P.n) :
-      ProgramStep P j p (Sum.inl (Sum.inl (.fail i))) (PMF.pure p)
+      ProgramStep P j p (Sum.inl (.fail i)) (PMF.pure p)
 
 /-! ### The gather network
 
 The one state of the gather that holds what no program may see: the
 per-sender sent sets, the corrupted set and the instance's core. It participates
 in every gather multicast and delivery, it is where a corrupted sender's
-injections enter (D5), and it writes the core at the first return. -/
+injections enter (D5), it writes the core at the instance's first return, and it
+announces the core from then on (D29). -/
 
 /-- The step relation of the gather network. All transitions are Dirac. -/
 inductive NetworkStep (P : Parameters) :
     NetworkState P.n X → GatherLabel P.n X → PMF (NetworkState P.n X) → Prop
   /-- A call sends nothing. -/
   | call (w) (id : Fin P.n) (x : X) :
-      NetworkStep P w (Sum.inl (Sum.inl (.call id x))) (PMF.pure w)
-  /-- A call loop sends nothing. -/
-  | callLoop (w) (id : Fin P.n) (x : X) :
-      NetworkStep P w (Sum.inl (Sum.inr (.callLoop id x))) (PMF.pure w)
+      NetworkStep P w (Sum.inl (.call id x)) (PMF.pure w)
   /-- The network's half of a multicast: record the message under its sender. -/
   | send (w) (j : Fin P.n) (m : Message P.n X) :
       NetworkStep P w (Sum.inr (.send j m)) (PMF.pure
@@ -381,7 +359,7 @@ inductive NetworkStep (P : Parameters) :
   /-- Byzantine injection: a corrupted sender multicasts anything, at any time
   (D5). -/
   | byzantine (w) (j : Fin P.n) (m : Message P.n X) (h : j ∈ w.network.F) :
-      NetworkStep P w (Sum.inl (Sum.inl .tau)) (PMF.pure { w with
+      NetworkStep P w (Sum.inl .tau) (PMF.pure { w with
         network :=
           w.network.recordSent j m })
   /-- An input instance's return sends nothing. -/
@@ -390,14 +368,18 @@ inductive NetworkStep (P : Parameters) :
   /-- An input-broadcast call sends nothing. -/
   | inputBroadcastCallIdle (w) (j : Fin P.n) (x : X) :
       NetworkStep P w (Sum.inr (.inputBroadcastCall j x)) (PMF.pure w)
-  /-- Return: the label carries the core, which this transition writes if it is
-  unwritten. -/
+  /-- Return: the network writes the core `coreOfNetwork P w.network` at the instance's first
+  return, and a written core stands. The label carries the returned map alone. -/
   | ret (w) (id : Fin P.n) (g : Fin P.n → Option X) :
-      NetworkStep P w (Sum.inl (Sum.inl (.ret id g (w.core.getD (coreOfNetwork P w.network)))))
+      NetworkStep P w (Sum.inl (.ret id g))
         (PMF.pure { w with core := some (w.core.getD (coreOfNetwork P w.network)) })
+  /-- The core `C` is announced: a Dirac self-loop at every state whose core is `C`, which may
+  repeat (D29). -/
+  | announceCore (w) (C : AcceptedPairs P.n X) (h : w.core = some C) :
+      NetworkStep P w (Sum.inl (.core C)) (PMF.pure w)
   /-- Corruption (deviation D1). -/
   | fail (w) (i : Fin P.n) :
-      NetworkStep P w (Sum.inl (Sum.inl (.fail i))) (PMF.pure { w with
+      NetworkStep P w (Sum.inl (.fail i)) (PMF.pure { w with
         network :=
           w.network.corrupt P i })
 

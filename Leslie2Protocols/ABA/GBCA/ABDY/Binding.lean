@@ -15,8 +15,10 @@ The round-`r` composition of `GBCA/ABDY/Composition.lean` reaches
 alphabet, through `GBCA.ByABDY.refinesSpecification`. `composition_specificationTraces`
 (`GBCA/ABDY/RefinesSpecification.lean`) is the trace-distribution inclusion of that refinement.
 
-Binding is a property of the labels (`GBCA.BindingTraceExtended`), so the inclusion carries it from
-`GBCA.specificationOverRoundAlphabet_binding`: `composition_binding` is binding of the round.
+Binding is a property of the labels: `GBCA.BindingTraceExtended` reads the three conjuncts of
+`GBCA.BindingTrace` on the round's returns `retG r` and announcements `boundG r` over the round's
+alphabet (D29). The inclusion carries it from `GBCA.specificationOverRoundAlphabet_binding`:
+`composition_binding` is binding of the round.
 -/
 
 open Stream'
@@ -30,10 +32,10 @@ open Implementation Composition
 /-! ### Binding of the round -/
 
 /-- **Binding of the round's composition, on a trace.** Every positive-probability trace of the
-round-`r` composition is bound to one bit: all its round-`r` returns announce that bit, and every
-one of them that returns a value returns that bit. Binding is a property of the labels
-(`GBCA.BindingTraceExtended`), so `composition_specificationTraces` carries it from
-`GBCA.specificationOverRoundAlphabet_binding`. -/
+round-`r` composition is bound to one bit: its round-`r` announcements name one bit, every
+round-`r` return of a value returns the announced bit, and two round-`r` returns of values return
+the same bit. Binding is a property of the labels (`GBCA.BindingTraceExtended`), so
+`composition_specificationTraces` carries it from `GBCA.specificationOverRoundAlphabet_binding`. -/
 theorem composition_binding (P : Parameters) (r : ℕ) :
     ∀ D ∈ achievableTraceDists (composition P r), ∀ t, D t ≠ 0 →
       GBCA.BindingTraceExtended P r t :=

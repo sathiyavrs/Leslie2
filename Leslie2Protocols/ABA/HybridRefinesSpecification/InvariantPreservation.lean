@@ -26,8 +26,8 @@ Stages A and B of the proof that `hybridSpecificationStateRelation` is a simulat
 `HybridRefinesSpecification/Relation.lean`. `InvariantPreservation/StepCases.lean` holds Stage
 A, the step cases of `hybrid`, and `InvariantPreservation/SpecificationStateCorruption.lean`
 the readings of corruption at a specification state that the `fail` transition consumes. Stage B,
-the preservation of `Invariant`, is one file per label class, each carrying all forty invariant
-fields across the transitions of its class. The file
+the preservation of `Invariant`, is one file per label class, each carrying all forty-one
+invariant fields across the transitions of its class. The file
 `HybridRefinesSpecification/AbstractStatePreservation.lean` assembles the two stages into
 `Invariant.step`, beside the `AbstractState` stutter lemmas it is stated with.
 -/

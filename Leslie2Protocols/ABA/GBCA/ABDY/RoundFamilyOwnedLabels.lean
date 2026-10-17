@@ -34,19 +34,12 @@ variable {n : ℕ} {M : Type}
 
 @[simp] theorem roundOwnsLabel_callG (r : ℕ) (id : Fin n) (b : Bool) :
     GBCA.ByABDY.roundOwnsLabel (Sum.inl (Label.callG r id b) : ExtendedLabel n M) = some r := rfl
-@[simp] theorem roundOwnsLabel_retG (r : ℕ) (id : Fin n) (out : GBCAOutput) (bnd : Bool) :
-    GBCA.ByABDY.roundOwnsLabel (Sum.inl (Label.retG r id out bnd) : ExtendedLabel n M)
-      = some r := rfl
-@[simp] theorem roundOwnsLabel_gbcaCallLoop (r : ℕ) (id : Fin n) (b : Bool) :
-    GBCA.ByABDY.roundOwnsLabel (Sum.inr (.gbcaCallLoop r id b) : ExtendedLabel n M) = some r := rfl
+@[simp] theorem roundOwnsLabel_retG (r : ℕ) (id : Fin n) (out : GBCAOutput) :
+    GBCA.ByABDY.roundOwnsLabel (Sum.inl (Label.retG r id out) : ExtendedLabel n M) = some r := rfl
+@[simp] theorem roundOwnsLabel_boundG (r : ℕ) (b : Bool) :
+    GBCA.ByABDY.roundOwnsLabel (Sum.inl (Label.boundG r b) : ExtendedLabel n M) = some r := rfl
 @[simp] theorem roundOwnsLabel_byzantineCallG (r : ℕ) (k : Fin n) (b : Bool) :
     GBCA.ByABDY.roundOwnsLabel (Sum.inr (.byzantineCallG r k b) : ExtendedLabel n M) = some r := rfl
-@[simp] theorem roundOwnsLabel_byzantineCallGLoop (r : ℕ) (k : Fin n) (b : Bool) :
-    GBCA.ByABDY.roundOwnsLabel (Sum.inr (.byzantineCallGLoop r k b) : ExtendedLabel n M) = some r :=
-      rfl
-@[simp] theorem roundOwnsLabel_byzantineRetG (r : ℕ) (k : Fin n) (out : GBCAOutput) (bnd : Bool) :
-    GBCA.ByABDY.roundOwnsLabel (Sum.inr (.byzantineRetG r k out bnd) : ExtendedLabel n M)
-      = some r := rfl
 
 @[simp] theorem roundOwnsLabel_tau : GBCA.ByABDY.roundOwnsLabel (Sum.inl Label.tau : ExtendedLabel
   n M) = none := rfl
@@ -72,8 +65,6 @@ variable {n : ℕ} {M : Type}
     GBCA.ByABDY.roundOwnsLabel (Sum.inr (.decidedSend j b) : ExtendedLabel n M) = none := rfl
 @[simp] theorem roundOwnsLabel_byzantineCallW (r : ℕ) (k : Fin n) :
     GBCA.ByABDY.roundOwnsLabel (Sum.inr (.byzantineCallW r k) : ExtendedLabel n M) = none := rfl
-@[simp] theorem roundOwnsLabel_byzantineRetW (r : ℕ) (k : Fin n) (b : Bool) :
-    GBCA.ByABDY.roundOwnsLabel (Sum.inr (.byzantineRetW r k b) : ExtendedLabel n M) = none := rfl
 
 @[simp] theorem isFailLabel_fail (k : Fin n) :
     GBCA.ByABDY.isFailLabel (Sum.inl (Label.fail k) : ExtendedLabel n M) := trivial

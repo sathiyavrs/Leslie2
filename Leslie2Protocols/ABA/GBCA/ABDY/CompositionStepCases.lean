@@ -51,12 +51,16 @@ section ProgramStepCases
 variable {P : Parameters} {r : ℕ} {j : Fin P.n} {p : GBCA.ByABDY.RoundVariables P.n}
   {ν : PMF (GBCA.ByABDY.RoundVariables P.n)}
 
+/-- The process's own call: the variables record the input where they hold none, and do not
+move where they hold one. -/
 theorem gbcaProgramStep_callG_own {b : Bool}
     (h : GBCAProgramStep P r j p (Sum.inl (Sum.inl (.callG r j b))) ν) :
-    p.processVariables.input = none ∧
-      ν = PMF.pure (p.setProcessVariables { p.processVariables with input := some b }) := by
+    (p.processVariables.input = none ∧
+      ν = PMF.pure (p.setProcessVariables { p.processVariables with input := some b })) ∨
+    (p.processVariables.input ≠ none ∧ ν = PMF.pure p) := by
   cases h
-  case call => exact ⟨by assumption, rfl⟩
+  case call => exact Or.inl ⟨by assumption, rfl⟩
+  case callLoop => exact Or.inr ⟨by assumption, rfl⟩
   case callIdle => exact absurd rfl ‹_ ≠ j›
 
 theorem gbcaProgramStep_callG_notOwn {id : Fin P.n} {b : Bool} (hid : id ≠ j)
@@ -64,16 +68,11 @@ theorem gbcaProgramStep_callG_notOwn {id : Fin P.n} {b : Bool} (hid : id ≠ j)
     ν = PMF.pure p := by
   cases h
   case call => exact absurd rfl hid
+  case callLoop => exact absurd rfl hid
   case callIdle => rfl
 
-theorem gbcaProgramStep_gbcaCallLoop {id : Fin P.n} {b : Bool}
-    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inr (.gbcaCallLoop r id b))) ν) :
-    ν = PMF.pure p := by
-  cases h
-  case callLoop => rfl
-
-theorem gbcaProgramStep_retGGrade2_own {v bnd : Bool}
-    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r j (.grade2 v) bnd))) ν) :
+theorem gbcaProgramStep_retGGrade2_own {v : Bool}
+    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r j (.grade2 v)))) ν) :
     p.processVariables.input ≠ none ∧ p.processVariables.sentEcho5 ≠ none ∧
       P.n - P.f ≤ p.receivedCount (.echo5 (some v)) ∧ p.processVariables.returned = false ∧
       ν = PMF.pure (p.setProcessVariables { p.processVariables with returned := true }) := by
@@ -82,8 +81,8 @@ theorem gbcaProgramStep_retGGrade2_own {v bnd : Bool}
     exact ⟨by assumption, by assumption, by assumption, by assumption, rfl⟩
   case retIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem gbcaProgramStep_retGGrade1_own {v bnd : Bool}
-    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r j (.grade1 v) bnd))) ν) :
+theorem gbcaProgramStep_retGGrade1_own {v : Bool}
+    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r j (.grade1 v)))) ν) :
     p.processVariables.input ≠ none ∧ p.processVariables.sentEcho5 ≠ none ∧
       (∀ v, p.receivedCount (.echo5 (some v)) < P.n - P.f) ∧
       P.n - P.f ≤ p.echo5Count ∧ (∃ k, GBCA.ByABDY.Message.echo5 (some v) ∈ p.received k) ∧
@@ -96,8 +95,8 @@ theorem gbcaProgramStep_retGGrade1_own {v bnd : Bool}
       by assumption, by assumption, by assumption, by assumption, rfl⟩
   case retIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem gbcaProgramStep_retGGrade0_own {bnd : Bool}
-    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r j .grade0 bnd))) ν) :
+theorem gbcaProgramStep_retGGrade0_own
+    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r j .grade0))) ν) :
     p.processVariables.input ≠ none ∧ p.processVariables.sentEcho5 ≠ none ∧
       (∀ v, p.receivedCount (.echo5 (some v)) < P.n - P.f) ∧
       (∀ v, (∃ k, GBCA.ByABDY.Message.echo5 (some v) ∈ p.received k) →
@@ -111,19 +110,30 @@ theorem gbcaProgramStep_retGGrade0_own {bnd : Bool}
       by assumption, by assumption, by assumption, rfl⟩
   case retIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem gbcaProgramStep_retG_notOwn {id : Fin P.n} {out : GBCAOutput} {bnd : Bool} (hid : id ≠ j)
-    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r id out bnd))) ν) :
+theorem gbcaProgramStep_retG_notOwn {id : Fin P.n} {out : GBCAOutput} (hid : id ≠ j)
+    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inl (.retG r id out))) ν) :
     ν = PMF.pure p := by
   cases h
   case retIdle => rfl
   all_goals exact absurd rfl hid
 
+/-- Every program idles on the announcement of the round's bound bit. -/
+theorem gbcaProgramStep_boundG {b : Bool}
+    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inl (.boundG r b))) ν) :
+    ν = PMF.pure p := by
+  cases h
+  case boundGIdle => rfl
+
+/-- A corrupted process's call at the program it names: the variables record the bit where they
+hold no input, and do not move where they hold one. -/
 theorem gbcaProgramStep_byzantineCallG_own {b : Bool}
     (h : GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineCallG r j b))) ν) :
-    p.processVariables.input = none ∧
-      ν = PMF.pure (p.setProcessVariables { p.processVariables with input := some b }) := by
+    (p.processVariables.input = none ∧
+      ν = PMF.pure (p.setProcessVariables { p.processVariables with input := some b })) ∨
+    (p.processVariables.input ≠ none ∧ ν = PMF.pure p) := by
   cases h
-  case byzantineCall => exact ⟨by assumption, rfl⟩
+  case byzantineCall => exact Or.inl ⟨by assumption, rfl⟩
+  case byzantineCallLoop => exact Or.inr ⟨by assumption, rfl⟩
   case byzantineCallIdle => exact absurd rfl ‹_ ≠ j›
 
 theorem gbcaProgramStep_byzantineCallG_notOwn {k : Fin P.n} {b : Bool} (hk : k ≠ j)
@@ -131,59 +141,8 @@ theorem gbcaProgramStep_byzantineCallG_notOwn {k : Fin P.n} {b : Bool} (hk : k �
     ν = PMF.pure p := by
   cases h
   case byzantineCall => exact absurd rfl hk
+  case byzantineCallLoop => exact absurd rfl hk
   case byzantineCallIdle => rfl
-
-theorem gbcaProgramStep_byzantineCallGLoop {k : Fin P.n} {b : Bool}
-    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineCallGLoop r k b))) ν) :
-    ν = PMF.pure p := by
-  cases h
-  case byzantineCallLoop => rfl
-
-theorem gbcaProgramStep_byzantineRetGGrade2_own {v bnd : Bool}
-    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r j (.grade2 v) bnd))) ν) :
-    p.processVariables.input ≠ none ∧ p.processVariables.sentEcho5 ≠ none ∧
-      P.n - P.f ≤ p.receivedCount (.echo5 (some v)) ∧ p.processVariables.returned = false ∧
-      ν = PMF.pure (p.setProcessVariables { p.processVariables with returned := true }) := by
-  cases h
-  case byzantineRetGrade2 =>
-    exact ⟨by assumption, by assumption, by assumption, by assumption, rfl⟩
-  case byzantineRetIdle => exact absurd rfl ‹_ ≠ j›
-
-theorem gbcaProgramStep_byzantineRetGGrade1_own {v bnd : Bool}
-    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r j (.grade1 v) bnd))) ν) :
-    p.processVariables.input ≠ none ∧ p.processVariables.sentEcho5 ≠ none ∧
-      (∀ v, p.receivedCount (.echo5 (some v)) < P.n - P.f) ∧
-      P.n - P.f ≤ p.echo5Count ∧ (∃ k, GBCA.ByABDY.Message.echo5 (some v) ∈ p.received k) ∧
-      P.f + 1 ≤ p.receivedCount (.bind (some v)) ∧ p.bothValid P ∧
-      p.processVariables.returned = false ∧
-      ν = PMF.pure (p.setProcessVariables { p.processVariables with returned := true }) := by
-  cases h
-  case byzantineRetGrade1 =>
-    exact ⟨by assumption, by assumption, by assumption, by assumption,
-      by assumption, by assumption, by assumption, by assumption, rfl⟩
-  case byzantineRetIdle => exact absurd rfl ‹_ ≠ j›
-
-theorem gbcaProgramStep_byzantineRetGGrade0_own {bnd : Bool}
-    (h : GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r j .grade0 bnd))) ν) :
-    p.processVariables.input ≠ none ∧ p.processVariables.sentEcho5 ≠ none ∧
-      (∀ v, p.receivedCount (.echo5 (some v)) < P.n - P.f) ∧
-      (∀ v, (∃ k, GBCA.ByABDY.Message.echo5 (some v) ∈ p.received k) →
-        p.receivedCount (.bind (some v)) < P.f + 1) ∧
-      P.n - P.f ≤ p.receivedCount (.echo5 none) ∧ p.bothValid P ∧
-      p.processVariables.returned = false ∧
-      ν = PMF.pure (p.setProcessVariables { p.processVariables with returned := true }) := by
-  cases h
-  case byzantineRetGrade0 =>
-    exact ⟨by assumption, by assumption, by assumption, by assumption,
-      by assumption, by assumption, by assumption, rfl⟩
-  case byzantineRetIdle => exact absurd rfl ‹_ ≠ j›
-
-theorem gbcaProgramStep_byzantineRetG_notOwn {k : Fin P.n} {out : GBCAOutput} {bnd : Bool}
-    (hk : k ≠ j) (h : GBCAProgramStep P r j p (Sum.inl (Sum.inr (.byzantineRetG r k out bnd))) ν) :
-    ν = PMF.pure p := by
-  cases h
-  case byzantineRetIdle => rfl
-  all_goals exact absurd rfl hk
 
 /-- A send of `⟨INPUT, b⟩` by the program is the first multicast of its own input or the relay. -/
 theorem gbcaProgramStep_send_input_own {b : Bool}
@@ -446,34 +405,21 @@ theorem gbcaNetworkStep_callG_round {r' : ℕ} {id : Fin P.n} {b : Bool}
     r' = r ∧ μ = PMF.pure w := by
   cases h; exact ⟨rfl, rfl⟩
 
-theorem gbcaNetworkStep_retG_round {r' : ℕ} {id : Fin P.n} {out : GBCAOutput} {bnd : Bool}
-    (h : GBCANetworkStep P r w (Sum.inl (Sum.inl (.retG r' id out bnd))) μ) :
-    r' = r ∧ bnd = w.bound.getD (GBCA.ByABDY.boundOf w.sent w.F out) ∧
-      μ = PMF.pure (w.setBound bnd) := by
-  cases h with
-  | retGIdle _ _ _ hbnd => exact ⟨rfl, hbnd, rfl⟩
-
-theorem gbcaNetworkStep_gbcaCallLoop_round {r' : ℕ} {id : Fin P.n} {b : Bool}
-    (h : GBCANetworkStep P r w (Sum.inl (Sum.inr (.gbcaCallLoop r' id b))) μ) :
-    r' = r ∧ μ = PMF.pure w := by
+theorem gbcaNetworkStep_retG_round {r' : ℕ} {id : Fin P.n} {out : GBCAOutput}
+    (h : GBCANetworkStep P r w (Sum.inl (Sum.inl (.retG r' id out))) μ) :
+    r' = r ∧ μ = PMF.pure (w.setBound (w.bound.getD (GBCA.ByABDY.boundOf w.sent w.F out))) := by
   cases h; exact ⟨rfl, rfl⟩
+
+theorem gbcaNetworkStep_boundG_round {r' : ℕ} {b : Bool}
+    (h : GBCANetworkStep P r w (Sum.inl (Sum.inl (.boundG r' b))) μ) :
+    r' = r ∧ w.bound = some b ∧ μ = PMF.pure w := by
+  cases h with
+  | announceBound _ h => exact ⟨rfl, h, rfl⟩
 
 theorem gbcaNetworkStep_byzantineCallG_round {r' : ℕ} {k : Fin P.n} {b : Bool}
     (h : GBCANetworkStep P r w (Sum.inl (Sum.inr (.byzantineCallG r' k b))) μ) :
     r' = r ∧ μ = PMF.pure w := by
   cases h; exact ⟨rfl, rfl⟩
-
-theorem gbcaNetworkStep_byzantineCallGLoop_round {r' : ℕ} {k : Fin P.n} {b : Bool}
-    (h : GBCANetworkStep P r w (Sum.inl (Sum.inr (.byzantineCallGLoop r' k b))) μ) :
-    r' = r ∧ μ = PMF.pure w := by
-  cases h; exact ⟨rfl, rfl⟩
-
-theorem gbcaNetworkStep_byzantineRetG_round {r' : ℕ} {k : Fin P.n} {out : GBCAOutput} {bnd : Bool}
-    (h : GBCANetworkStep P r w (Sum.inl (Sum.inr (.byzantineRetG r' k out bnd))) μ) :
-    r' = r ∧ bnd = w.bound.getD (GBCA.ByABDY.boundOf w.sent w.F out) ∧
-      μ = PMF.pure (w.setBound bnd) := by
-  cases h with
-  | byzantineRetG _ _ _ hbnd => exact ⟨rfl, hbnd, rfl⟩
 
 /-! The labels the network does not offer at all: the ABA API, the coin ports,
 corruption, and the protocol network's own synchronisations. -/
@@ -510,9 +456,6 @@ theorem gbcaNetworkStep_decidedSend_noStep {j : Fin P.n} {b : Bool}
 
 theorem gbcaNetworkStep_byzantineCallW_noStep {r' : ℕ} {k : Fin P.n}
     (h : GBCANetworkStep P r w (Sum.inl (Sum.inr (.byzantineCallW r' k))) μ) : False := by cases h
-
-theorem gbcaNetworkStep_byzantineRetW_noStep {r' : ℕ} {k : Fin P.n} {b : Bool}
-    (h : GBCANetworkStep P r w (Sum.inl (Sum.inr (.byzantineRetW r' k b))) μ) : False := by cases h
 
 end RoundTaggedNetworkStepCases
 end GBCA.ByABDY

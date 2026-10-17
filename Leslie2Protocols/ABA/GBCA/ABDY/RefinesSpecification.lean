@@ -17,23 +17,27 @@ the round's interface (`GBCA.specificationOverRoundAlphabet`), along `specificat
 A transition of the composition is one transition of `Algorithm`
 (`GBCA.ByABDY.composition_projects`), that transition is matched by a weak run of the
 specification (`specificationRelation_transition`), and the run is lifted to the round's interface
-along a section of `specificationLabelMap`. A Byzantine call or return transition is matched at
-that lifting by the specification's own call or return (D11).
-`composition_specificationTraces` is the trace-distribution inclusion the simulation yields.
+along a section of `specificationLabelMap`. A corrupted process's call is matched at that lifting
+by the specification's own call (D11). `composition_specificationTraces` is the trace-distribution
+inclusion the simulation yields.
 
 Every return of the algorithm does the same decidable case split on the specification's `excluded`.
 Where the exclusion is missing, the return is matched by the two-step weak run of
 `GBCA/ABDY/SpecificationRelation.lean`, whose excluded bit comes from the return's own exclusion
 witness. Where the exclusion is on record, the return is matched by a single graded
-specification return. A `fail` is matched by the specification's corruption, and
-`specificationRelation_corrupt_F_eq` keeps the two `corrupt` functions equal on aligned
-corrupted sets.
+specification return. The network's announcement of the bound bit `b` is matched by the
+specification's announcement of `b`, whose guard `(!b) ∈ excluded` the relation supplies
+(`SpecificationRelation.excluded_of_bound`). A `fail` is matched by the specification's
+corruption, and `specificationRelation_corrupt_F_eq` keeps the two `corrupt` functions equal on
+aligned corrupted sets.
 
 `specificationCorruptionAct` is the broadcast corruption act the lifted specification carries at
-the extended alphabet. `specificationRelation_init` and `refinesSpecification_failAct` are the two
-premises `ForwardSimulation.family` (`Framework/FamilySimulation.lean`) asks of the round-indexed
-family: the relation holds at the initial states, and the broadcast corruption preserves it. The
-family lifting that consumes them is `ABA/ABDY/Substitution.lean`.
+the extended alphabet. `specificationRelation_init`, `refinesSpecification_failAct` and
+`refinesSpecification_untouchedFirstStep` are the premises `ForwardSimulation.family`
+(`Framework/FamilySimulation.lean`) asks of the round-indexed family: the relation holds at the
+initial states, the broadcast corruption preserves it, and at an untouched round a step on a label
+the round owns is matched by a specification transition on that label followed by a silent run.
+The family lifting that consumes them is `ABA/ABDY/Substitution.lean`.
 
 Binding is stated on the labels of a trace (`GBCA.BindingTraceExtended`), so the inclusion carries
 it; `ABA/GBCA/ABDY/Binding.lean` takes that step.
@@ -52,12 +56,47 @@ variable {P : Parameters}
 
 /-! ### The relation across one transition -/
 
+/-- **The relation across a call.** A call at a process holding no input records the input in the
+composition and in the specification alike, and every other field stands. -/
+theorem specificationRelation_call {r : ℕ} {q1 : RoundState P.n} {q2 : SpecState P.n}
+    (hRR : SpecificationRelation P q1 q2) {id : Fin P.n} {b : Bool}
+    (h : (q1.processVariables id).input = none) :
+    specificationRelation P r
+      (q1.setProcessVariables id { q1.processVariables id with input := some b })
+      { q2 with call := Function.update q2.call id (some b) } := by
+  refine ⟨hRR.invariant.step (Algorithm.call (r := r) q1 id b h) (PMF.mem_support_pure_iff _ _
+    |>.mpr rfl), ?_, ?_, hRR.F_eq, ?_, by simpa using hRR.grade2_witness,
+    by simpa using hRR.grade0_witness, hRR.bound_excluded⟩
+  · intro k
+    change Function.update q2.call id (some b) k = _
+    by_cases hk : k = id
+    · subst hk
+      rw [Function.update_self]
+      simp
+    · rw [Function.update_of_ne hk, RoundState.setProcessVariables_processVariables_ne _ _ _ hk]
+      exact hRR.call_eq k
+  · intro k
+    by_cases hk : k = id
+    · subst hk
+      simpa using hRR.ret_eq k
+    · rw [RoundState.setProcessVariables_processVariables_ne _ _ _ hk]
+      exact hRR.ret_eq k
+  · intro b' hb'
+    refine ExclusionWitness.mono (s := q1) (fun _ _ _ hm => by simpa using hm)
+      (fun k w hk => ?_) (Finset.Subset.refl _) (hRR.exclusion_witness b' hb')
+    by_cases hkj : k = id
+    · subst hkj
+      rw [RoundState.setProcessVariables_processVariables_self]
+      exact hk
+    · rw [RoundState.setProcessVariables_processVariables_ne _ _ _ hkj]
+      exact hk
+
 /-- **The relation across one transition**: every transition of `Algorithm` at a related
 pair is matched by a weak run of the graded agreement specification, ending at a related
 state. The internal transitions stutter, the multicast of the process's own `INPUT` among them;
-the call, the call loop and `fail` are matched by the
-specification's own transitions; a return is matched by a graded specification return, preceded by
-`bindUnset` where the bit that return needs excluded is not excluded yet. -/
+the call, the call loop, the announcement and `fail` are matched by the specification's own
+transitions; a return is matched by a graded specification return, preceded by `bindUnset` where
+the bit that return needs excluded is not excluded yet. -/
 theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundState P.n)
     (q2 : SpecState P.n) (hR : specificationRelation P r q1 q2) (l : Label P.n)
     (μ1 : PMF (RoundState P.n)) (hstep : Algorithm P r q1 l μ1)
@@ -71,40 +110,18 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundS
   | call id b h =>
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'
-    refine ⟨{ q2 with call := Function.update q2.call id (some b) },
-      Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
-        (Step.call q2 id b (by rw [hRR.call_eq]; exact h))⟩,
-      hI', ?_, ?_, hRR.F_eq, ?_,
-      by simpa using hRR.grade2_witness, by simpa using hRR.grade0_witness,
-      hRR.bound_excluded⟩
-    · intro k
-      change Function.update q2.call id (some b) k = _
-      by_cases hk : k = id
-      · subst hk
-        rw [Function.update_self]
-        simp
-      · rw [Function.update_of_ne hk, RoundState.setProcessVariables_processVariables_ne _ _ _ hk]
-        exact hRR.call_eq k
-    · intro k
-      by_cases hk : k = id
-      · subst hk
-        simpa using hRR.ret_eq k
-      · rw [RoundState.setProcessVariables_processVariables_ne _ _ _ hk]
-        exact hRR.ret_eq k
-    · intro b' hb'
-      refine ExclusionWitness.mono (s := q1) (fun _ _ _ hm => by simpa using hm)
-        (fun k w hk => ?_) (Finset.Subset.refl _) (hRR.exclusion_witness b' hb')
-      by_cases hkj : k = id
-      · subst hkj
-        rw [RoundState.setProcessVariables_processVariables_self]
-        exact hk
-      · rw [RoundState.setProcessVariables_processVariables_ne _ _ _ hkj]
-        exact hk
-  | callLoop id b =>
+    exact ⟨_, Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
+      (Step.call q2 id b (by rw [hRR.call_eq]; exact h))⟩, specificationRelation_call hRR h⟩
+  | callLoop id b _ =>
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'
     exact ⟨q2, Or.inr ⟨by simp,
       System.weakLStep_of_step (by simp) (Step.callLoop q2 id b)⟩, hRR⟩
+  | announceBound b hb =>
+    rw [PMF.mem_support_pure_iff] at hq1'
+    subst hq1'
+    exact ⟨q2, Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
+      (Step.announceBound q2 b (hRR.excluded_of_bound hb))⟩, hRR⟩
   | deliver i j m hsent =>
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'
@@ -319,17 +336,18 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundS
     exact ⟨q2, Or.inl ⟨rfl, System.weakLSilent_refl _ q2⟩,
       hI', hRR.call_eq, hRR.ret_eq, hRR.F_eq, hRR.exclusion_witness, hRR.grade2_witness,
       hRR.grade0_witness, hRR.bound_excluded⟩
-  | retGrade2 id v bnd _hin _hlv hcnt hr hbnd =>
+  | retGrade2 id v _hin _hlv hcnt hr =>
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'
+    generalize hβ : q1.bound.getD (boundOf q1.sent q1.F (.grade2 v)) = β at hI' ⊢
     have hret : q2.ret id = false := by
       rw [hRR.ret_eq]; exact hr
     have hfn := P.f_lt_n_sub_f
     obtain ⟨k₁, hk₁F, hbq⟩ := received_binds_of_echo5_quorum hRR.invariant hcnt
     obtain ⟨k, hkF, hvq⟩ :=
       voteQuorum_of_received_binds hRR.invariant (i := k₁) (v := v) (by omega)
-    have hbv : v = bnd :=
-      (hbnd.trans (hRR.retBound_eq hvq (boundOf_grade2 q1.sent q1.F v))).symm
+    have hbv : v = β :=
+      (hβ.symm.trans (hRR.retBound_eq hvq (boundOf_grade2 q1.sent q1.F v))).symm
     subst hbv
     have hlive : v ∉ q2.excluded := fun hv =>
       not_exclusionWitness_of_voteQuorum hRR.invariant hvq (hRR.exclusion_witness v hv)
@@ -346,7 +364,7 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundS
       grade := some true,
                         ret := Function.update q2.ret id true },
         Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
-          (Step.retGrade2 q2 id v v hlive hexcluded hexcluded hgr hret)⟩,
+          (Step.retGrade2 q2 id v hlive hexcluded hgr hret)⟩,
         hI', ?_, ?_, hRR.F_eq,
         fun b hb => exclusionWitness_setBound (exclusionWitness_ret
           (hRR.exclusion_witness b hb)),
@@ -403,15 +421,16 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundS
             (exclusionWitness_ret (exclusionWitness_of_voteQuorum hRR.invariant hvq))
         · exact exclusionWitness_setBound (exclusionWitness_ret (hRR.exclusion_witness b
             hb))
-  | retGrade1 id v bnd _hin _hlv _hnotGrade2 hcnt honce hbind hval hr hbnd =>
+  | retGrade1 id v _hin _hlv _hnotGrade2 hcnt honce hbind hval hr =>
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'
+    generalize hβ : q1.bound.getD (boundOf q1.sent q1.F (.grade1 v)) = β at hI' ⊢
     have hret : q2.ret id = false := by
       rw [hRR.ret_eq]; exact hr
     have hfn := P.f_lt_n_sub_f
     obtain ⟨k, hkF, hvq⟩ := voteQuorum_of_received_binds hRR.invariant hbind
-    have hbv : v = bnd :=
-      (hbnd.trans (hRR.retBound_eq hvq (boundOf_grade1 q1.sent q1.F v))).symm
+    have hbv : v = β :=
+      (hβ.symm.trans (hRR.retBound_eq hvq (boundOf_grade1 q1.sent q1.F v))).symm
     subst hbv
     have hlive : v ∉ q2.excluded := fun hv =>
       not_exclusionWitness_of_voteQuorum hRR.invariant hvq (hRR.exclusion_witness v hv)
@@ -421,7 +440,7 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundS
     by_cases hexcluded : (!v) ∈ q2.excluded
     · refine ⟨{ q2 with ret := Function.update q2.ret id true },
         Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
-          (Step.retGrade1 q2 id v v hlive hexcluded hexcluded hd hret)⟩,
+          (Step.retGrade1 q2 id v hlive hexcluded hd hret)⟩,
         hI', ?_, ?_, hRR.F_eq,
         fun b hb => exclusionWitness_setBound (exclusionWitness_ret
           (hRR.exclusion_witness b hb)),
@@ -475,9 +494,10 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundS
             (exclusionWitness_ret (exclusionWitness_of_voteQuorum hRR.invariant hvq))
         · exact exclusionWitness_setBound (exclusionWitness_ret (hRR.exclusion_witness b
             hb))
-  | retGrade0 id bnd _hin _hlv _hnotGrade2 _hnotGrade1 hcnt hval hr hbnd =>
+  | retGrade0 id _hin _hlv _hnotGrade2 _hnotGrade1 hcnt hval hr =>
     rw [PMF.mem_support_pure_iff] at hq1'
     subst hq1'
+    generalize hβ : q1.bound.getD (boundOf q1.sent q1.F .grade0) = b at hI' ⊢
     have hret : q2.ret id = false := by
       rw [hRR.ret_eq]; exact hr
     have hwT : P.f + 1 ≤ (Finset.univ.filter
@@ -497,20 +517,20 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundS
     have hex := hRR.bound_excluded
     cases hb : q1.bound with
     | none =>
-      -- the round has not returned yet: exclude the announced bit's complement
+      -- the round has not returned yet: exclude the complement of the bit the return writes
       rw [hb, excludedOf_none] at hex
-      have hbv : bnd = boundOf q1.sent q1.F .grade0 := by
-        rw [hbnd, hb]; rfl
-      have hcert : ExclusionWitness P q1 (!bnd) := by
+      have hbv : b = boundOf q1.sent q1.F .grade0 := by
+        rw [← hβ, hb]; rfl
+      have hcert : ExclusionWitness P q1 (!b) := by
         rw [hbv]; exact exclusionWitness_boundOf_grade0 hRR.invariant hcnt
       have hq : q2.quorum P := quorum_of_messageQuorum hRR
         (fun j hj hm' => hRR.invariant.input_called j true hj hm')
         (RoundState.bothValid_le hval true)
       have hw : P.f + 1 ≤ (Finset.univ.filter
-          (fun k' => q2.call k' = some bnd ∨ k' ∈ q2.F)).card :=
-        hRR.callSupport (inputSupport_of_bothValid hRR.invariant hval bnd)
+          (fun k' => q2.call k' = some b ∨ k' ∈ q2.F)).card :=
+        hRR.callSupport (inputSupport_of_bothValid hRR.invariant hval b)
       refine ⟨{ q2 with
-        excluded := insert (!bnd) q2.excluded, grade := some false,
+        excluded := insert (!b) q2.excluded, grade := some false,
                         ret := Function.update q2.ret id true },
         Or.inr ⟨by simp, excludeThenRetGrade0_run hq hw hex hwT hwF hgr hret⟩,
         hI', ?_, ?_, hRR.F_eq, ?_,
@@ -540,18 +560,18 @@ theorem specificationRelation_transition (P : Parameters) (r : ℕ) (q1 : RoundS
         · exact exclusionWitness_setBound (exclusionWitness_ret (hRR.exclusion_witness
             b' hb'))
     | some β =>
-      -- the round has returned before: it announces the bit on record
+      -- the round has returned before: the bit on record stands
       rw [hb, excludedOf_some] at hex
-      have hbv : bnd = β := by
-        rw [hbnd, hb]; rfl
+      have hbv : b = β := by
+        rw [← hβ, hb]; rfl
       subst hbv
-      have hmem : (!bnd) ∈ q2.excluded := by
+      have hmem : (!b) ∈ q2.excluded := by
         rw [hex]; exact Finset.mem_singleton_self _
       refine ⟨{ q2 with
         grade := some false,
                         ret := Function.update q2.ret id true },
         Or.inr ⟨by simp, System.weakLStep_of_step (by simp)
-          (Step.retGrade0 q2 id bnd hmem hwT hwF hgr hret)⟩,
+          (Step.retGrade0 q2 id (Finset.ne_empty_of_mem hmem) hwT hwF hgr hret)⟩,
         hI', ?_, ?_, hRR.F_eq,
         fun b hb' => exclusionWitness_setBound (exclusionWitness_ret
           (hRR.exclusion_witness b hb')),
@@ -611,8 +631,8 @@ The matching run for a transition of the composition is the algorithm's own, rea
 `specificationRelation_transition`: the projection `composition_projects` is strong and functional,
 so one step of the composition costs one step of the algorithm and nothing of the matching is
 reproved here. The specification's matching weak run is finally lifted to the round's interface
-along a section of `specificationLabelMap`. A Byzantine call or return transition is matched at
-that lifting by the specification's own call or return (D11). -/
+along a section of `specificationLabelMap`. A corrupted process's call is matched at that lifting
+by the specification's own call (D11). -/
 
 /-- **The refinement of the round's graded-agreement composition**: the round-`r` composition is
 forward simulated by the graded agreement specification, read over the round's interface. -/
@@ -644,11 +664,11 @@ theorem composition_specificationTraces (P : Parameters) (r : ℕ) :
     (specificationOverRoundAlphabet_isLTS P Message r)
     (specificationRelation_init P r) (refinesSpecification P r)).achievableTraceDists_subset
 
-/-! ### What the family lift will need
+/-! ### The premises of the family lifting
 
-The two premises of `ForwardSimulation.family` for the round-indexed family: the relation holds at
+Two premises of `ForwardSimulation.family` for the round-indexed family: the relation holds at
 the initial states (`specificationRelation_init`, `GBCA/ABDY/SpecificationRelation.lean`), and the
-broadcast corruption preserves it. -/
+broadcast corruption preserves it. The third, the first step at an untouched round, follows. -/
 
 /-- The broadcast corruption act on a specification state, over the extended
 alphabet: `GBCA.failAct` taken on the extended `fail` label. -/
@@ -680,8 +700,106 @@ theorem refinesSpecification_failAct (P : Parameters) :
     | retABA id b => exact hl.elim
     | callG r' id b => exact hl.elim
     | retG r' id out => exact hl.elim
+    | boundG r' b => exact hl.elim
     | callW r' id => exact hl.elim
     | retW r' id b => exact hl.elim
+
+/-! ### The first step at an untouched round
+
+The family takes no silent transition at a round it has not touched, so the congruence of
+`ForwardSimulation.family` asks that a step of the composition at an untouched round be matched by
+a specification run whose first transition carries the step's label
+(`refinesSpecification_untouchedFirstStep`). An untouched round is the initial instance under a
+list of corruptions. Its specification state holds no call and excludes no bit, so by the relation
+the composition's processes hold no input and its network holds no bound bit. A step on a label
+the round owns is then a call, correct or a corrupted process's, and the specification's call on
+the same label matches it, followed by no silent step. -/
+
+/-- The broadcast corruption act leaves the specification's calls as they stand. -/
+theorem specificationCorruptionAct_call {M : Type} (l : ExtendedLabel P.n M)
+    (t : GBCA.SpecState P.n) : (specificationCorruptionAct P l t).call = t.call := by
+  rcases l with (_ | _ | _ | _ | _ | _ | _ | _ | k) | e
+  all_goals first | rfl | exact corrupt_call P t k
+
+/-- The broadcast corruption act leaves the specification's exclusion set as it stands. -/
+theorem specificationCorruptionAct_excluded {M : Type} (l : ExtendedLabel P.n M)
+    (t : GBCA.SpecState P.n) : (specificationCorruptionAct P l t).excluded = t.excluded := by
+  rcases l with (_ | _ | _ | _ | _ | _ | _ | _ | k) | e
+  all_goals first | rfl | exact corrupt_excluded P t k
+
+/-- An untouched specification instance, the initial instance under a list of corruptions, holds
+no call and excludes no bit. -/
+theorem specificationCorruptionAct_foldr {M : Type} (broadcasts : List (ExtendedLabel P.n M)) :
+    (∀ id, (broadcasts.foldr (specificationCorruptionAct P) (GBCA.SpecState.initial P.n)).call id
+      = none) ∧
+    (broadcasts.foldr (specificationCorruptionAct P) (GBCA.SpecState.initial P.n)).excluded = ∅ :=
+      by
+  induction broadcasts with
+  | nil => exact ⟨fun _ => rfl, rfl⟩
+  | cons l rest ih =>
+    rw [List.foldr_cons, specificationCorruptionAct_call, specificationCorruptionAct_excluded]
+    exact ih
+
+/-- **The first step from a specification state holding no call and excluding no bit.** A step
+of the composition on a label of round `r` is a call, correct or a corrupted process's, and the
+specification's call on the same label matches it in one transition. -/
+theorem refinesSpecification_firstStep_of_noCall {r : ℕ} {q : RoundState P.n}
+    {t : GBCA.SpecState P.n} (hRR : SpecificationRelation P q t) (hcall : ∀ id, t.call id = none)
+    (hexcl : t.excluded = ∅) {l : ExtendedLabel P.n Message} (howns : roundOwnsLabel l = some r)
+    {μ : PMF (RoundState P.n)} (hstep : (composition P r).step q l μ) {x : RoundState P.n}
+    (hx : x ∈ μ.support) :
+    ∃ y, specificationRelation P r x y ∧
+      (specificationOverRoundAlphabet P Message r).step t l (PMF.pure y) := by
+  obtain ⟨l₀, hpull, halg⟩ := composition_projects P r q l μ hstep
+  have hτ : l ≠ Sum.inl Label.tau := by
+    rintro rfl
+    exact absurd howns (by simp [roundOwnsLabel])
+  have hinput : ∀ id, (q.processVariables id).input = none := fun id => by
+    rw [← hRR.call_eq, hcall]
+  cases halg with
+  | call id b h =>
+    rw [PMF.mem_support_pure_iff] at hx
+    subst hx
+    refine ⟨_, specificationRelation_call hRR h, (System.mapIdle_step_some hpull _).mpr ?_⟩
+    exact Step.call t id b (by rw [hcall])
+  | callLoop id b h => exact absurd (hinput id) h
+  | retGrade2 id v hin => exact absurd (hinput id) hin
+  | retGrade1 id v hin => exact absurd (hinput id) hin
+  | retGrade0 id hin => exact absurd (hinput id) hin
+  | announceBound b hb =>
+    have hmem := hRR.excluded_of_bound hb
+    rw [hexcl] at hmem
+    exact absurd hmem (Finset.notMem_empty _)
+  | fail k =>
+    exfalso
+    rcases l with l' | e
+    · rw [specificationLabelMap_inl, Option.some.injEq] at hpull
+      subst hpull
+      exact absurd howns (by simp [roundOwnsLabel])
+    · cases e <;> simp [specificationLabelMap] at hpull
+  | _ => exact absurd (specificationLabelMap_eq_tau hpull) hτ
+
+/-- **The first step at an untouched round**, the hypothesis `hUntouchedFirstStep` of
+`ForwardSimulation.family` for the round-indexed family. From a related pair of untouched
+instances, the initial instances under a list of corruptions, a step of the composition on a label
+round `r` owns is a call, correct or a corrupted process's. The specification's call on the same
+label matches it, followed by no silent step. -/
+theorem refinesSpecification_untouchedFirstStep (P : Parameters) :
+    ∀ (r : ℕ) (broadcasts : List (ExtendedLabel P.n Message)) (l : ExtendedLabel P.n Message),
+      roundOwnsLabel l = some r →
+      specificationRelation P r (broadcasts.foldr (corruptionAct P) (RoundState.initial P.n))
+        (broadcasts.foldr (specificationCorruptionAct P) (GBCA.SpecState.initial P.n)) →
+      ∀ μ, (composition P r).step (broadcasts.foldr (corruptionAct P) (RoundState.initial P.n))
+          l μ → ∀ x ∈ μ.support,
+        ∃ y, specificationRelation P r x y ∧ ∃ ν, (specificationOverRoundAlphabet P Message r).step
+          (broadcasts.foldr (specificationCorruptionAct P) (GBCA.SpecState.initial P.n)) l ν ∧
+          ∃ z ∈ ν.support, (specificationOverRoundAlphabet P Message r).weakLSilent z y := by
+  intro r broadcasts l howns hR μ hstep x hx
+  obtain ⟨hcall, hexcl⟩ := specificationCorruptionAct_foldr (P := P) broadcasts
+  obtain ⟨y, hRxy, hstepA⟩ :=
+    refinesSpecification_firstStep_of_noCall hR hcall hexcl howns hstep hx
+  exact ⟨y, hRxy, PMF.pure y, hstepA, y, (PMF.mem_support_pure_iff _ _).mpr rfl,
+    System.weakLSilent_refl _ y⟩
 
 /-! ### Mechanical axiom check -/
 
@@ -692,6 +810,14 @@ theorem refinesSpecification_failAct (P : Parameters) :
 /-- info: 'PLTS.ABA.GBCA.ByABDY.composition_specificationTraces' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms composition_specificationTraces
+
+/--
+info: 'PLTS.ABA.GBCA.ByABDY.refinesSpecification_untouchedFirstStep' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+-/
+#guard_msgs in
+#print axioms refinesSpecification_untouchedFirstStep
 
 end GBCA.ByABDY
 end ABA

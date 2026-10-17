@@ -19,10 +19,12 @@ label that the hiding leaves visible. `systemExtended_event_cases`, `systemExten
 `systemExtended_tau_cases` decompose a synchronised step of the three components into the
 transitions of the group, of the network and of the coin.
 
-The two graded-agreement returns are the only transitions that read the ghost, and what they read
-is the relation `ghostOutput` at the network's state. `systemExtended_retG_bound` and
-`systemExtended_byzantineRetG_bound` state what a composite transition on either therefore
-requires of the bound bit its label carries.
+The announcement of a round's bound bit is the one transition whose guard reads the ghost, and
+`systemExtended_announceBound` and `systemExtended_boundG_cases` state the composite transition on
+it: the network announces the bit the round's ghost holds, every program idles and the common coin
+idles. `systemExtended_byzantineCallG` and `systemExtended_byzantineCallW` state the composite
+transitions on a corrupted process's two sub-protocol calls, which the network outputs under
+`k ∈ F` at a round of `startedRounds`.
 -/
 
 namespace PLTS
@@ -79,18 +81,18 @@ theorem programProduct_tau_cases {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
 section SystemStepCases
 variable {G : Type} [DecidableEq M] [Inhabited G]
     {ghostStep : ExtendedLabel P.n M E → NetworkState P.n M G → G → G}
-    {ghostOutput : NetworkState P.n M G → ℕ → Fin P.n → GBCAOutput → Bool → Prop}
+    {ghostBound : G → Option Bool}
 
 omit [IsRoundStep P M E S roundStep] in
 /-- The composite step relation of the group, unfolded to the hidden-synchronisation
 case and the shared-label case. -/
 theorem systemHidden_step_iff (q : State P M S G) (l : Label P.n)
     (μ : PMF (State P M S G)) :
-    (systemHidden P M E S G roundStep ghostStep ghostOutput).step q l μ ↔
+    (systemHidden P M E S G roundStep ghostStep ghostBound).step q l μ ↔
       (l = .tau ∧ ∃ e : NetworkEvent P.n M E,
-        (systemExtended P M E S G roundStep ghostStep ghostOutput).step q
+        (systemExtended P M E S G roundStep ghostStep ghostBound).step q
           (Sum.inr e) μ) ∨
-      (systemExtended P M E S G roundStep ghostStep ghostOutput).step q
+      (systemExtended P M E S G roundStep ghostStep ghostBound).step q
         (Sum.inl l) μ := by
   constructor
   · rintro (⟨hτ, l', ⟨e, rfl⟩, hstep⟩ | ⟨-, hstep⟩)
@@ -105,24 +107,25 @@ omit [IsRoundStep P M E S roundStep] in
 a label that the hiding leaves visible. -/
 theorem system_step_iff (q : State P M S G) (l : Label P.n)
     (μ : PMF (State P M S G)) :
-    (system P M E S G roundStep ghostStep ghostOutput).step q l μ ↔
+    (system P M E S G roundStep ghostStep ghostBound).step q l μ ↔
       (l = .tau ∧ ∃ l' ∈ Label.hiddenAPI P.n,
-        (systemHidden P M E S G roundStep ghostStep ghostOutput).step q l' μ) ∨
+        (systemHidden P M E S G roundStep ghostStep ghostBound).step q l' μ) ∨
       (l ∉ Label.hiddenAPI P.n ∧
-        (systemHidden P M E S G roundStep ghostStep ghostOutput).step q l μ) :=
+        (systemHidden P M E S G roundStep ghostStep ghostBound).step q l μ) :=
   System.abstract_step _ _ _ _ _
 
 /-- A synchronised transition: every process, the network and the lifted coin
 move together, and only the coin's successor can fail to be a Dirac. -/
 theorem systemExtended_event_cases {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
-    {w : NetworkState P.n M G} {o : ℕ → WCC.SpecState P.n} {e : NetworkEvent P.n M E}
+    {w : NetworkState P.n M G}
+    {o : InstanceFamilyState (WCC.SpecState.initial P.n) (WCC.failAct P)} {e : NetworkEvent P.n M E}
     {μ : PMF (State P M S G)}
-    (h : (systemExtended P M E S G roundStep ghostStep ghostOutput).step (u, w, o)
+    (h : (systemExtended P M E S G roundStep ghostStep ghostBound).step (u, w, o)
       (Sum.inr e) μ) :
     ∃ (x : ∀ _ : Fin P.n, ProcessVariables P.n S) (w' : NetworkState P.n M G)
-      (μ₃ : PMF (ℕ → WCC.SpecState P.n)),
+      (μ₃ : PMF (InstanceFamilyState (WCC.SpecState.initial P.n) (WCC.failAct P))),
       (∀ i, ProgramStep P M E S roundStep i (u i) (Sum.inr e) (PMF.pure (x i))) ∧
-      NetworkStep P M E G ghostStep ghostOutput w (Sum.inr e) (PMF.pure w') ∧
+      NetworkStep P M E G ghostStep ghostBound w (Sum.inr e) (PMF.pure w') ∧
       (coinOverExtendedAlphabet P M E).step o (Sum.inr e) μ₃ ∧
       μ = prodPMF (PMF.pure x) (prodPMF (PMF.pure w') μ₃) := by
   rw [systemExtended, System.parallel_step] at h
@@ -139,14 +142,15 @@ theorem systemExtended_event_cases {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
 
 /-- A visible shared-label transition. -/
 theorem systemExtended_label_cases {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
-    {w : NetworkState P.n M G} {o : ℕ → WCC.SpecState P.n} {l : Label P.n}
+    {w : NetworkState P.n M G}
+    {o : InstanceFamilyState (WCC.SpecState.initial P.n) (WCC.failAct P)} {l : Label P.n}
     (hl : l ≠ Label.tau) {μ : PMF (State P M S G)}
-    (h : (systemExtended P M E S G roundStep ghostStep ghostOutput).step (u, w, o)
+    (h : (systemExtended P M E S G roundStep ghostStep ghostBound).step (u, w, o)
       (Sum.inl l) μ) :
     ∃ (x : ∀ _ : Fin P.n, ProcessVariables P.n S) (w' : NetworkState P.n M G)
-      (ω : PMF (ℕ → WCC.SpecState P.n)),
+      (ω : PMF (InstanceFamilyState (WCC.SpecState.initial P.n) (WCC.failAct P))),
       (∀ i, ProgramStep P M E S roundStep i (u i) (Sum.inl l) (PMF.pure (x i))) ∧
-      NetworkStep P M E G ghostStep ghostOutput w (Sum.inl l) (PMF.pure w') ∧
+      NetworkStep P M E G ghostStep ghostBound w (Sum.inl l) (PMF.pure w') ∧
       (WCC.specFamily P).step o l ω ∧
       μ = prodPMF (PMF.pure x) (prodPMF (PMF.pure w') ω) := by
   rw [systemExtended, System.parallel_step] at h
@@ -165,20 +169,21 @@ theorem systemExtended_label_cases {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
   · rw [extendedLabel_tau] at habs; exact absurd (Sum.inl_injective habs) hl
 
 /-- A silent shared-label transition: one process terminating, the network's own
-injection, or the resolution of one round of the common coin. -/
+injection, or the resolution of one round of the common coin's map. -/
 theorem systemExtended_tau_cases {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
-    {w : NetworkState P.n M G} {o : ℕ → WCC.SpecState P.n}
+    {w : NetworkState P.n M G}
+    {o : InstanceFamilyState (WCC.SpecState.initial P.n) (WCC.failAct P)}
     {μ : PMF (State P M S G)}
-    (h : (systemExtended P M E S G roundStep ghostStep ghostOutput).step (u, w, o)
+    (h : (systemExtended P M E S G roundStep ghostStep ghostBound).step (u, w, o)
       (Sum.inl Label.tau) μ) :
     (∃ (i : Fin P.n) (y : ProcessVariables P.n S),
       ProgramStep P M E S roundStep i (u i) (Sum.inl Label.tau) (PMF.pure y) ∧
       μ = PMF.pure (Function.update u i y, w, o)) ∨
-    (∃ w', NetworkStep P M E G ghostStep ghostOutput w (Sum.inl .tau)
+    (∃ w', NetworkStep P M E G ghostStep ghostBound w (Sum.inl .tau)
         (PMF.pure w') ∧
       μ = PMF.pure (u, w', o)) ∨
-    (∃ (r : ℕ) (μw : PMF (WCC.SpecState P.n)), WCC.Step P r (o r) Label.tau μw ∧
-      μ = prodPMF (PMF.pure u) (prodPMF (PMF.pure w) (μw.map (Function.update o r)))) := by
+    (∃ r ∈ o.instanceMap.keys, ∃ μw : PMF (WCC.SpecState P.n), WCC.Step P r (o r) Label.tau μw ∧
+      μ = prodPMF (PMF.pure u) (prodPMF (PMF.pure w) (μw.map (o.setInstanceState r)))) := by
   rw [systemExtended, System.parallel_step] at h
   rcases h with ⟨habs, -⟩ | ⟨-, μ₁, hS, rfl⟩ | ⟨-, μ₂₃, hNW, rfl⟩
   · exact absurd rfl habs
@@ -189,41 +194,120 @@ theorem systemExtended_tau_cases {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
     · exact absurd rfl habs
     · obtain ⟨w', rfl⟩ := networkStep_dirac hN
       exact Or.inr (Or.inl ⟨w', hN, by rw [prodPMF_pure_pure, prodPMF_pure_pure]⟩)
-    · obtain ⟨r, μw, hstep, rfl⟩ := ABA.WCC.specFamily_tau_cases P
+    · obtain ⟨r, hr, μw, hstep, rfl⟩ := ABA.WCC.specFamily_tau_cases P
         ((System.mapIdle_step_some (coinLabelMap_inl Label.tau) μ₃).mp hO)
-      exact Or.inr (Or.inr ⟨r, μw, hstep, rfl⟩)
+      exact Or.inr (Or.inr ⟨r, hr, μw, hstep, rfl⟩)
 
-/-! ### The bound bit on a return
+/-! ### The announcement and a corrupted process's calls
 
-The two graded-agreement returns are the only transitions that read the ghost,
-and what they read is the relation `ghostOutput` at the network's state. A composite
-transition on either therefore constrains the bound bit its label carries. -/
+The network outputs the announcement of a round's bound bit and a corrupted process's two
+sub-protocol calls. Every program idles on the three. The common coin idles on the announcement,
+which names no coin round, and on the graded-agreement call, which `coinLabelMap` sends to no
+label; it takes the coin call on its own call transition. -/
 
-/-- A composite graded-agreement return announces a bit the network's ghost
-relation admits. -/
-theorem systemExtended_retG_bound {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
-    {w : NetworkState P.n M G} {o : ℕ → WCC.SpecState P.n}
-    {r : ℕ} {id : Fin P.n} {out : GBCAOutput} {bnd : Bool}
+omit [DecidableEq M] in
+/-- The common coin idles on the announcement of a graded-agreement round's bound bit. -/
+theorem coinOverExtendedAlphabet_boundG
+    (o : InstanceFamilyState (WCC.SpecState.initial P.n) (WCC.failAct P)) (r : ℕ) (b : Bool) :
+    (coinOverExtendedAlphabet P M E).step o (Sum.inl (.boundG r b)) (PMF.pure o) :=
+  (System.mapIdle_step_some (coinLabelMap_inl _) _).mpr
+    (wccFamily_idle P o (by simp) rfl (by simp [Label.isFail]))
+
+omit [IsRoundStep P M E S roundStep] in
+/-- **The composite announcement** (D29): the network announces the bit the round's ghost holds,
+every program idles, and the common coin idles. -/
+theorem systemExtended_announceBound (u : ∀ _ : Fin P.n, ProcessVariables P.n S)
+    (w : NetworkState P.n M G)
+    (o : InstanceFamilyState (WCC.SpecState.initial P.n) (WCC.failAct P)) {r : ℕ} {b : Bool}
+    (h : ghostBound (w.ghost r) = some b) :
+    (systemExtended P M E S G roundStep ghostStep ghostBound).step (u, w, o)
+      (Sum.inl (.boundG r b))
+      (PMF.pure (u, w.writeGhost ghostStep (Sum.inl (.boundG r b)), o)) := by
+  have hne : (Sum.inl (.boundG r b) : ExtendedLabel P.n M E) ≠ Silent.τ := by
+    rw [extendedLabel_tau]; simp
+  rw [systemExtended, System.parallel_step]
+  refine Or.inl ⟨hne, PMF.pure u, PMF.pure (w.writeGhost ghostStep (Sum.inl (.boundG r b)), o),
+    ?_, ?_, (prodPMF_pure_pure _ _).symm⟩
+  · rw [System.synchronisedProduct_step]
+    exact Or.inl ⟨hne, fun i => PMF.pure (u i),
+      fun i => ProgramStep.boundGIdle (u i).1 (u i).2 r b, (piPMF_pure u).symm⟩
+  · rw [System.parallel_step]
+    exact Or.inl ⟨hne, _, _, NetworkStep.announceBound w r b h,
+      coinOverExtendedAlphabet_boundG o r b, (prodPMF_pure_pure _ _).symm⟩
+
+/-- A composite transition on the announcement of a round's bound bit is the composite
+announcement: the round's ghost holds the bit, and only the network's ghost write moves. -/
+theorem systemExtended_boundG_cases {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
+    {w : NetworkState P.n M G}
+    {o : InstanceFamilyState (WCC.SpecState.initial P.n) (WCC.failAct P)} {r : ℕ} {b : Bool}
     {μ : PMF (State P M S G)}
-    (h : (systemExtended P M E S G roundStep ghostStep ghostOutput).step (u, w, o)
-      (Sum.inl (.retG r id out bnd)) μ) :
-    ghostOutput w r id out bnd := by
-  have hne : (Label.retG r id out bnd : Label P.n) ≠ Label.tau := by
-    simp
-  obtain ⟨x, w', ω, -, hN, -, -⟩ := systemExtended_label_cases hne h
-  exact (networkStep_retG hN).1
+    (h : (systemExtended P M E S G roundStep ghostStep ghostBound).step (u, w, o)
+      (Sum.inl (.boundG r b)) μ) :
+    ghostBound (w.ghost r) = some b ∧
+      μ = PMF.pure (u, w.writeGhost ghostStep (Sum.inl (.boundG r b)), o) := by
+  obtain ⟨x, w', ω, hall, hN, hO, rfl⟩ := systemExtended_label_cases (by simp) h
+  obtain ⟨hb, hw'⟩ := networkStep_announceBound hN
+  have hx : x = u := funext fun i => pure_inj (programStep_boundG (hall i))
+  have hω : ω = PMF.pure o := by
+    rw [WCC.specFamily, System.family_step_iff] at hO
+    rcases hO with ⟨hτ, -⟩ | ⟨r', hown, -⟩ | ⟨-, -, hg, -⟩ | ⟨-, -, -, rfl⟩
+    · exact absurd hτ (by simp)
+    · exact absurd hown (by simp)
+    · exact absurd hg (by simp [Label.isFail])
+    · rfl
+  subst hx hω
+  rw [pure_inj hw', prodPMF_pure_pure, prodPMF_pure_pure]
+  exact ⟨hb, rfl⟩
 
-/-- A composite Byzantine graded-agreement return announces a bit the same
-ghost relation admits (D11). -/
-theorem systemExtended_byzantineRetG_bound {u : ∀ _ : Fin P.n, ProcessVariables P.n S}
-    {w : NetworkState P.n M G} {o : ℕ → WCC.SpecState P.n}
-    {r : ℕ} {k : Fin P.n} {out : GBCAOutput} {bnd : Bool}
-    {μ : PMF (State P M S G)}
-    (h : (systemExtended P M E S G roundStep ghostStep ghostOutput).step (u, w, o)
-      (Sum.inr (.byzantineRetG r k out bnd)) μ) :
-    ghostOutput w r k out bnd := by
-  obtain ⟨x, w', μ₃, -, hN, -, -⟩ := systemExtended_event_cases h
-  exact (networkStep_byzantineRetG hN).2.1
+omit [IsRoundStep P M E S roundStep] in
+/-- **The composite graded-agreement call of a corrupted process** (D11, D37): the network
+outputs it under `k ∈ F` at a started round, every program idles, and the common coin idles. The
+round instance that takes it lies in the composed systems, beside the round loops. -/
+theorem systemExtended_byzantineCallG (u : ∀ _ : Fin P.n, ProcessVariables P.n S)
+    (w : NetworkState P.n M G)
+    (o : InstanceFamilyState (WCC.SpecState.initial P.n) (WCC.failAct P)) {r : ℕ} {k : Fin P.n}
+    {b : Bool} (hF : k ∈ w.F) (hr : r ∈ w.startedRounds) :
+    (systemExtended P M E S G roundStep ghostStep ghostBound).step (u, w, o)
+      (Sum.inr (.byzantineCallG r k b))
+      (PMF.pure (u, w.writeGhost ghostStep (Sum.inr (.byzantineCallG r k b)), o)) := by
+  have hne : (Sum.inr (.byzantineCallG r k b) : ExtendedLabel P.n M E) ≠ Silent.τ := by
+    rw [extendedLabel_tau]; simp
+  rw [systemExtended, System.parallel_step]
+  refine Or.inl ⟨hne, PMF.pure u,
+    PMF.pure (w.writeGhost ghostStep (Sum.inr (.byzantineCallG r k b)), o),
+    ?_, ?_, (prodPMF_pure_pure _ _).symm⟩
+  · rw [System.synchronisedProduct_step]
+    exact Or.inl ⟨hne, fun i => PMF.pure (u i),
+      fun i => ProgramStep.byzantineCallGIdle (u i).1 (u i).2 r k b, (piPMF_pure u).symm⟩
+  · rw [System.parallel_step]
+    exact Or.inl ⟨hne, _, _, NetworkStep.byzantineCallG w r k b hF hr,
+      (System.mapIdle_step_none (coinLabelMap_byzantineCallG r k b) _).mpr rfl,
+      (prodPMF_pure_pure _ _).symm⟩
+
+omit [IsRoundStep P M E S roundStep] in
+/-- **The composite coin call of a corrupted process** (D11, D37): the network outputs it under
+`k ∈ F` at a started round, every program idles, and the common coin takes it as the call of
+`k` at round `r`. -/
+theorem systemExtended_byzantineCallW (u : ∀ _ : Fin P.n, ProcessVariables P.n S)
+    (w : NetworkState P.n M G)
+    {o : InstanceFamilyState (WCC.SpecState.initial P.n) (WCC.failAct P)} {r : ℕ} {k : Fin P.n}
+    (hF : k ∈ w.F) (hr : r ∈ w.startedRounds)
+    {ω : PMF (InstanceFamilyState (WCC.SpecState.initial P.n) (WCC.failAct P))}
+    (hO : (WCC.specFamily P).step o (.callW r k) ω) :
+    (systemExtended P M E S G roundStep ghostStep ghostBound).step (u, w, o)
+      (Sum.inr (.byzantineCallW r k))
+      (prodPMF (PMF.pure u)
+        (prodPMF (PMF.pure (w.writeGhost ghostStep (Sum.inr (.byzantineCallW r k)))) ω)) := by
+  have hne : (Sum.inr (.byzantineCallW r k) : ExtendedLabel P.n M E) ≠ Silent.τ := by
+    rw [extendedLabel_tau]; simp
+  rw [systemExtended, System.parallel_step]
+  refine Or.inl ⟨hne, PMF.pure u, _, ?_, ?_, rfl⟩
+  · rw [System.synchronisedProduct_step]
+    exact Or.inl ⟨hne, fun i => PMF.pure (u i),
+      fun i => ProgramStep.byzantineCallWIdle (u i).1 (u i).2 r k, (piPMF_pure u).symm⟩
+  · rw [System.parallel_step]
+    exact Or.inl ⟨hne, _, _, NetworkStep.byzantineCallW w r k hF hr,
+      (System.mapIdle_step_some (coinLabelMap_byzantineCallW r k) _).mpr hO, rfl⟩
 
 end SystemStepCases
 end Composite

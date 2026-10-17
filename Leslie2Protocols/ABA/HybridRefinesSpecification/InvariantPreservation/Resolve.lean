@@ -10,13 +10,15 @@ import Leslie2Protocols.ABA.HybridRefinesSpecification.Relation
 # `Invariant` across the coin's resolution in `hybrid`
 
 `Invariant.step_resolve`, preservation of `Invariant` at the silent resolution of the coin. The
-resolution of round `r` is enabled at `val = ⊥` once more than `f` processes have called round `r`,
-and it writes the drawn outcome to `val`. The clauses reading `(w r).val` come back from the
-threshold: `Invariant.exists_correct_wccCaller` supplies a never-corrupted caller of round `r`,
-whose `wcc_called`, `wcc_callRound` and `wccCalled_witness` carry `wcc_bound`, `wcc_order` and
-`flip_witness`. `agree_bound`'s round-`r` corner is vacuous: `round_flip` at a never-corrupted
-process past round `r` contradicts `val = ⊥`. The resolution leaves `called`, `F`, `g`, the
-round loops and the ABA network unchanged, so every other clause passes through.
+coin family takes the resolution at a round `r` of its map (`WCC.specFamily_tau_cases`), and the
+statement below holds at every round. The resolution of round `r` is enabled at `val = ⊥` once
+more than `f` processes have called round `r`, and it writes the drawn outcome to `val`. The
+clauses that read `(w r).val` follow from the threshold: `Invariant.exists_correct_wccCaller`
+supplies a never-corrupted caller of round `r`, whose `wcc_called`, `wcc_callRound` and
+`wccCalled_witness` give `wcc_bound`, `wcc_order` and `flip_witness`. `agree_bound` holds at
+round `r` vacuously: `round_flip` at a never-corrupted process past round `r` contradicts
+`val = ⊥`. The resolution leaves `called`, `F`, `g`, the round loops and the ABA network
+unchanged, so every other clause passes through.
 -/
 
 namespace PLTS
@@ -65,8 +67,8 @@ theorem Invariant.step_resolve {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
   refine ⟨hI.corrupted_F, hI.F_gbca, fun r' => (hFeq r').trans (hI.F_wcc r'), hI.F_card,
     hI.input_gbcaRound0,
     hI.input_called, hI.phase_input, hI.down_settled, hI.quiescent, ?_, hI.received_sound,
-    hI.decided_source, hI.grade2Bound_commit, hI.round_bound, ?_, hI.grade2_needs_bind,
-      hI.call_round, ?_, ?_,
+    hI.decided_source, hI.decidedSent_recorded, hI.grade2Bound_commit, hI.round_bound, ?_,
+      hI.grade2_needs_bind, hI.call_round, ?_, ?_,
     hI.estimate0, hI.grade2_source, hI.estimate_ret, ?_, ?_, ?_, hI.grade0_chain,
       hI.estimate_previous_ne,
     ?_, hI.input_gbcaRound0_permanent, ?_, ?_, ?_, hI.retG_witness, ?_, hI.bound_quorum,

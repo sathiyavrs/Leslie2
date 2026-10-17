@@ -13,15 +13,19 @@ import Leslie2Protocols.ABA.AFW.RoundProjection
 A transition of the implementation writes the acting process's round variables and records at most
 one tagged message. `roundProjection_write` and `roundProjection_writeNoSent` do that write once,
 through `roundProjectionUpdate`: each local state vector of the projection becomes a one-point
-update of the old one, and each network state is recovered from the written sent family by its own
-tag (`messagesOf`).
-`messagesOf_recordSent_some` and `messagesOf_recordSent_none` are the sent algebra a transition
-still owes, and one simp lemma per coordinate computes the written projection from
-`roundProjectionUpdate`.
-`networkState_ext`,
-`stateOverBroadcasts_ext` and `roundStateOverGathers_ext` identify a network state, a
-gather-over-Bracha state and a round state with their components. Every class of transitions in
-`AFW/RoundProjectionStep/` rests on this file.
+update of the vector before the write, and each network state of messages is recovered from the
+written sent family by its own tag (`messagesOf`). `messagesOf_recordSent_some` and
+`messagesOf_recordSent_none` are the sent algebra a transition's projection lemma rests on, and one
+simp lemma per coordinate computes the written projection from `roundProjectionUpdate`.
+
+The projection reads the network's state through the sent sets and the ghost of the round and the
+corrupted set (`roundProjection_network_congr`). The record of a started round and a DECIDED
+multicast leave every round's projection where it stands, and a round multicast every round other
+than the one it names (`roundProjection_recordStartedRound`, `roundProjection_recordDecided`,
+`roundProjection_recordGBCASend_ne`). `networkState_ext`, `stateOverBroadcasts_ext` and
+`roundStateOverGathers_ext` identify a network state of messages, a gather-over-Bracha state and a
+round state with their components. Every class of transitions in `AFW/RoundProjectionStep/` rests
+on this file.
 -/
 
 namespace PLTS
@@ -53,12 +57,11 @@ theorem stateOverBroadcasts_ext {n : ℕ} {X B : Type} {a b : Gather.StateOverBr
   subst h2; subst h3
   rfl
 
-/-- A round state is its programs and its bound bit beside its two gather
-instances. -/
+/-- A round state is its programs and its network state beside its two gather instances. -/
 theorem roundStateOverGathers_ext {n : ℕ} {G₁ G₂ : Type}
     {a b : GBCA.ByAFW.RoundStateOverGathers n G₁ G₂}
     (h1 : GBCA.ByAFW.programs a = GBCA.ByAFW.programs b)
-    (h2 : GBCA.ByAFW.bound a = GBCA.ByAFW.bound b)
+    (h2 : GBCA.ByAFW.network a = GBCA.ByAFW.network b)
     (h3 : GBCA.ByAFW.firstGather a = GBCA.ByAFW.firstGather b)
     (h4 : GBCA.ByAFW.secondGather a = GBCA.ByAFW.secondGather b) : a = b := by
   obtain ⟨⟨ua, va⟩, ca, da⟩ := a
@@ -179,12 +182,44 @@ theorem roundProjection_congr {x u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} 
     roundProjection P x w r = roundProjection P u w r := by
   simp only [roundProjection, firstGatherProjection, secondGatherProjection, h]
 
+/-! ### The network's writes, read through the projection
+
+The projection reads the network's state through the sent sets and the ghost of the round and the
+corrupted set. A write of the network that leaves the three where they stand at a round leaves that
+round's projection where it stands: the record of a started round and a DECIDED multicast do so at
+every round, and a round multicast at every round other than the one it names. -/
+
+/-- The projection reads the network's state through the round's sent sets, the round's ghost and
+the corrupted set alone. -/
+theorem roundProjection_network_congr {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n}
+    {v w : NetworkState P.n} {r : ℕ} (hsent : v.sent r = w.sent r) (hF : v.F = w.F)
+    (hghost : v.ghost r = w.ghost r) : roundProjection P u v r = roundProjection P u w r := by
+  simp only [roundProjection, firstGatherProjection, secondGatherProjection, hsent, hF, hghost]
+
+/-- The record of a started round leaves every round's projection where it stands. -/
+@[simp] theorem roundProjection_recordStartedRound (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n)
+    (w : NetworkState P.n) (r r' : ℕ) (id : Fin P.n) :
+    roundProjection P u (w.recordStartedRound r id) r' = roundProjection P u w r' :=
+  roundProjection_network_congr (by rw [recordStartedRound_sent]) (recordStartedRound_F w r id)
+    (by rw [recordStartedRound_ghost])
+
+/-- A DECIDED multicast leaves every round's projection where it stands. -/
+@[simp] theorem roundProjection_recordDecided (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n)
+    (w : NetworkState P.n) (j : Fin P.n) (b : Bool) (r : ℕ) :
+    roundProjection P u (w.recordDecided j b) r = roundProjection P u w r := rfl
+
+/-- A round multicast at round `r` leaves every other round's projection where it stands. -/
+theorem roundProjection_recordGBCASend_ne (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n)
+    (w : NetworkState P.n) {r r' : ℕ} (j : Fin P.n) (m : Message P.n) (hr : r' ≠ r) :
+    roundProjection P u (w.recordGBCASend r j m) r' = roundProjection P u w r' :=
+  roundProjection_network_congr (recordGBCASend_sent_ne w r j m hr) rfl rfl
+
 /-! ### Transposing one written process's variables
 
-A transition writes the acting process's round variables, so each local state vector
-the projection reads becomes a one-point update of the old one. Each lemma below is that
-observation at one component of the projection, stated over the `ite` that reading
-written variables produces. -/
+A transition writes the acting process's round variables, so each local state vector the
+projection reads becomes a one-point update of the vector before the write. Each lemma below is
+that observation at one component of the projection, stated over the `ite` that reading written
+variables produces. -/
 
 section LocalStates
 variable {j : Fin P.n} (Y : Fin P.n → RoundVariables P.n) (sr : RoundVariables P.n)
@@ -236,8 +271,8 @@ end LocalStates
 A transition of the implementation writes one component of the acting process's
 round variables and records at most one tagged message. The two lemmas below are that
 write read through the projection: each local state vector becomes a one-point
-update, and each network state is recovered from the written sent family by its
-own tag. What every transition still owes is then sent algebra alone. -/
+update, and each network state of messages is recovered from the written sent family by its
+own tag. What a transition's projection lemma asks beyond them is sent algebra alone. -/
 
 section Writes
 variable {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} {w : NetworkState P.n} {j : Fin P.n}
@@ -245,17 +280,16 @@ variable {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} {w : NetworkState P.n} 
 
 /-- The projection after a write, with the one-point update pushed inside every
 coordinate: the acting process's local state replaced in each local state
-vector, and each network state recovered from the written sent by its own tag.
-The two cores
-and the bound bit are the adversary's ghost of the round, which a write
-leaves alone. -/
+vector, and each network state of messages recovered from the written sent family by its own tag.
+The two cores and the round's network state are computed from the adversary's ghost of the round,
+which a write of the variables or of a sent set leaves alone. -/
 noncomputable def roundProjectionUpdate (P : Parameters) (u : ∀ _ : Fin P.n, AFW.ProcessVariables
   P.n)
     (w : NetworkState P.n) (r : ℕ) (j : Fin P.n) (sr : RoundVariables P.n)
     (sent : Fin P.n → Finset (Message P.n)) : GBCA.ByAFW.RoundStateOverBracha P.n :=
   ((Function.update (fun i => programProjection ((u i).2.roundVariables r)) j (programProjection
     sr),
-      (w.ghost r).2.2),
+      networkProjection (w.ghost r)),
     (((Function.update
             (fun i => ((u i).2.roundVariables r).firstGather) j
             (sr.firstGather),
@@ -350,30 +384,32 @@ theorem roundProjection_writeNoSent (u : ∀ _ : Fin P.n, AFW.ProcessVariables P
 end Writes
 /-! ### Reading the written projection
 
-The written projection is read coordinate by coordinate, so that a transition's
-remaining obligations are stated over one local state vector or one network
+The written projection is read coordinate by coordinate, so that the obligations of a
+transition's projection lemma are stated over one local state vector or one network
 state at a time. -/
 
-section WrittenProjectionReaders
+section WrittenProjectionCoordinates
 variable (v : ∀ _ : Fin P.n, AFW.ProcessVariables P.n) (w : NetworkState P.n) (r : ℕ) (j : Fin P.n)
     (sr : RoundVariables P.n) (sent : Fin P.n → Finset (Message P.n))
 
 @[simp] theorem programs_mk {G₁ G₂ : Type} (a : ∀ _ : Fin P.n, GBCA.ByAFW.ProcessVariables P.n)
-    (bnd : Option Bool) (x : G₁) (y : G₂) :
-    GBCA.ByAFW.programs (((a, bnd), (x, y)) : GBCA.ByAFW.RoundStateOverGathers P.n G₁ G₂) = a := rfl
+    (net : GBCA.ByAFW.NetworkState P.n) (x : G₁) (y : G₂) :
+    GBCA.ByAFW.programs (((a, net), (x, y)) : GBCA.ByAFW.RoundStateOverGathers P.n G₁ G₂) = a :=
+  rfl
 
-@[simp] theorem bound_mk {G₁ G₂ : Type} (a : ∀ _ : Fin P.n, GBCA.ByAFW.ProcessVariables P.n)
-    (bnd : Option Bool) (x : G₁) (y : G₂) :
-    GBCA.ByAFW.bound (((a, bnd), (x, y)) : GBCA.ByAFW.RoundStateOverGathers P.n G₁ G₂) = bnd := rfl
+@[simp] theorem network_mk {G₁ G₂ : Type} (a : ∀ _ : Fin P.n, GBCA.ByAFW.ProcessVariables P.n)
+    (net : GBCA.ByAFW.NetworkState P.n) (x : G₁) (y : G₂) :
+    GBCA.ByAFW.network (((a, net), (x, y)) : GBCA.ByAFW.RoundStateOverGathers P.n G₁ G₂) = net :=
+  rfl
 
 @[simp] theorem firstGather_mk {G₁ G₂ : Type} (a : ∀ _ : Fin P.n, GBCA.ByAFW.ProcessVariables P.n)
-    (bnd : Option Bool) (x : G₁) (y : G₂) :
-    GBCA.ByAFW.firstGather (((a, bnd), (x,
+    (net : GBCA.ByAFW.NetworkState P.n) (x : G₁) (y : G₂) :
+    GBCA.ByAFW.firstGather (((a, net), (x,
       y)) : GBCA.ByAFW.RoundStateOverGathers P.n G₁ G₂) = x := rfl
 
 @[simp] theorem secondGather_mk {G₁ G₂ : Type} (a : ∀ _ : Fin P.n, GBCA.ByAFW.ProcessVariables P.n)
-    (bnd : Option Bool) (x : G₁) (y : G₂) :
-    GBCA.ByAFW.secondGather (((a, bnd), (x,
+    (net : GBCA.ByAFW.NetworkState P.n) (x : G₁) (y : G₂) :
+    GBCA.ByAFW.secondGather (((a, net), (x,
       y)) : GBCA.ByAFW.RoundStateOverGathers P.n G₁ G₂) = y := rfl
 
 @[simp] theorem gatherProgramsAndNetwork_firstGatherProjection_fst :
@@ -394,8 +430,9 @@ variable (v : ∀ _ : Fin P.n, AFW.ProcessVariables P.n) (w : NetworkState P.n) 
       = Function.update (fun i => programProjection ((v i).2.roundVariables r)) j (programProjection
         sr) := rfl
 
-@[simp] theorem bound_roundProjectionUpdate :
-    GBCA.ByAFW.bound (roundProjectionUpdate P v w r j sr sent) = (w.ghost r).2.2 := rfl
+@[simp] theorem network_roundProjectionUpdate :
+    GBCA.ByAFW.network (roundProjectionUpdate P v w r j sr sent) = networkProjection (w.ghost r) :=
+  rfl
 
 @[simp] theorem core_firstGather_roundProjectionUpdate :
     Gather.core (GBCA.ByAFW.firstGather (roundProjectionUpdate P v w r j sr sent)) = (w.ghost
@@ -436,7 +473,7 @@ variable (v : ∀ _ : Fin P.n, AFW.ProcessVariables P.n) (w : NetworkState P.n) 
             ⟨messagesOf (secondGatherInputBroadcastMessageOf k)
               (secondGatherInputBroadcastMessageOf_inj k) sent, w.F⟩) := rfl
 
-end WrittenProjectionReaders
+end WrittenProjectionCoordinates
 end AFW
 end ABA
 end PLTS

@@ -13,11 +13,11 @@ import Leslie2Protocols.Framework.Relabel
 # The extended alphabet
 
 The shared alphabet `Label n` names what an observer of the protocol sees: the
-ABA interface, the two sub-protocol interfaces, and corruption. It cannot name
-a multicast, a delivery, or a Byzantine call or return transition, because those are synchronised
-steps of
-components whose boundary the observer does not see. The extended alphabet
-`ExtendedLabel n M E` adds them, and the composition hides them again.
+ABA interface, the two sub-protocol interfaces with the announcement `boundG` of a round's bound
+bit, and corruption. It cannot name a multicast, a delivery, a round-internal call or return, or a
+corrupted process's sub-protocol call, because those are synchronised steps of components whose
+boundary the observer does not see. The extended alphabet `ExtendedLabel n M E` adds them, and the
+composition hides them again.
 
 The alphabet is parametric in two types an implementation supplies: the graded-agreement message
 type `M`, and the type `E` of the round's own calls and returns. Every constructor but the three
@@ -26,11 +26,20 @@ is everything defined over the alphabet here: the hidden-label set, the labels a
 (D23), the common coin's label pullback, and the lifted coin itself. An implementation fixes `M`
 and `E` and inherits all of it.
 
+Each label is output by one component. The program of process `j` outputs its
+graded-agreement call and return, its round multicast and its round-internal calls and returns,
+its coin call, its DECIDED send and relay, and its ABA return. The network outputs the deliveries,
+`fail`, the announcement `boundG`, and a corrupted process's two sub-protocol calls
+`byzantineCallG` and `byzantineCallW` (D11). The common coin outputs its return `retW`. A program
+takes every other non-silent label as an input, and every program idles on `boundG`. A return to a
+corrupted process is the output of the instance that computes it, on the instance's own return
+label. A replaced program takes no transition on the labels of `actsAt j` and takes every other
+non-silent label on a self-loop (D23).
+
 The graded-agreement return `retG` carries `GBCAOutput`, the interface's grade,
 which is the specification's own value type and is shared by every
-implementation. It carries the round's bound bit beside it, and so does the
-Byzantine return transition `byzantineRetG`: both returns of a round announce the same
-ghost output, whichever process they answer.
+implementation. It carries the returned value alone; the round's bound bit is announced by
+`boundG` (D29).
 -/
 
 namespace PLTS
@@ -39,8 +48,8 @@ namespace Implementation
 
 /-! ### The synchronisation labels -/
 
-/-- The labels the programs and the network synchronise on: the two networks, the Byzantine call and
-return transitions, and the call and return branches the shared alphabet does not distinguish. The
+/-- The labels the programs and the network synchronise on: the sends and the deliveries of the two
+networks, the round-internal calls and returns, and a corrupted process's sub-protocol calls. The
 round multicast and the round delivery carry a message of the graded-agreement implementation being
 read. -/
 inductive NetworkEvent (n : ℕ) (M E : Type) : Type
@@ -56,24 +65,17 @@ inductive NetworkEvent (n : ℕ) (M E : Type) : Type
   | decidedRelay (j : Fin n) (b : Bool)
   /-- DECIDED delivery: sender `j`'s `⟨DECIDED, b⟩` reaches receiver `i`. -/
   | decidedDeliver (i j : Fin n) (b : Bool)
-  /-- The graded-agreement call against a round already called. -/
-  | gbcaCallLoop (r : ℕ) (id : Fin n) (b : Bool)
   /-- A round-internal call or return at process `j`: a step at the boundary between the round's
   program and one of its sub-protocol instances, which the shared alphabet does not name. The
   network takes part in it, writing the round's ghost, and it sends no message. -/
   | gbcaRoundEvent (r : ℕ) (j : Fin n) (e : E)
-  /-- A corrupted process takes the graded-agreement call, opening the round's variables (D11). -/
+  /-- A corrupted process's graded-agreement call, output by the network under `k ∈ F` at a round
+  a correct process has started; the round instance takes it on its call or its loop (D11,
+  D37). -/
   | byzantineCallG (r : ℕ) (k : Fin n) (b : Bool)
-  /-- A corrupted process takes the graded-agreement call against a round already called
-  (D11). -/
-  | byzantineCallGLoop (r : ℕ) (k : Fin n) (b : Bool)
-  /-- A corrupted process takes a graded-agreement return (D11), the round's
-  bound bit `bnd` announced beside the graded outcome. -/
-  | byzantineRetG (r : ℕ) (k : Fin n) (out : GBCAOutput) (bnd : Bool)
-  /-- A corrupted process takes the coin call (D11). -/
+  /-- A corrupted process's coin call, output by the network under `k ∈ F` at a round a correct
+  process has started; the common coin takes it on its call or its loop (D11, D37). -/
   | byzantineCallW (r : ℕ) (k : Fin n)
-  /-- A corrupted process takes the coin return (D11). -/
-  | byzantineRetW (r : ℕ) (k : Fin n) (b : Bool)
   deriving DecidableEq
 
 /-- The extended alphabet. Its silent label is `Sum.inl τ`, so every
@@ -96,28 +98,22 @@ def networkEventLabels (n : ℕ) {M E : Type} : Set (ExtendedLabel n M E) :=
 
 /-! ### The labels a process acts on
 
-A corruption replaces the program of the process it names (D23). The replaced
-program is unchanged on every label it can take at all, and it can take every
-label except the ones below: those on which the process would act on its own
-sub-protocol messages. Those messages are the business of the Byzantine call and return
-transitions (D11), which carry it with no transition at the process they name. -/
+A corruption replaces the program of the process it names (D23). The replaced program takes no
+transition on the outputs below and takes every other non-silent label on a self-loop: the
+deliveries addressed to it, the coin's return, the Byzantine calls, the announcement `boundG` and
+`fail`, which are its inputs, and its two other outputs, `decidedRelay j _` and `retABA j _`, at
+either bit. -/
 
-/-- The labels on which process `j` acts on its own sub-protocol messages: its own graded-agreement
-call and return, its own round multicast, the round and DECIDED deliveries addressed to it, its own
-call against a round already called, its own round-internal call or return, its own DECIDED send,
-and the graded-agreement transitions that name it. -/
+/-- The outputs of the program of process `j` on which a replaced program takes no transition: its
+own graded-agreement call and return, its own round multicast, its own round-internal calls and
+returns, its own coin call and its own DECIDED send. -/
 def actsAt {n : ℕ} {M E : Type} (j : Fin n) : ExtendedLabel n M E → Prop
   | Sum.inl (.callG _ id _) => id = j
-  | Sum.inl (.retG _ id _ _) => id = j
+  | Sum.inl (.retG _ id _) => id = j
+  | Sum.inl (.callW _ id) => id = j
   | Sum.inr (.gbcaSend _ k _) => k = j
-  | Sum.inr (.gbcaDeliver _ i _ _) => i = j
-  | Sum.inr (.decidedDeliver i _ _) => i = j
-  | Sum.inr (.gbcaCallLoop _ id _) => id = j
   | Sum.inr (.gbcaRoundEvent _ k _) => k = j
   | Sum.inr (.decidedSend id _) => id = j
-  | Sum.inr (.byzantineCallG _ k _) => k = j
-  | Sum.inr (.byzantineCallGLoop _ k _) => k = j
-  | Sum.inr (.byzantineRetG _ k _ _) => k = j
   | _ => False
 
 instance {n : ℕ} {M E : Type} (j : Fin n) :
@@ -129,12 +125,11 @@ instance {n : ℕ} {M E : Type} (j : Fin n) :
 /-! ### The label pullback of the common coin -/
 
 /-- The pullback along which the common coin is read over the extended
-alphabet: a shared label is its own, the Byzantine call and return transitions are the coin's own
-calls and returns, and every other network event leaves the coin idle. -/
+alphabet: a shared label is its own, a corrupted process's coin call is the coin's own call, and
+every other network event leaves the coin idle. -/
 def coinLabelMap (n : ℕ) {M E : Type} : ExtendedLabel n M E → Option (Label n)
   | Sum.inl l => some l
   | Sum.inr (.byzantineCallW r k) => some (.callW r k)
-  | Sum.inr (.byzantineRetW r k b) => some (.retW r k b)
   | Sum.inr _ => none
 
 @[simp] theorem coinLabelMap_inl {n : ℕ} {M E : Type} (l : Label n) :
@@ -142,9 +137,6 @@ def coinLabelMap (n : ℕ) {M E : Type} : ExtendedLabel n M E → Option (Label 
 
 @[simp] theorem coinLabelMap_byzantineCallW {n : ℕ} {M E : Type} (r : ℕ) (k : Fin n) :
     coinLabelMap (M := M) (E := E) n (Sum.inr (.byzantineCallW r k)) = some (.callW r k) := rfl
-
-@[simp] theorem coinLabelMap_byzantineRetW {n : ℕ} {M E : Type} (r : ℕ) (k : Fin n) (b : Bool) :
-    coinLabelMap (M := M) (E := E) n (Sum.inr (.byzantineRetW r k b)) = some (.retW r k b) := rfl
 
 @[simp] theorem coinLabelMap_gbcaSend {n : ℕ} {M E : Type} (r : ℕ) (j : Fin n) (m : M) :
     coinLabelMap (E := E) n (Sum.inr (.gbcaSend r j m)) = none := rfl
@@ -161,29 +153,19 @@ def coinLabelMap (n : ℕ) {M E : Type} : ExtendedLabel n M E → Option (Label 
 @[simp] theorem coinLabelMap_decidedDeliver {n : ℕ} {M E : Type} (i j : Fin n) (b : Bool) :
     coinLabelMap (M := M) (E := E) n (Sum.inr (.decidedDeliver i j b)) = none := rfl
 
-@[simp] theorem coinLabelMap_gbcaCallLoop {n : ℕ} {M E : Type} (r : ℕ) (id : Fin n) (b : Bool) :
-    coinLabelMap (M := M) (E := E) n (Sum.inr (.gbcaCallLoop r id b)) = none := rfl
-
 @[simp] theorem coinLabelMap_gbcaRoundEvent {n : ℕ} {M E : Type} (r : ℕ) (j : Fin n) (e : E) :
     coinLabelMap (M := M) n (Sum.inr (.gbcaRoundEvent r j e)) = none := rfl
 
 @[simp] theorem coinLabelMap_byzantineCallG {n : ℕ} {M E : Type} (r : ℕ) (k : Fin n) (b : Bool) :
     coinLabelMap (M := M) (E := E) n (Sum.inr (.byzantineCallG r k b)) = none := rfl
 
-@[simp] theorem coinLabelMap_byzantineCallGLoop {n : ℕ} {M E : Type} (r : ℕ) (k : Fin n)
-    (b : Bool) :
-    coinLabelMap (M := M) (E := E) n (Sum.inr (.byzantineCallGLoop r k b)) = none := rfl
-
-@[simp] theorem coinLabelMap_byzantineRetG {n : ℕ} {M E : Type} (r : ℕ) (k : Fin n)
-    (out : GBCAOutput) (bnd : Bool) :
-    coinLabelMap (M := M) (E := E) n (Sum.inr (.byzantineRetG r k out bnd)) = none := rfl
-
 /-! ### The lifted common coin -/
 
 /-- The common coin, read over the extended alphabet through the pullback. A
 implementation fixes `M` and `E` and names the result `coinOverRoundAlphabet`. -/
 noncomputable def coinOverExtendedAlphabet (P : Parameters) (M E : Type) :
-    System (ℕ → WCC.SpecState P.n) (ExtendedLabel P.n M E) :=
+    System (InstanceFamilyState (WCC.SpecState.initial P.n) (WCC.failAct P))
+      (ExtendedLabel P.n M E) :=
   (WCC.specFamily P).mapIdle (coinLabelMap P.n)
 
 @[simp] theorem coinOverExtendedAlphabet_init (P : Parameters) (M E : Type) :
@@ -196,7 +178,8 @@ call or return of one of its own rounds, nor `fail`. Read through the pullback
 `coinLabelMap`, this is the coin's transition in every synchronised step — of a protocol
 system, of its composed system, and of the protocol-shaped specification
 (`ABA/Composition/Hybrid.lean`) — that leaves the coin unchanged. -/
-theorem wccFamily_idle (P : Parameters) (o : ℕ → WCC.SpecState P.n) {l : Label P.n}
+theorem wccFamily_idle (P : Parameters)
+    (o : InstanceFamilyState (WCC.SpecState.initial P.n) (WCC.failAct P)) {l : Label P.n}
     (hl : l ≠ Label.tau) (hr : Label.wccRound l = none) (hf : ¬ Label.isFail l) :
     (WCC.specFamily P).step o l (PMF.pure o) := by
   rw [WCC.specFamily, System.family_step_iff]
@@ -204,22 +187,25 @@ theorem wccFamily_idle (P : Parameters) (o : ℕ → WCC.SpecState P.n) {l : Lab
 
 /-! ### The common coin's resolution -/
 
-/-- An instance's resolution at round `r` is a silent transition of the common coin's
-family, every other round unchanged. -/
-theorem wccFamily_tau (P : Parameters) (o : ℕ → WCC.SpecState P.n) {r : ℕ}
-    {μw : PMF (WCC.SpecState P.n)} (h : WCC.Step P r (o r) Label.tau μw) :
-    (WCC.specFamily P).step o Label.tau (μw.map (Function.update o r)) := by
+/-- An instance's resolution at a round `r` of the map is a silent transition of the common
+coin's family, every other round unchanged. -/
+theorem wccFamily_tau (P : Parameters)
+    (o : InstanceFamilyState (WCC.SpecState.initial P.n) (WCC.failAct P)) {r : ℕ}
+    (hr : r ∈ o.instanceMap.keys) {μw : PMF (WCC.SpecState P.n)}
+    (h : WCC.Step P r (o r) Label.tau μw) :
+    (WCC.specFamily P).step o Label.tau (μw.map (o.setInstanceState r)) := by
   rw [WCC.specFamily, System.family_step_iff]
-  exact Or.inl ⟨rfl, r, μw, h, rfl⟩
+  exact Or.inl ⟨rfl, r, hr, μw, h, rfl⟩
 
-/-- An instance's resolution at round `r` is a silent transition of the common coin read
-over the extended alphabet. -/
+/-- An instance's resolution at a round `r` of the map is a silent transition of the common
+coin read over the extended alphabet. -/
 theorem coinOverExtendedAlphabet_tau (P : Parameters) (M E : Type)
-    (o : ℕ → WCC.SpecState P.n) {r : ℕ} {μw : PMF (WCC.SpecState P.n)}
+    (o : InstanceFamilyState (WCC.SpecState.initial P.n) (WCC.failAct P)) {r : ℕ}
+    (hr : r ∈ o.instanceMap.keys) {μw : PMF (WCC.SpecState P.n)}
     (h : WCC.Step P r (o r) Label.tau μw) :
     (coinOverExtendedAlphabet P M E).step o (Sum.inl Label.tau)
-      (μw.map (Function.update o r)) :=
-  (System.mapIdle_step_some (coinLabelMap_inl Label.tau) _).mpr (wccFamily_tau P o h)
+      (μw.map (o.setInstanceState r)) :=
+  (System.mapIdle_step_some (coinLabelMap_inl Label.tau) _).mpr (wccFamily_tau P o hr h)
 
 /-! ### Dirac successors
 

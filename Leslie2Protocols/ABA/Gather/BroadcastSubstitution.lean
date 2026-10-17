@@ -27,8 +27,8 @@ through the operators that expression is built from: `ForwardSimulation.mapIdle`
 coordinate over the composition's alphabet, `ForwardSimulation.synchronisedProduct` collects the
 coordinates of the family, `ForwardSimulation.parallel_left` holds the gather programs, and
 `ForwardSimulation.abstract` and `ForwardSimulation.relabel` hide the events and read the result
-back over the interface alphabet. `ForwardSimulation.congr` then reshapes the composite relation
-into `BroadcastSubstitutionRelation`.
+back over the gather specification's alphabet. `ForwardSimulation.congr` then reshapes the
+composite relation into `BroadcastSubstitutionRelation`.
 
 Both instances are LTS, so `instanceOverBracha_refines` reads the substitution as an
 inclusion of achievable trace distributions. `broadcastSubstitutionRelation_corrupt` states that
@@ -74,7 +74,7 @@ theorem broadcastSubstitution (P : Parameters) (X : Type) [DecidableEq X] :
       := by
   have hIn : ∀ k : Fin P.n,
       ForwardSimulation ((BRB.brachaInstance P k X).mapIdle (inputBroadcastLabelMap P.n X k))
-        ((BRB.specificationOverInstanceAlphabet P k X).mapIdle (inputBroadcastLabelMap P.n X k))
+        ((BRB.specInst P k X).mapIdle (inputBroadcastLabelMap P.n X k))
           (BRB.SpecificationRelation P k) :=
     fun k => ForwardSimulation.mapIdle (inputBroadcastLabelMap P.n X k) (inputBroadcastLabelMap_tau
       P.n X k)

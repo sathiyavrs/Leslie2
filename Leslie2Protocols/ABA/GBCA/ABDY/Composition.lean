@@ -15,21 +15,21 @@ import Leslie2Protocols.Framework.LoopsAndInstanceFamilies
 `ABA/GBCA/ABDY/Components.lean` — the `n` corruption-blind local programs beside the round's own
 network. `compositionExtended` is the programs synchronised and put in parallel with the network
 over the instance-internal alphabet; `composition` hides the two synchronisations there and reads
-the
-result back over the shared extended alphabet `ExtendedLabel n Message`. The instance is the unit
-the
-analysis replaces by the graded-agreement specification, so its interface is exactly what that
-replacement may see: the round's ports `callG r`, `retG r`, `gbcaCallLoop r` and the
-three Byzantine graded-agreement labels of round `r`, and nothing else.
+the result back over the shared extended alphabet `ExtendedLabel n Message`. The instance is the
+unit the analysis replaces by the graded-agreement specification, so its interface is exactly what
+that replacement may see: the calls `callG r`, the returns `retG r`, the announcements `boundG r`
+and a corrupted process's calls `byzantineCallG r` of round `r`, and nothing else.
 
-`gbcaInstanceFamily` is the ℕ-indexed family of these instances: `System.family` passes a
-round-tagged label to the instance of its round, takes `τ` at any round, and broadcasts `fail` to
-every round at once. It is built from three functions on the shared extended alphabet.
-`roundOwnsLabel` gives the round a label of the interface belongs to, and `none` at every other
-label — the ABA API, the coin ports, `fail`, the DECIDED sets and the round synchronisations of the
-protocol network. `isFailLabel` picks out the one label every round takes at once. `corruptionAct`
-is the broadcast corruption act on an instance state: the round's network state records it and the
-round variables do not (D1).
+`gbcaInstanceFamily` is the ℕ-indexed family of these instances over `InstanceFamilyState`:
+`System.family` passes a round-tagged label to the instance of its round, takes `τ` at a round it
+has touched, and broadcasts `fail` to every round at once. It is built from three functions on the
+shared extended alphabet and the instances' common initial state. `roundOwnsLabel` gives the round a
+label of the interface belongs to, and `none` at every other label — the ABA API, the coin ports,
+`fail`, the DECIDED sets and the round synchronisations of the protocol network. `isFailLabel`
+picks out the one label every round takes at once. `corruptionAct` is the broadcast corruption act
+on an instance state: the round's network state records it and the round variables do not (D1).
+Every instance starts from `RoundState.initial` (`composition_init`), so the family reads the
+instance's initial state at every round it has not touched (`gbcaInstanceFamily_init_apply`).
 
 ## Determinacy
 
@@ -62,8 +62,8 @@ noncomputable def compositionExtended (P : Parameters) (r : ℕ) :
 
 /-- **The round-`r` instance**: the programs beside the network, the two
 synchronisations hidden, the result read back over the shared extended alphabet. Its
-interface is the round's ports — `callG r`, `retG r`, `gbcaCallLoop r` and the
-three Byzantine graded-agreement labels of round `r`. -/
+interface is the calls `callG r`, the returns `retG r`, the announcements `boundG r` and a
+corrupted process's calls `byzantineCallG r` of round `r`. -/
 noncomputable def composition (P : Parameters) (r : ℕ) :
     System (GBCA.ByABDY.RoundState P.n) (ExtendedLabel P.n Message) :=
   ((compositionExtended P r).abstract (gbcaEvents P.n)).relabel
@@ -73,11 +73,9 @@ alphabet — the ABA API, the coin ports, `fail`, the DECIDED sets, and the roun
 the protocol network — is owned by no round. -/
 def roundOwnsLabel {n : ℕ} {M : Type} : ExtendedLabel n M → Option ℕ
   | Sum.inl (.callG r _ _) => some r
-  | Sum.inl (.retG r _ _ _) => some r
-  | Sum.inr (.gbcaCallLoop r _ _) => some r
+  | Sum.inl (.retG r _ _) => some r
+  | Sum.inl (.boundG r _) => some r
   | Sum.inr (.byzantineCallG r _ _) => some r
-  | Sum.inr (.byzantineCallGLoop r _ _) => some r
-  | Sum.inr (.byzantineRetG r _ _ _) => some r
   | _ => none
 
 /-- Corruption is the one label every round takes at once. -/
@@ -98,11 +96,24 @@ def corruptionAct (P : Parameters) : ExtendedLabel P.n Message → GBCA.ByABDY.R
   | _, s => s
 
 /-- **The graded-agreement family of the protocol**: the ℕ-indexed family of round instances. A
-round-tagged label moves its round alone, `τ` moves one round, and `fail` is the broadcast that
-keeps every round's copy of the corrupted set together. -/
+round-tagged label moves its round alone, `τ` moves one round the family has touched, and `fail` is
+the broadcast that keeps every round's copy of the corrupted set together. Every round not touched
+reads `RoundState.initial` under the recorded corruptions. -/
 noncomputable def gbcaInstanceFamily (P : Parameters) :
-    System (ℕ → GBCA.ByABDY.RoundState P.n) (ExtendedLabel P.n Message) :=
+    System (InstanceFamilyState (GBCA.ByABDY.RoundState.initial P.n) (corruptionAct P))
+      (ExtendedLabel P.n Message) :=
   System.family (composition P) roundOwnsLabel isFailLabel (corruptionAct P)
+    (GBCA.ByABDY.RoundState.initial P.n)
+
+/-- Every instance starts from the initial round state: every program at its initial variables
+and the network at its initial state. -/
+@[simp] theorem composition_init (P : Parameters) (r : ℕ) :
+    (composition P r).init = GBCA.ByABDY.RoundState.initial P.n := rfl
+
+/-- The family starts from the instances' initial states. -/
+theorem gbcaInstanceFamily_init_apply (P : Parameters) (r : ℕ) :
+    (gbcaInstanceFamily P).init r = (composition P r).init :=
+  System.family_init_apply _ _ _ (composition_init P) r
 
 /-! ### Determinacy
 
@@ -149,6 +160,7 @@ theorem composition_isLTS (P : Parameters) (r : ℕ) : (composition P r).IsLTS :
 /-- The family of instances is an LTS. -/
 theorem gbcaInstanceFamily_isLTS (P : Parameters) : (gbcaInstanceFamily P).IsLTS :=
   System.family_isLTS (composition_isLTS P) roundOwnsLabel isFailLabel (corruptionAct P)
+    (GBCA.ByABDY.RoundState.initial P.n)
 
 /-- No program transition fires on `τ`: a program only ever moves in a synchronisation or
 on one of the round's ports. The instance's silent transitions are therefore

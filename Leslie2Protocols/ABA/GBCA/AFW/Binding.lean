@@ -21,10 +21,13 @@ graded agreement specification read over the family alphabet, through
 `roundOverBracha_specificationTraces` are the trace-distribution inclusions of the three, and
 `roundOverBracha_refinesSpecification` is the composite simulation the lowest one rests on.
 
-Binding is a property of the labels (`GBCA.BindingTraceExtended`), so each inclusion carries it
-from `GBCA.specificationOverRoundAlphabet_binding`: `roundOverGatherSpecifications_binding`,
+Binding is a property of the labels (`GBCA.BindingTraceExtended`): two announcements of the
+round's bound bit name the same bit, a return of a value returns the announced bit, and two
+returns of values agree. Each inclusion therefore carries it from
+`GBCA.specificationOverRoundAlphabet_binding`: `roundOverGatherSpecifications_binding`,
 `roundOverBroadcastSpecification_binding` and `roundOverBracha_binding` are binding at the three
-compositions.
+compositions. In each composition the announced bit is `GBCA.boundOfCore` of the first gather's
+core, which the round's network records from the first gather's announcement.
 -/
 
 open Stream'
@@ -97,7 +100,7 @@ theorem roundOverBroadcastSpecification_specificationTraces (P : Parameters) (r 
 
 /-- **Binding of the round over the gather specifications, on a trace.** Every
 positive-probability trace of the round is bound to one bit: all its round-`r`
-returns announce that bit, and every one of them that returns a value returns
+announcements name that bit, and every round-`r` return of a value returns
 that bit. Binding is a property of the labels (`BindingTraceExtended`), so
 `roundOverGatherSpecifications_refines` carries it from
 `specificationOverRoundAlphabet_binding`. -/

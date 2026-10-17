@@ -11,23 +11,25 @@ import Leslie2.Results
 /-!
 # Safety of the gather specification instance
 
-The common core is what a gather instance promises about the sets its returns announce.
-`CoreTrace` states it over the labels of a run: every return label of the trace carries the same
-payload set `C`, that set has at least `n − f` entries, and the returned map has every entry of it.
-This is the source's Transition System 4 core clause, quantified over the labels of a run rather
-than over the states of one. `specInst_core` is `CoreTrace` at the gather specification
+The common core is what a gather instance promises about the set it announces. `CoreTrace`
+states it over the labels of a run: every announced core has at least `n − f` entries, two
+announcements announce the same set, and every returned map contains every announced core. This
+is the source's Transition System 4 core clause, quantified over the labels of a run rather than
+over the states of one. `specInst_core` is `CoreTrace` at the gather specification
 `Gather.specInst` (`ABA/Gather/Specification.lean`).
 
 At the specification the three clauses come from the transitions alone. `bindCore` is the only
 writer of the `core` field and fires only from `core = none`, so the field, once written, keeps its
-value (`core_stable`) and every return reads the same set. `ret` demands `C.subMap g` outright. The
-size bound is the guard `hcard` of `bindCore`, carried forward as the state invariant `core_card`.
+value (`core_stable`), and two states of one execution that hold a core hold the same one
+(`core_eq_of_stateAt`). `announceCore` announces the field's value, and `ret` asks for a core below
+the returned map. The size bound is the guard `hcard` of `bindCore`, carried forward as the state
+invariant `core_card`.
 
 An implementation inherits the predicate along the soundness of its refinement
 (`PLTS.safety_transfer`, `Framework/TraceDistributionSupport.lean`), and the two gather
 implementations carry it in `ABA/Gather/CommonCore.lean`. What makes that transfer say anything is
-that the core is on the label (D29): an implementation holds it in a field no process reads, and
-its refinements match the labels that carry it.
+that the core is announced on a label of its own (D29): an implementation holds it in a field no
+process reads, and its refinements match its announcement by the specification's.
 -/
 
 open Stream'
@@ -40,13 +42,18 @@ variable {X : Type} [DecidableEq X] {P : Parameters}
 
 /-! ### The core along a run -/
 
-/-- The guards of a return, determined by its label. -/
+/-- The guards of a return: the core is written and lies below the returned map. -/
 theorem ret_guards {s : SpecState P.n X} {id : Fin P.n} {g : Fin P.n → Option X}
-    {C : AcceptedPairs P.n X} {μ : PMF (SpecState P.n X)}
-    (hstep : Step P s (.ret id g C) μ) :
-    s.core = some C ∧ AcceptedPairs.subMap C g := by
+    {μ : PMF (SpecState P.n X)} (hstep : Step P s (.ret id g) μ) :
+    ∃ C, s.core = some C ∧ AcceptedPairs.subMap C g := by
   cases hstep with
-  | ret id' g' C' hC hmem _ _ => exact ⟨hC, hmem⟩
+  | ret _ _ C hC hmem _ _ => exact ⟨C, hC, hmem⟩
+
+/-- The guard of an announcement: the announced set is the core. -/
+theorem announceCore_guard {s : SpecState P.n X} {C : AcceptedPairs P.n X}
+    {μ : PMF (SpecState P.n X)} (hstep : Step P s (.core C) μ) : s.core = some C := by
+  cases hstep with
+  | announceCore _ h => exact h
 
 /-- **The core is written once.** `bindCore` is its only writer and fires
 only from `core = none`, so the value is unchanged by every later transition and every
@@ -93,48 +100,64 @@ theorem core_card {e : AlterSeq (SpecState P.n X) (Label P.n X)}
         rw [PMF.mem_support_pure_iff] at hs'; subst hs'
         exact hI
 
+/-- **The core is one set along an execution.** Two states of one execution that hold a core
+hold the same core, since the core is written once (`core_stable`). -/
+theorem core_eq_of_stateAt {e : AlterSeq (SpecState P.n X) (Label P.n X)}
+    (he : is_exec e (specInst P X)) {k₁ k₂ : ℕ} {s₁ s₂ : SpecState P.n X}
+    {C₁ C₂ : AcceptedPairs P.n X} (hst₁ : e.stateAt k₁ = some s₁) (hst₂ : e.stateAt k₂ = some s₂)
+    (hC₁ : s₁.core = some C₁) (hC₂ : s₂.core = some C₂) : C₁ = C₂ := by
+  rcases le_total k₁ k₂ with hk | hk
+  · have hcarry := is_exec_stable (sys := specInst P X)
+      (fun s => s.core = some C₁) (fun s l μ s' => core_stable s l μ s')
+      he k₁ k₂ s₁ s₂ hk hst₁ hst₂ hC₁
+    rw [hcarry] at hC₂
+    exact Option.some.inj hC₂
+  · have hcarry := is_exec_stable (sys := specInst P X)
+      (fun s => s.core = some C₂) (fun s l μ s' => core_stable s l μ s')
+      he k₂ k₁ s₂ s₁ hk hst₂ hst₁ hC₂
+    rw [hcarry] at hC₁
+    exact (Option.some.inj hC₁).symm
+
 /-! ### The trace-level statement -/
 
-/-- **The core on a trace.** Every return label of the trace carries one and
-the same payload set, that set has at least `n − f` entries, and the returned
-map has every entry of it. -/
+/-- **The common core on a trace.** Every announced core has at least `n − f` entries, two
+announcements announce the same set, and every returned map contains every announced core. -/
 def CoreTrace (P : Parameters) {X : Type} (t : Seq (Label P.n X)) : Prop :=
+  (∀ C : AcceptedPairs P.n X, Label.core C ∈ t → P.n - P.f ≤ C.card) ∧
+  (∀ C₁ C₂ : AcceptedPairs P.n X, Label.core C₁ ∈ t → Label.core C₂ ∈ t → C₁ = C₂) ∧
   (∀ (id : Fin P.n) (g : Fin P.n → Option X) (C : AcceptedPairs P.n X),
-      Label.ret id g C ∈ t → P.n - P.f ≤ C.card ∧ AcceptedPairs.subMap C g) ∧
-    ∀ (id₁ id₂ : Fin P.n) (g₁ g₂ : Fin P.n → Option X) (C₁ C₂ : AcceptedPairs P.n X),
-      Label.ret id₁ g₁ C₁ ∈ t → Label.ret id₂ g₂ C₂ ∈ t → C₁ = C₂
+    Label.ret id g ∈ t → Label.core C ∈ t → AcceptedPairs.subMap C g)
 
-/-- **The specification instance binds one core.** -/
+/-- **The specification instance binds one core.** An announcement reads the core of the state
+it fires at, a return asks for a core below its map, and the core is one set along an
+execution. -/
 theorem specInst_core (P : Parameters) (X : Type) [DecidableEq X] :
     ∀ D ∈ achievableTraceDists (specInst P X), ∀ t, D t ≠ 0 → CoreTrace P t := by
   rintro D ⟨pe, h_init, h_D⟩ t h_ne
   rw [← h_D t] at h_ne
   obtain ⟨e, h_exec, h_char⟩ :=
     exists_exec_of_traceProb_ne_zero pe h_init t h_ne
-  refine ⟨?_, ?_⟩
-  · intro id g C h₁
-    obtain ⟨-, k, s', hg⟩ := (h_char _).mp h₁
+  have hcore : ∀ C, Label.core C ∈ t →
+      ∃ (k : ℕ) (s : SpecState P.n X), e.stateAt k = some s ∧ s.core = some C := by
+    intro C h
+    obtain ⟨-, k, s', hg⟩ := (h_char _).mp h
     obtain ⟨s, μ, hst, hstep, -⟩ := h_exec.1 k _ _ hg
-    obtain ⟨hC, hmem⟩ := ret_guards hstep
-    exact ⟨core_card h_exec k s hst C hC, hmem⟩
-  · intro id₁ id₂ g₁ g₂ C₁ C₂ h₁ h₂
+    exact ⟨k, s, hst, announceCore_guard hstep⟩
+  refine ⟨?_, ?_, ?_⟩
+  · intro C h
+    obtain ⟨k, s, hst, hC⟩ := hcore C h
+    exact core_card h_exec k s hst C hC
+  · intro C₁ C₂ h₁ h₂
+    obtain ⟨k₁, s₁, hst₁, hC₁⟩ := hcore C₁ h₁
+    obtain ⟨k₂, s₂, hst₂, hC₂⟩ := hcore C₂ h₂
+    exact core_eq_of_stateAt h_exec hst₁ hst₂ hC₁ hC₂
+  · intro id g C h₁ h₂
     obtain ⟨-, k₁, s₁', hg₁⟩ := (h_char _).mp h₁
-    obtain ⟨-, k₂, s₂', hg₂⟩ := (h_char _).mp h₂
     obtain ⟨s₁, μ₁, hst₁, hstep₁, -⟩ := h_exec.1 k₁ _ _ hg₁
-    obtain ⟨s₂, μ₂, hst₂, hstep₂, -⟩ := h_exec.1 k₂ _ _ hg₂
-    obtain ⟨hC₁, -⟩ := ret_guards hstep₁
-    obtain ⟨hC₂, -⟩ := ret_guards hstep₂
-    rcases le_total k₁ k₂ with hk | hk
-    · have hcarry := is_exec_stable (sys := specInst P X)
-        (fun s => s.core = some C₁) (fun s l μ s' => core_stable s l μ s')
-        h_exec k₁ k₂ s₁ s₂ hk hst₁ hst₂ hC₁
-      rw [hcarry] at hC₂
-      exact Option.some.inj hC₂
-    · have hcarry := is_exec_stable (sys := specInst P X)
-        (fun s => s.core = some C₂) (fun s l μ s' => core_stable s l μ s')
-        h_exec k₂ k₁ s₂ s₁ hk hst₂ hst₁ hC₂
-      rw [hcarry] at hC₁
-      exact (Option.some.inj hC₁).symm
+    obtain ⟨C', hC', hmem⟩ := ret_guards hstep₁
+    obtain ⟨k₂, s₂, hst₂, hC₂⟩ := hcore C h₂
+    rw [core_eq_of_stateAt h_exec hst₂ hst₁ hC₂ hC']
+    exact hmem
 
 /-! ### Mechanical axiom check -/
 

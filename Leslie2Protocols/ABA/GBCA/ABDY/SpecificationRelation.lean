@@ -35,13 +35,14 @@ received messages for them instead:
   `excluded = excludedOf bound`, empty while the bit is unwritten and the singleton of its
   complement once a return has written it. This is the one clause that bounds `excluded` from below,
   and it holds because the exclusion fires with the round's first return. It supplies the guard
-  `(!bnd) ∈ excluded` of a return that announces a bit already recorded, and with
+  `(!b) ∈ excluded` of the specification's announcement of the network's bit `b`
+  (`SpecificationRelation.excluded_of_bound`) and of a return after the round's first, and with
   `exclusion_witness` it yields `SpecificationRelation.bound_witness`: the recorded bit
-  carries an exclusion witness for its complement. A grade-1 or grade-2 return then announces its
-  own value (`SpecificationRelation.retBound_eq`) — the return's `n − f` quorum of received `VOTE v`
-  messages refutes a witness for `v` (`not_exclusionWitness_of_voteQuorum`), so a recorded bit is
-  `v`, and a bit computed here is `v` by `boundOf`. A grade-0 return announces `boundOf`'s bit,
-  whose complement is witnessed by `exclusionWitness_boundOf_grade0`.
+  carries an exclusion witness for its complement. After a grade-1 or grade-2 return of `v` the
+  bound bit is `v` (`SpecificationRelation.retBound_eq`) — the return's `n − f` quorum of received
+  `VOTE v` messages refutes a witness for `v` (`not_exclusionWitness_of_voteQuorum`), so a recorded
+  bit is `v`, and a bit computed at the return is `v` by `boundOf`. A grade-0 first return writes
+  `boundOf`'s bit, whose complement is witnessed by `exclusionWitness_boundOf_grade0`.
 
 Both `bindUnset` guards come from one `ECHO` witness (`bindUnset_guards`): refine it to an `n − f`
 quorum of received `INPUT v` messages (`inputQuorum_of_receivedEchoQuorum`), whose correct senders
@@ -151,7 +152,7 @@ theorem specificationRelation_corrupt_F_eq {t : SpecState P.n} {s : RoundState P
   · rw [if_neg (by rw [hF]; exact hc), if_neg hc]
     exact hF
 
-/-- **Broadcast compatibility**: `specificationRelation` is preserved by the synchronized corruption
+/-- **Broadcast compatibility**: `specificationRelation` is preserved by the synchronised corruption
 of both systems. The two `corrupt`s share the guard `id ∉ F ∧ |F| < f` and `specificationRelation`
 aligns the `F`s, so the `if`-conditions agree; every other field is untouched by corruption. -/
 theorem specificationRelation_corrupt (P : Parameters) (r : ℕ) (id : Fin P.n)
@@ -187,6 +188,14 @@ theorem specificationRelation_corrupt (P : Parameters) (r : ℕ) (id : Fin P.n)
         rw [corrupt_excluded, RoundState.corrupt_bound]
         exact hR.bound_excluded }
 
+/-- **The guard of the specification's announcement.** The specification excludes the
+complement of the recorded bound bit. -/
+theorem SpecificationRelation.excluded_of_bound {s : RoundState P.n} {t : SpecState P.n}
+    (hR : SpecificationRelation P s t) {b : Bool} (hb : s.bound = some b) :
+    (!b) ∈ t.excluded := by
+  rw [hR.bound_excluded, hb, excludedOf_some]
+  exact Finset.mem_singleton_self _
+
 /-- The recorded bound bit carries an exclusion witness for its complement:
 the specification has excluded that complement, and every excluded bit is
 witnessed. -/
@@ -197,10 +206,10 @@ theorem SpecificationRelation.bound_witness {s : RoundState P.n} {t : SpecState 
   rw [hR.bound_excluded, hb, excludedOf_some]
   exact Finset.mem_singleton_self _
 
-/-- **The announced bit of a grade-1 or grade-2 return.** A return of `v` carries an
+/-- **The bound bit after a grade-1 or grade-2 return.** A return of `v` carries an
 `n − f` quorum of received `VOTE v` messages, which refutes an exclusion witness for `v`; so a
 bound bit already recorded, whose complement is witnessed, is `v` itself,
-and one computed here is `v` by `boundOf`. -/
+and one computed at the return is `v` by `boundOf`. -/
 theorem SpecificationRelation.retBound_eq {s : RoundState P.n} {t : SpecState P.n}
     (hR : SpecificationRelation P s t) {i : Fin P.n} {v : Bool} {out : GBCAOutput}
     (hvq : P.n - P.f ≤ s.receivedCount i (.vote (some v)))
@@ -318,8 +327,7 @@ theorem excluded_eq_singleton {d : Finset Bool} {v : Bool}
 
 /-- `bindUnset (!v) ; retGrade2 v` from a state that excludes no bit (`excluded = ∅`, the
 `bindUnset` guard). The `bindUnset (!v)` support guard reads `some (!(!v))`; `Bool.not_not` rewrites
-it to `hw`'s `some v`. The exclusion of `!v` is also
-the announced bit's guard, so the return announces `v`. -/
+it to `hw`'s `some v`. -/
 theorem excludeThenRetGrade2_run {r : ℕ} {t : SpecState P.n} {id : Fin P.n} {v : Bool}
     (hq : t.quorum P)
     (hw : P.f + 1 ≤ (Finset.univ.filter
@@ -327,19 +335,18 @@ theorem excludeThenRetGrade2_run {r : ℕ} {t : SpecState P.n} {id : Fin P.n} {v
     (hlive : v ∉ t.excluded) (hd0 : t.excluded = ∅)
     (hg : t.grade = none ∨ t.grade = some true)
     (hr : t.ret id = false) :
-    (specInst P r).weakLStep t (.retG r id (.grade2 v) v)
+    (specInst P r).weakLStep t (.retG r id (.grade2 v))
       { t with
         excluded := insert (!v) t.excluded, grade := some true,
                ret := Function.update t.ret id true } := by
   have h1 : (specInst P r).LStep t Silent.τ { t with excluded := insert (!v) t.excluded } :=
     Step.bindUnset t (!v) hq (by simpa only [Bool.not_not] using hw) hd0
   have h2 : (specInst P r).LStep { t with excluded := insert (!v) t.excluded }
-      (.retG r id (.grade2 v) v)
+      (.retG r id (.grade2 v))
       { t with
         excluded := insert (!v) t.excluded, grade := some true,
                ret := Function.update t.ret id true } := by
-    refine Step.retGrade2 { t with excluded := insert (!v) t.excluded } id v v ?_
-      (Finset.mem_insert_self (!v) t.excluded)
+    refine Step.retGrade2 { t with excluded := insert (!v) t.excluded } id v ?_
       (Finset.mem_insert_self (!v) t.excluded) hg hr
     rw [Finset.mem_insert]
     rintro (hv | hv)
@@ -355,17 +362,16 @@ theorem excludeThenRetGrade1_run {r : ℕ} {t : SpecState P.n} {id : Fin P.n} {v
     (hlive : v ∉ t.excluded) (hd0 : t.excluded = ∅)
     (hd : P.f + 1 ≤ (Finset.univ.filter (fun k => t.call k = some (!v) ∨ k ∈ t.F)).card)
     (hr : t.ret id = false) :
-    (specInst P r).weakLStep t (.retG r id (.grade1 v) v)
+    (specInst P r).weakLStep t (.retG r id (.grade1 v))
     { t with excluded := insert (!v) t.excluded, ret := Function.update t.ret id true } := by
   have h1 : (specInst P r).LStep t Silent.τ { t with excluded := insert (!v) t.excluded } :=
     Step.bindUnset t (!v) hq (by simpa only [Bool.not_not] using hw) hd0
   have h2 : (specInst P r).LStep { t with excluded := insert (!v) t.excluded }
-      (.retG r id (.grade1 v) v)
+      (.retG r id (.grade1 v))
       { t with
         excluded := insert (!v) t.excluded,
                ret := Function.update t.ret id true } := by
-    refine Step.retGrade1 { t with excluded := insert (!v) t.excluded } id v v ?_
-      (Finset.mem_insert_self (!v) t.excluded)
+    refine Step.retGrade1 { t with excluded := insert (!v) t.excluded } id v ?_
       (Finset.mem_insert_self (!v) t.excluded) hd hr
     rw [Finset.mem_insert]
     rintro (hv | hv)
@@ -373,13 +379,13 @@ theorem excludeThenRetGrade1_run {r : ℕ} {t : SpecState P.n} {id : Fin P.n} {v
     · exact hlive hv
   exact weakLStep_tauThen h1 h2 (by simp)
 
-/-- `bindUnset (!bnd) ; retGrade0` from a state that excludes no bit (`excluded = ∅`, the
-`bindUnset` guard): the exclusion of `!bnd` is the announced bit's guard, so the
-return announces `bnd`. -/
-theorem excludeThenRetGrade0_run {r : ℕ} {t : SpecState P.n} {id : Fin P.n} {bnd : Bool}
+/-- `bindUnset (!b) ; retGrade0` from a state that excludes no bit (`excluded = ∅`, the
+`bindUnset` guard): the exclusion of `!b` is the guard `excluded ≠ ∅` of the return, and `b` is
+the bit the specification announces from then on. -/
+theorem excludeThenRetGrade0_run {r : ℕ} {t : SpecState P.n} {id : Fin P.n} {b : Bool}
     (hq : t.quorum P)
     (hw : P.f + 1 ≤ (Finset.univ.filter
-      (fun k => t.call k = some bnd ∨ k ∈ t.F)).card)
+      (fun k => t.call k = some b ∨ k ∈ t.F)).card)
     (hd0 : t.excluded = ∅)
     (hwT : P.f + 1 ≤ (Finset.univ.filter
       (fun k => t.call k = some true ∨ k ∈ t.F)).card)
@@ -387,20 +393,20 @@ theorem excludeThenRetGrade0_run {r : ℕ} {t : SpecState P.n} {id : Fin P.n} {b
       (fun k => t.call k = some false ∨ k ∈ t.F)).card)
     (hg : t.grade = none ∨ t.grade = some false)
     (hr : t.ret id = false) :
-    (specInst P r).weakLStep t (.retG r id .grade0 bnd)
+    (specInst P r).weakLStep t (.retG r id .grade0)
       { t with
-        excluded := insert (!bnd) t.excluded, grade := some false,
+        excluded := insert (!b) t.excluded, grade := some false,
                ret := Function.update t.ret id true } := by
   have h1 : (specInst P r).LStep t Silent.τ
-      { t with excluded := insert (!bnd) t.excluded } :=
-    Step.bindUnset t (!bnd) hq (by simpa only [Bool.not_not] using hw) hd0
-  have h2 : (specInst P r).LStep { t with excluded := insert (!bnd) t.excluded }
-      (.retG r id .grade0 bnd)
+      { t with excluded := insert (!b) t.excluded } :=
+    Step.bindUnset t (!b) hq (by simpa only [Bool.not_not] using hw) hd0
+  have h2 : (specInst P r).LStep { t with excluded := insert (!b) t.excluded }
+      (.retG r id .grade0)
       { t with
-        excluded := insert (!bnd) t.excluded, grade := some false,
+        excluded := insert (!b) t.excluded, grade := some false,
                ret := Function.update t.ret id true } :=
-    Step.retGrade0 { t with excluded := insert (!bnd) t.excluded } id bnd
-      (Finset.mem_insert_self (!bnd) t.excluded) hwT hwF hg hr
+    Step.retGrade0 { t with excluded := insert (!b) t.excluded } id
+      (Finset.insert_ne_empty (!b) t.excluded) hwT hwF hg hr
   exact weakLStep_tauThen h1 h2 (by simp)
 
 end GBCA.ByABDY

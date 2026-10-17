@@ -12,12 +12,14 @@ import Leslie2Protocols.ABA.Composition.Hybrid
 
 `Invariant.step_decidedSend`, preservation of `Invariant` at the DECIDED send of a grade-2 round.
 The process `id` stands at `toSendDecided` with the grade `grade2 b` of the round it has just
-closed. The send inserts `b` into `id`'s DECIDED set, clears the grade and moves `id` to `toCallG`
-at the same round. `g` and the coin are untouched. The phases `toSendDecided` and `toCallG` belong
+closed. The send inserts `b` into both records of `id`'s DECIDED sends, the round loop's own and
+the network's, clears the grade and moves `id` to `toCallG` at the same round. `g` and the coin
+are untouched. The phases `toSendDecided` and `toCallG` belong
 to the same groups of every clause, so the holders of every round's outcome are unchanged.
 `decided_source` for the inserted bit is `grade2_source` read at the sender, `received_sound`
 holds since the sent set grows, and `grade2Bound_agree` holds since the grade-2 holder at `id`
-moves from the grade to the sent set.
+moves from the grade to the sent set. `decidedSent_recorded` (I4') holds since the two records of
+`id` gain the same bit (`ABAState.sendDecidedOnGrade2_fst_decidedSent_self`).
 -/
 
 namespace PLTS
@@ -120,6 +122,13 @@ theorem Invariant.step_decidedSend {P : Parameters} {g : ℕ → GBCA.SpecState 
           ⟨rfl, rfl⟩ | h
         · exact (hI.grade2_source k b' hlg).imp (fun r => hCert r b')
         · exact (hI.decided_source k b' (hFeq ▸ hk) h).imp (fun r => hCert r b')
+      decidedSent_recorded := fun k hk => by
+        rw [ABAState.sendDecidedOnGrade2_decidedSent]
+        by_cases hkid : k = id
+        · rw [hkid, ABAState.sendDecidedOnGrade2_fst_decidedSent_self, Function.update_self,
+            hI.decidedSent_recorded id (hFeq ▸ hkid ▸ hk)]
+        · rw [ABAState.sendDecidedOnGrade2_fst_ne _ _ _ hkid, Function.update_of_ne hkid]
+          exact hI.decidedSent_recorded k (hFeq ▸ hk)
       grade2Bound_commit := fun r b' hgr hbr =>
         Grade2Commitment.of_unchanged (fun _ => rfl) (fun _ _ => rfl) (by rw [hFeq] : c.F ⊆ _)
           hRd hEs (hOH r) (hI.grade2Bound_commit r b' hgr hbr)

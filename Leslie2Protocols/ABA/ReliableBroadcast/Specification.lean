@@ -6,6 +6,7 @@ Authors: Sathiya / Claude
 
 import Leslie2Protocols.ABA.Vocabulary.ProcessAndNetworkState
 import Leslie2.Systems.LTS
+import Leslie2Protocols.Framework.InputEnabledness
 
 /-!
 # The BRB specification (blueprint Transition System 6)
@@ -35,6 +36,10 @@ guard forces `val = input`.
 
 Every transition is Dirac, so the instance is an LTS. `fail` is the
 determinised D1 corruption.
+
+The call and corruption are the inputs of the instance and the returns its outputs
+(`specInstInputOutputLabels`). `callLoop` takes `call m` and `fail` takes `fail id` at every
+state, so every input is enabled (`specInst_inputEnabled`).
 -/
 
 namespace PLTS
@@ -154,6 +159,20 @@ noncomputable def specInst (P : Parameters) (ldr : Fin P.n) (M : Type) :
 theorem specInst_isLTS (P : Parameters) (ldr : Fin P.n) : (specInst P ldr M).IsLTS := by
   rintro s l μ hstep
   cases hstep <;> exact ⟨_, rfl⟩
+
+/-- The input labels and the output labels of the BRB specification: the leader's call and
+corruption are inputs, and the returns are outputs. -/
+def specInstInputOutputLabels (n : ℕ) (M : Type) : InputOutputLabels (Label n M) where
+  inputLabels := {l | (∃ m, l = .call m) ∨ ∃ id, l = .fail id}
+  outputLabels := {l | ∃ id m, l = .ret id m}
+
+/-- The BRB specification is input-enabled: `callLoop` takes `call m` and `fail` takes `fail id`
+at every state. -/
+theorem specInst_inputEnabled (P : Parameters) (ldr : Fin P.n) :
+    (specInst P ldr M).InputEnabled (specInstInputOutputLabels P.n M).inputLabels := by
+  rintro s l (⟨m, rfl⟩ | ⟨id, rfl⟩)
+  · exact ⟨_, Step.callLoop s m⟩
+  · exact ⟨_, Step.fail s id⟩
 
 end BRB
 end ABA

@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.SpecificationOverInstanceAlphabet
+import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.Composition
 import Leslie2Protocols.ABA.Gather.Components
 import Leslie2Protocols.Framework.Relabel
 import Leslie2Protocols.Framework.SynchronisedProduct
@@ -15,17 +15,17 @@ import Leslie2Protocols.Framework.LoopsAndInstanceFamilies
 
 `Gather.instanceOverBroadcasts`: one gather instance over an arbitrary payload type `X`, assembled
 from the `n` gather programs beside the gather network (`ABA/Gather/Components.lean`) and the `n`
-reliable-broadcast instances carrying the inputs, one per process, each lifted along the pullback
+reliable-broadcast instances carrying the inputs, one per process, each read along the pullback
 that names it.
 `instanceOverBroadcastsExtended` puts the two in parallel over the instance-internal
 alphabet; `instanceOverBroadcasts` hides the instance's four events there and reads the result back
-over the interface alphabet `InstanceLabel n X`, the gather alphabet extended by the call loop.
+over the gather specification's alphabet `Label n X`.
 
-The composition is generic in the broadcast instances: `instanceOverBroadcasts` takes the `n`
-instances as arguments, `instanceOverBracha` supplies Bracha instances (`BRB.brachaInstance`) and
-`instanceOverBroadcastSpecification` supplies lifted broadcast specifications
-(`BRB.specificationOverInstanceAlphabet`). Both run on `StateOverBroadcasts n X B`, and the three
-`init` lemmas are the states they start from.
+The composition is generic in the broadcast instances, each over the BRB specification's alphabet
+`BRB.Label n X`: `instanceOverBroadcasts` takes the `n` instances as arguments,
+`instanceOverBracha` supplies Bracha instances (`BRB.brachaInstance`) and
+`instanceOverBroadcastSpecification` supplies broadcast specifications (`BRB.specInst`). Both run
+on `StateOverBroadcasts n X B`, and the three `init` lemmas are the states they start from.
 
 ## Projections of the composed state
 
@@ -66,17 +66,17 @@ abbrev StateOverBroadcasts (n : ℕ) (X B : Type) : Type :=
 /-- The gather programs and network beside the input instances, over the
 instance-internal alphabet. -/
 noncomputable def instanceOverBroadcastsExtended (P : Parameters) (X : Type) [DecidableEq X]
-    {B : Type} (BIn : ∀ _ : Fin P.n, System B (BRB.InstanceLabel P.n X)) :
+    {B : Type} (BIn : ∀ _ : Fin P.n, System B (BRB.Label P.n X)) :
     System (StateOverBroadcasts P.n X B) (GatherLabel P.n X) :=
   (gatherPrograms P X).parallel
     (System.synchronisedProduct (fun k => (BIn k).mapIdle (inputBroadcastLabelMap P.n X k)))
 
 /-- **The gather instance** over the input instances `BIn`: the two in
-parallel, the instance's events hidden, the result read back over the interface
-alphabet. -/
+parallel, the instance's events hidden, the result read back over the gather
+specification's alphabet. -/
 noncomputable def instanceOverBroadcasts (P : Parameters) (X : Type) [DecidableEq X] {B : Type}
-    (BIn : ∀ _ : Fin P.n, System B (BRB.InstanceLabel P.n X)) :
-    System (StateOverBroadcasts P.n X B) (InstanceLabel P.n X) :=
+    (BIn : ∀ _ : Fin P.n, System B (BRB.Label P.n X)) :
+    System (StateOverBroadcasts P.n X B) (Label P.n X) :=
   ((instanceOverBroadcastsExtended P X BIn).abstract (gatherEvents P.n X)).relabel
 
 /-- The state of the gather instance over Bracha's broadcast. -/
@@ -89,16 +89,16 @@ abbrev StateOverBroadcastSpecification (n : ℕ) (X : Type) : Type :=
 
 /-- **The gather instance over Bracha's broadcast.** -/
 noncomputable def instanceOverBracha (P : Parameters) (X : Type) [DecidableEq X] :
-    System (StateOverBracha P.n X) (InstanceLabel P.n X) :=
+    System (StateOverBracha P.n X) (Label P.n X) :=
   instanceOverBroadcasts P X (fun k => BRB.brachaInstance P k X)
 
 /-- **The gather instance over the broadcast specification.** -/
 noncomputable def instanceOverBroadcastSpecification (P : Parameters) (X : Type) [DecidableEq X] :
-    System (StateOverBroadcastSpecification P.n X) (InstanceLabel P.n X) :=
-  instanceOverBroadcasts P X (fun k => BRB.specificationOverInstanceAlphabet P k X)
+    System (StateOverBroadcastSpecification P.n X) (Label P.n X) :=
+  instanceOverBroadcasts P X (fun k => BRB.specInst P k X)
 
 @[simp] theorem instanceOverBroadcasts_init (P : Parameters) {B : Type}
-    (BIn : ∀ _ : Fin P.n, System B (BRB.InstanceLabel P.n X)) :
+    (BIn : ∀ _ : Fin P.n, System B (BRB.Label P.n X)) :
     (instanceOverBroadcasts P X BIn).init =
       (((fun _ => LocalState.initial P.n (Message P.n X) (ProcessVariables.initial P.n X)),
         NetworkState.initial P.n X), (fun k => (BIn k).init)) := rfl
@@ -247,7 +247,7 @@ theorem gatherPrograms_isLTS (P : Parameters) : (gatherPrograms P X).IsLTS :=
 
 /-- The gather programs and network beside the input instances form an LTS. -/
 theorem instanceOverBroadcastsExtended_isLTS (P : Parameters) {B : Type}
-    {BIn : ∀ _ : Fin P.n, System B (BRB.InstanceLabel P.n X)}
+    {BIn : ∀ _ : Fin P.n, System B (BRB.Label P.n X)}
     (hIn : ∀ k, (BIn k).IsLTS) :
     (instanceOverBroadcastsExtended P X BIn).IsLTS :=
   System.parallel_isLTS (gatherPrograms_isLTS P)
@@ -255,7 +255,7 @@ theorem instanceOverBroadcastsExtended_isLTS (P : Parameters) {B : Type}
 
 /-- The gather instance is an LTS. -/
 theorem instanceOverBroadcasts_isLTS (P : Parameters) {B : Type}
-    {BIn : ∀ _ : Fin P.n, System B (BRB.InstanceLabel P.n X)}
+    {BIn : ∀ _ : Fin P.n, System B (BRB.Label P.n X)}
     (hIn : ∀ k, (BIn k).IsLTS) :
     (instanceOverBroadcasts P X BIn).IsLTS :=
   System.relabel_isLTS (System.abstract_isLTS (instanceOverBroadcastsExtended_isLTS P hIn) _)
@@ -267,7 +267,7 @@ theorem instanceOverBracha_isLTS (P : Parameters) : (instanceOverBracha P X).IsL
 /-- The gather instance over the broadcast specification is an LTS. -/
 theorem instanceOverBroadcastSpecification_isLTS (P : Parameters) :
     (instanceOverBroadcastSpecification P X).IsLTS :=
-  instanceOverBroadcasts_isLTS P (fun k => BRB.specificationOverInstanceAlphabet_isLTS P k)
+  instanceOverBroadcasts_isLTS P (fun k => BRB.specInst_isLTS P k)
 
 /-- No gather program transition fires on `τ`: a program only ever moves in an event
 or on one of the interface labels. The composition's silent transitions are

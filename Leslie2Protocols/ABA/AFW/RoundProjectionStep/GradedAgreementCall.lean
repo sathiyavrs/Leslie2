@@ -9,11 +9,15 @@ import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ProjectionAfterOneWrite
 /-!
 # The graded-agreement call and its loop
 
-`roundProjection_callG` and `roundProjection_gbcaCallLoop`: the projection of the composed round
-after a call of graded agreement. The call records the input on the round's first gather and sends
-nothing, which is what the composed round's `callG` writes, its program recording the input and its
-first gather taking `Gather.AlgorithmOverBracha.call`. A call at a process whose first gather
-already holds an input moves the round loop alone, which the projection does not read.
+`roundProjection_callG` and `roundProjection_callGLoop`: the projection of the composed round after
+a call of graded agreement. `callG` and `callGLoop` are the two transitions on the label
+`callG r j b` (D36). At both the network records the started round and its ghost write leaves the
+ghost, and the projection reads neither the started rounds nor the round loop. `callG` records the
+input on the round's first gather and sends nothing, which is what the composed round's `callG`
+writes, its program recording the input and its first gather taking
+`Gather.AlgorithmOverBracha.call`. `callGLoop` is the call at a round whose first gather holds an
+input: the round loop moves and the round variables stand, which the composed round's `callLoop`
+matches.
 -/
 
 namespace PLTS
@@ -32,18 +36,19 @@ variable {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} {w : NetworkState P.n} 
 /-! ### The graded-agreement call and its loop
 
 The call records the input on the round's first gather and sends nothing. The
-composed round answers on one label, whose program transition records the input and
+composed round matches it on one label, whose program transition records the input and
 whose first gather takes `Gather.AlgorithmOverBracha.call`. The call at a process whose
-first gather already holds an input moves the round loop alone, which the
-projection does not read. -/
+first gather holds an input moves the round loop alone, which the projection does not
+read. -/
 
-/-- The graded-agreement call, read through the projection. -/
+/-- The graded-agreement call, read through the projection. The network records the started
+round, and the ghost write at `callG` leaves the ghost. -/
 theorem roundProjection_callG (hu : (u j).2 = p) (r : ℕ) (b : Bool) :
     roundProjection P (Function.update u j (c, p.setRoundVariables r
         { p.roundVariables r with
           firstGather := (p.roundVariables r).firstGather.setProcessVariables
             { ((p.roundVariables r).firstGather.processVariables) with input := some b } }))
-      (w.writeGhost (ghostStep P) (Sum.inl (.callG r j b))) r
+      ((w.recordStartedRound r j).writeGhost (ghostStep P) (Sum.inl (.callG r j b))) r
       = GBCA.ByAFW.setFirstGather (GBCA.ByAFW.setPrograms (roundProjection P u w r)
             (Function.update (GBCA.ByAFW.programs (roundProjection P u w r)) j
               { GBCA.ByAFW.programs (roundProjection P u w r) j with input := some b }))
@@ -54,7 +59,7 @@ theorem roundProjection_callG (hu : (u j).2 = p) (r : ℕ) (b : Bool) :
                 input := some b })) := by
   subst hu
   rw [roundProjection_ghostId (Sum.inl (.callG r j b)) (fun _ _ => rfl),
-    roundProjection_writeNoSent]
+    roundProjection_recordStartedRound, roundProjection_writeNoSent]
   refine roundStateOverGathers_ext ?_ ?_ (stateOverBroadcasts_ext ?_ ?_ ?_)
     (stateOverBroadcasts_ext ?_ ?_ ?_)
   · simp only [programs_roundProjectionUpdate, GBCA.ByAFW.programs_setFirstGather,
@@ -86,13 +91,16 @@ theorem roundProjection_callG (hu : (u j).2 = p) (r : ℕ) (b : Bool) :
     exact Prod.ext (Function.update_eq_self _ _) rfl
   · simp
 
-/-- The graded-agreement call against variables already called, read through
-the projection: the round loop moves and the projection is unchanged. -/
-theorem roundProjection_gbcaCallLoop (hu : (u j).2 = p) (r r' : ℕ) (b : Bool)
+/-- The graded-agreement call at a round whose first gather holds an input, read through the
+projection: the round loop moves, the round variables stand, and every round's projection is the
+one before the call. The composed round matches the call by `callLoop`. -/
+theorem roundProjection_callGLoop (hu : (u j).2 = p) (r r' : ℕ) (b : Bool)
     (c' : RoundLoopVariables P.n) :
     roundProjection P (Function.update u j (c', p))
-    (w.writeGhost (ghostStep P) (Sum.inr (.gbcaCallLoop r j b))) r' = roundProjection P u w r' := by
-  rw [roundProjection_ghostId (Sum.inr (.gbcaCallLoop r j b)) (fun _ _ => rfl)]
+      ((w.recordStartedRound r j).writeGhost (ghostStep P) (Sum.inl (.callG r j b))) r'
+      = roundProjection P u w r' := by
+  rw [roundProjection_ghostId (Sum.inl (.callG r j b)) (fun _ _ => rfl),
+    roundProjection_recordStartedRound]
   refine roundProjection_congr (fun i => ?_)
   by_cases hi : i = j
   · subst hi; rw [Function.update_self, ← hu]

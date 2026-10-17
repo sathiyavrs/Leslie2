@@ -11,7 +11,10 @@ import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ProjectionAfterOneWrite
 
 `roundProjection_byzantineFirstGather` and its three companions: the projection of the composed
 round after an injection. The adversary multicasts on behalf of a corrupted sender, the message
-reaches the network state its tag names, and no process's variables move.
+reaches the network state its tag names, and no process's variables move. The implementation's
+injection `Implementation.NetworkStep.byzantineGBCA` fires under `k ∈ F` at a round of
+`startedRounds` (D11, D37). The four statements hold at every round and take neither guard as a
+hypothesis.
 -/
 
 namespace PLTS

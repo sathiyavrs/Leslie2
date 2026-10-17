@@ -18,13 +18,12 @@ D24).
 
 Per process, the construction is
 
-* `S ← Gather₁(b)` — the input bit through the first gather instance; * the candidate: the bit
-occurring at least `|S| − f` times in `S`, `⊥` if
-  neither does (`GBCA.candidate`);
-* `T ← Gather₂(candidate)` — the candidate through the second instance; * the graded return
-(`GBCA.gradeOf`): `(v, 2)` if some bit's entries reach
-  `|T| − f`, else `(v, 1)` if they reach `f + 1` — at most one bit can —
-  else `(⊥, 0)`.
+* `S ← Gather₁(b)`: the input bit through the first gather instance;
+* the candidate: the bit occurring at least `|S| − f` times in `S`, `⊥` if neither does
+  (`GBCA.candidate`);
+* `T ← Gather₂(candidate)`: the candidate through the second instance;
+* the graded return (`GBCA.gradeOf`): `(v, 2)` if some bit's entries reach `|T| − f`, else
+  `(v, 1)` if they reach `f + 1`, which at most one bit can, else `(⊥, 0)`.
 
 ## The bound bit
 
@@ -32,9 +31,8 @@ occurring at least `|S| − f` times in `S`, `⊥` if
 `S`, and `true` when neither bit is. At the sizes the gather specification's
 `bindCore` allows (`|S| ≥ n − f > 2f`) at most one bit is carried by that many,
 so the definition selects it wherever one exists, and its complement is then
-below the threshold (`count_boundOfCore_belowThreshold`): a return of
-`v` announces `v`, and a return of no bit announces a bit whose
-complement no return can return.
+below the threshold (`count_boundOfCore_belowThreshold`). The round's network
+announces this bit on `boundG`, and no return returns its complement.
 
 ## The entry counts
 
@@ -122,6 +120,7 @@ theorem AcceptedPairs.card_sub_count_le {U : AcceptedPairs n α} {g : Fin n → 
   unfold AcceptedPairs.count domainCount valueCount
   omega
 
+omit [DecidableEq α] in
 /-- A payload set's first components inject into the map's domain. -/
 theorem AcceptedPairs.card_le_domainCount {U : AcceptedPairs n α} {g : Fin n → Option α}
     (hg : U.subMap g) : U.card ≤ domainCount g := by
@@ -340,7 +339,7 @@ theorem boundOfCore_of_aboveThreshold {P : Parameters} {S : AcceptedPairs P.n Bo
     rw [if_neg hT, if_pos hv]
   · rw [if_pos hv]
 
-/-- The complement of the bound bit is below the threshold: no return can hand it out. -/
+/-- The complement of the bound bit is below the threshold, so no grade-2 return returns it. -/
 theorem count_boundOfCore_belowThreshold {P : Parameters} {S : AcceptedPairs P.n Bool}
     (hcard : P.n - P.f ≤ S.card) :
     AcceptedPairs.count S (!boundOfCore P S) < S.card - P.f := by

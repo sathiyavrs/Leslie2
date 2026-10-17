@@ -15,9 +15,11 @@ The subject of the whole chain: `n` programs, one per process, beside one
 network and the common coin. A program reads its own variables, its own
 received sets and its own replacement flag, and nothing else about corruption: not
 the corrupted set, not the budget, not another process's status (D23). The
-adversary holds the round-tagged message sets, the DECIDED sets and the
-corrupted set with its budget, and it is the sole authority on the Byzantine
-labels. The common coin is held at specification level.
+network holds the round-tagged message sets, the DECIDED sets, the corrupted set with its budget,
+the rounds a correct process has started, and the bound bit of every round as a ghost (D30,
+D37). Beside the deliveries and `fail`, the network outputs a corrupted process's graded-agreement
+call `byzantineCallG` and coin call `byzantineCallW` (D11). It announces a round's bound bit on
+`boundG` (D29). The common coin is held at specification level.
 
 The shape is the parametric implementation of `ABA/Implementation/System.lean`, which
 carries the round loop, the DECIDED sets, the coin's call and return, corruption, the
@@ -28,15 +30,15 @@ nothing else:
 * the round message type, `GBCA.ByABDY.Message` — the five message levels of
   `GBCA/ABDY/MessagesAndVariables.lean` (D18);
 * the per-process per-round variables, `GBCA.ByABDY.RoundVariables`, held by round in a finite map
-(D22);
-* the transitions of the implementation, `RoundStep`: the graded-agreement call, the nine round
-  multicasts, the round delivery, the call against variables already called, and the three graded
-  returns;
-* the network's ghost — the type `Option Bool` of a round's bound
-  bit, the write `abdyGhostStep`, the read `abdyGhostOutput` and the guard
-  `abdyAnnouncedBound` the two return transitions put on the announced bit.
+  (D22);
+* the transitions of the implementation, `RoundStep`: the graded-agreement call and its loop at a
+  round already called, the nine round multicasts, the round delivery and its loop at a terminated
+  program, and the three graded returns;
+* the network's ghost: the type `Option Bool` of a round's bound bit, the write `abdyGhostStep`,
+  and the read `id`, so that the network announces `boundG r b` exactly when the ghost of round
+  `r` holds `b`.
 
-`ABDY.protocol P` is the implementation at those three, named for the authors of the implementation
+`ABDY.protocol P` is the implementation at these, named for the authors of the implementation
 it runs, as `AFW.protocol P` is named for the authors of the gather-based one. Its per-process
 variables are the round-loop variables beside the variables of each round, the variables a process
 holds in a round are retained across the round advance, and a round never touched reads as the
@@ -45,15 +47,21 @@ initial variables (D22).
 ## The round transitions
 
 Every guard reads the process's own variables. A round transition reads and writes the variables of
-the round its label tags, whichever round the round loop is in, and is guarded by
-`p.terminated = false` (D22). The transitions are taken in the wait-until order of ABDY22's
-Algorithm 6 from the `BIND` level down, each of those levels requiring the process's own send at
-the level below; the `VOTE` transitions ask for no own send, the `ECHO` they read being sent by an
-`upon` handler that may still be pending. A synchronised transition carries the process's half of a
-synchronised step with the network: on a send the write to its own variables, on a delivery the
-write to its received sets. The Byzantine round transitions have no transition at the process they
-name (D11, D22). The three return transitions take the bit their label announces free: the bit is
-the network's ghost output and the program neither guards on it nor records it. -/
+the round its label tags, whichever round the round loop is in. Every round transition but the two
+loops is guarded by `p.terminated = false` (D22). The transitions are taken in the wait-until order
+of ABDY22's Algorithm 6 from the `BIND` level down, each of those levels requiring the process's
+own send at the level below; the `VOTE` transitions ask for no own send, the `ECHO` they read being
+sent by an `upon` handler that may still be pending. A synchronised transition carries the
+process's half of a synchronised step with the network: on a send the write to its own variables,
+on a delivery the write to its received sets.
+
+The call and the three returns are outputs of the program. The call carries two transitions on
+one label: `callG_call` records the input at a round not yet called, and `callGLoop` moves the
+round loop alone at a round already called. A return carries the outcome alone, and the program
+neither reads nor writes the round's bound bit. The round delivery is an output of the network and
+an input of the program: `gbcaDeliverReceive` files the message at a program that has not
+terminated, and `deliverLoop` takes it at a terminated one and leaves the variables where they
+stand. -/
 
 namespace PLTS
 namespace ABA
@@ -101,9 +109,9 @@ abbrev ProcessVariables (n : ℕ) : Type := Implementation.ProcessVariables n
 
 /-! ### The network's state at ABDY22's implementation -/
 
-/-- The state of the network: the round-tagged message sets, the
-DECIDED sets, the corrupted set with its budget, and the bound bit of every
-round. -/
+/-- The state of the network: the round-tagged message sets, the DECIDED sets, the corrupted set
+with its budget, the bound bit of every round, and the rounds a correct process has
+started. -/
 abbrev NetworkState (n : ℕ) : Type := Implementation.NetworkState n GBCA.ByABDY.Message (Option
   Bool)
 
@@ -119,58 +127,36 @@ abbrev NetworkState.corrupt (P : Parameters) (id : Fin P.n) (s : NetworkState P.
 
 /-! ### The network's ghost at ABDY22's implementation
 
-The bound bit of a round is a ghost output: the specification announces it on
-every return label (`ABA/GBCA/Specification.lean`) and no program reads it. At this
-implementation the network holds it, one bit per round, in the ghost
-`Implementation.NetworkState.ghost`.
+The round's bound bit is an auxiliary variable of the network: no program reads it. The network
+holds it, one bit per round, in the ghost `Implementation.NetworkState.ghost`, which is `none` at a
+round that has not returned (D30).
 
-`abdyGhostStep` writes it. A return records the bit its own label announces
-where the ghost holds none for the round and leaves the ghost alone otherwise,
-so the ghost is write-once and both returns of a round — the correct one and the
-Byzantine one — write it the same way. Every other transition leaves it alone.
+`abdyGhostStep` writes it. The round's first return `retG r id out` records
+`GBCA.ByABDY.boundOf` of the round's sent sets, the corrupted set and the outcome `out`, and a
+later return leaves the recorded bit where it stands. A replaced program takes no transition on the
+labels of `actsAt`, `retG` among them (D23), so the first return is a return at a process outside
+the corrupted set. Every other label leaves the ghost where it stands. This is the account of the
+round's bound bit that a round's network holds in the field `GBCA.ByABDY.NetworkState.bound`,
+computed here from the sent sets of the implementation's network.
 
-`abdyGhostOutput` reads it out: the bit the ghost holds for the round, and
-`GBCA.ByABDY.boundOf` of the round's sent sets, the corrupted set and the outcome
-otherwise. This is the account of the round's bound bit that
-`GBCA/ABDY/MessagesAndVariables.lean` holds in its own network state, computed here from the
-network's sent sets instead. `abdyAnnouncedBound` is the guard of the two
-return transitions: the bit a return announces is `abdyGhostOutput` of the round. -/
+The ghost is read by `id`: the network's announcement `boundG r b` is enabled exactly when the
+ghost of round `r` is `some b` (D29). -/
 
-/-- The ghost write of a transition: a return records the bit its label
-announces where the ghost holds none for the round; every other transition
-leaves the ghost alone. -/
+/-- The ghost write of a transition: the round's first return records `GBCA.ByABDY.boundOf` of the
+round's sent sets, the corrupted set and the outcome, a later return leaves the recorded bit, and
+every other transition leaves the ghost where it stands. -/
 def abdyGhostStep (P : Parameters) :
     ExtendedLabel P.n GBCA.ByABDY.Message → NetworkState P.n → Option Bool → Option Bool
-  | Sum.inl (.retG _ _ _ bnd), _, g => some (g.getD bnd)
-  | Sum.inr (.byzantineRetG _ _ _ bnd), _, g => some (g.getD bnd)
+  | Sum.inl (.retG r _ out), s, g => some (g.getD (GBCA.ByABDY.boundOf (s.sent r) s.F out))
   | _, _, g => g
 
-/-- The ghost output of a return: the round's bound bit where the ghost holds one, and
-`GBCA.ByABDY.boundOf` of the round's messages where there is none. -/
-def abdyGhostOutput (P : Parameters) (s : NetworkState P.n) (r : ℕ) (_id : Fin P.n)
-    (out : GBCAOutput) : Bool :=
-  (s.ghost r).getD (GBCA.ByABDY.boundOf (s.sent r) s.F out)
-
-/-- The bit the network announces on a return: the round's ghost
-output, and no other. This is the relation the implementation's `ghostOutput`
-parameter takes at this instantiation. It is reducible, so the guard of the two
-return transitions is the equation itself. -/
-abbrev abdyAnnouncedBound (P : Parameters) (s : NetworkState P.n) (r : ℕ) (id : Fin P.n)
-    (out : GBCAOutput) (bnd : Bool) : Prop :=
-  bnd = abdyGhostOutput P s r id out
-
-
-/-- A transition whose ghost write is the identity leaves the adversary's whole
-state where it stands. Every transition but the two returns is such a
-transition. -/
+/-- A transition whose ghost write is the identity leaves the network's whole state where it
+stands. Every transition but a return is such a transition. -/
 theorem writeGhost_abdy_id (P : Parameters) (w : NetworkState P.n)
     (L : ExtendedLabel P.n GBCA.ByABDY.Message)
     (h : ∀ g, abdyGhostStep P L w g = g) :
-    w.writeGhost (abdyGhostStep P) L = w := by
-  unfold Implementation.NetworkState.writeGhost
-  split
-  · next r _ => rw [h]; simp
-  · rfl
+    w.writeGhost (abdyGhostStep P) L = w :=
+  writeGhost_of_ghostStep_unchanged w fun _ _ => h _
 
 /-! ### The ghost write of each transition -/
 
@@ -188,6 +174,9 @@ variable (P : Parameters) (w : NetworkState P.n)
   writeGhost_abdy_id P w _ fun _ => rfl
 @[simp] theorem writeGhost_callG (r : ℕ) (id : Fin P.n) (b : Bool) :
     w.writeGhost (abdyGhostStep P) (Sum.inl (.callG r id b)) = w :=
+  writeGhost_abdy_id P w _ fun _ => rfl
+@[simp] theorem writeGhost_boundG (r : ℕ) (b : Bool) :
+    w.writeGhost (abdyGhostStep P) (Sum.inl (.boundG r b)) = w :=
   writeGhost_abdy_id P w _ fun _ => rfl
 @[simp] theorem writeGhost_callW (r : ℕ) (id : Fin P.n) :
     w.writeGhost (abdyGhostStep P) (Sum.inl (.callW r id)) = w :=
@@ -213,51 +202,28 @@ variable (P : Parameters) (w : NetworkState P.n)
 @[simp] theorem writeGhost_decidedSend (j : Fin P.n) (b : Bool) :
     w.writeGhost (abdyGhostStep P) (Sum.inr (.decidedSend j b)) = w :=
   writeGhost_abdy_id P w _ fun _ => rfl
-@[simp] theorem writeGhost_gbcaCallLoop (r : ℕ) (id : Fin P.n) (b : Bool) :
-    w.writeGhost (abdyGhostStep P) (Sum.inr (.gbcaCallLoop r id b)) = w :=
-  writeGhost_abdy_id P w _ fun _ => rfl
 @[simp] theorem writeGhost_byzantineCallG (r : ℕ) (k : Fin P.n) (b : Bool) :
     w.writeGhost (abdyGhostStep P) (Sum.inr (.byzantineCallG r k b)) = w :=
-  writeGhost_abdy_id P w _ fun _ => rfl
-@[simp] theorem writeGhost_byzantineCallGLoop (r : ℕ) (k : Fin P.n) (b : Bool) :
-    w.writeGhost (abdyGhostStep P) (Sum.inr (.byzantineCallGLoop r k b)) = w :=
   writeGhost_abdy_id P w _ fun _ => rfl
 @[simp] theorem writeGhost_byzantineCallW (r : ℕ) (k : Fin P.n) :
     w.writeGhost (abdyGhostStep P) (Sum.inr (.byzantineCallW r k)) = w :=
   writeGhost_abdy_id P w _ fun _ => rfl
-@[simp] theorem writeGhost_byzantineRetW (r : ℕ) (k : Fin P.n) (b : Bool) :
-    w.writeGhost (abdyGhostStep P) (Sum.inr (.byzantineRetW r k b)) = w :=
-  writeGhost_abdy_id P w _ fun _ => rfl
 
-/-! The two return transitions, which do write. The ghost of the round the
-label names holds the announced bit after the write, and the ghost of every
-other round is unchanged. -/
+/-! A return writes. The ghost of the round the label names holds, after the write, the bit it held
+before if any, and `GBCA.ByABDY.boundOf` of the round's sent sets, the corrupted set and the
+outcome otherwise; the ghost of every other round is unchanged. -/
 
-@[simp] theorem writeGhost_retG_self (r : ℕ) (id : Fin P.n) (out : GBCAOutput)
-    (bnd : Bool) :
-    (w.writeGhost (abdyGhostStep P) (Sum.inl (.retG r id out bnd))).ghost r
-      = some ((w.ghost r).getD bnd) :=
+@[simp] theorem writeGhost_retG_self (r : ℕ) (id : Fin P.n) (out : GBCAOutput) :
+    (w.writeGhost (abdyGhostStep P) (Sum.inl (.retG r id out))).ghost r
+      = some ((w.ghost r).getD (GBCA.ByABDY.boundOf (w.sent r) w.F out)) :=
   writeGhost_ghost_self w rfl
 
-theorem writeGhost_retG_ne (r : ℕ) (id : Fin P.n) (out : GBCAOutput) (bnd : Bool)
-    {r' : ℕ} (h : r' ≠ r) :
-    (w.writeGhost (abdyGhostStep P) (Sum.inl (.retG r id out bnd))).ghost r'
-      = w.ghost r' :=
-  writeGhost_ghost_ne w rfl h
-
-@[simp] theorem writeGhost_byzantineRetG_self (r : ℕ) (k : Fin P.n) (out : GBCAOutput)
-    (bnd : Bool) :
-    (w.writeGhost (abdyGhostStep P) (Sum.inr (.byzantineRetG r k out bnd))).ghost r
-      = some ((w.ghost r).getD bnd) :=
-  writeGhost_ghost_self w rfl
-
-theorem writeGhost_byzantineRetG_ne (r : ℕ) (k : Fin P.n) (out : GBCAOutput) (bnd : Bool)
-    {r' : ℕ} (h : r' ≠ r) :
-    (w.writeGhost (abdyGhostStep P) (Sum.inr (.byzantineRetG r k out bnd))).ghost r'
-      = w.ghost r' :=
+theorem writeGhost_retG_ne (r : ℕ) (id : Fin P.n) (out : GBCAOutput) {r' : ℕ} (h : r' ≠ r) :
+    (w.writeGhost (abdyGhostStep P) (Sum.inl (.retG r id out))).ghost r' = w.ghost r' :=
   writeGhost_ghost_ne w rfl h
 
 end GhostWrites
+
 /-! ### The transitions of the graded-agreement implementation -/
 
 /-- The round transitions of process `j`: the graded-agreement call, the nine multicasts of the
@@ -277,11 +243,21 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
         (PMF.pure (c.setProcessVariables { c.processVariables with phase := .awaitG },
           p.setRoundVariables r ((p.roundVariables r).setProcessVariables { (p.roundVariables
             r).processVariables with input := some b })))
+  /-- The graded-agreement call at a round already called: the round loop enters `awaitG`, and the
+  variables of round `r` stand as they are. The transition carries no termination guard, so a
+  terminated process takes the call at a round already called and has no transition on the call
+  at a round not yet called. -/
+  | callGLoop (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (b : Bool)
+      (hh : c.corrupted = false)
+      (hph : c.processVariables.phase = .toCallG) (hr : c.processVariables.round = r)
+      (hest : c.processVariables.estimate = some b)
+      (hin : (p.roundVariables r).processVariables.input ≠ none) :
+      RoundStep P j (c, p) (Sum.inl (.callG r j b))
+        (PMF.pure (c.setProcessVariables { c.processVariables with phase := .awaitG }, p))
   /-- Return with outcome `grade2 v`: an `n − f` `ECHO5 v` quorum. The round's variables are called
   and its own `ECHO5` is out. Case (1) heads the algorithm's chain, so there is no higher case to
   deny. -/
-  | retGGrade2 (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (v : Bool) (bnd :
-      Bool)
+  | retGGrade2 (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (v : Bool)
       (hh : c.corrupted = false)
       (hph : c.processVariables.phase = .awaitG) (hr : c.processVariables.round = r)
       (hterm : p.terminated = false)
@@ -289,7 +265,7 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
       (hlv : (p.roundVariables r).processVariables.sentEcho5 ≠ none)
       (hcnt : P.n - P.f ≤ (p.roundVariables r).receivedCount (.echo5 (some v)))
       (hret : (p.roundVariables r).processVariables.returned = false) :
-      RoundStep P j (c, p) (Sum.inl (.retG r j (.grade2 v) bnd))
+      RoundStep P j (c, p) (Sum.inl (.retG r j (.grade2 v)))
         (PMF.pure (c.setProcessVariables { c.processVariables with
             estimate := (GBCAOutput.grade2 v).estimate, lastGrade := some (.grade2 v),
               phase := .toCallW },
@@ -299,8 +275,7 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
   /-- Return with outcome `grade1 v`: an `n − f` any-`ECHO5` quorum containing `ECHO5 v`, `f + 1`
   `BIND v`s and `|Valid| > 1`. The round's variables are called, its own `ECHO5` is out, and
   `hnotGrade2` denies case (1) at either bit. -/
-  | retGGrade1 (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (v : Bool) (bnd :
-      Bool)
+  | retGGrade1 (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (v : Bool)
       (hh : c.corrupted = false)
       (hph : c.processVariables.phase = .awaitG) (hr : c.processVariables.round = r)
       (hterm : p.terminated = false)
@@ -312,7 +287,7 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
       (hbind : P.f + 1 ≤ (p.roundVariables r).receivedCount (.bind (some v)))
       (hval : (p.roundVariables r).bothValid P)
       (hret : (p.roundVariables r).processVariables.returned = false) :
-      RoundStep P j (c, p) (Sum.inl (.retG r j (.grade1 v) bnd))
+      RoundStep P j (c, p) (Sum.inl (.retG r j (.grade1 v)))
         (PMF.pure (c.setProcessVariables { c.processVariables with
             estimate := (GBCAOutput.grade1 v).estimate, lastGrade := some (.grade1 v),
               phase := .toCallW },
@@ -323,7 +298,7 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
   variables are called, its own `ECHO5` is out, `hnotGrade2` denies case (1) at either bit, and
   `hnotGrade1` denies case (2) in the reduced form `GBCA.ByABDY.Algorithm.retGrade0`
   states. -/
-  | retGGrade0 (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (bnd : Bool)
+  | retGGrade0 (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ)
       (hh : c.corrupted = false)
       (hph : c.processVariables.phase = .awaitG) (hr : c.processVariables.round = r)
       (hterm : p.terminated = false)
@@ -336,7 +311,7 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
       (hcnt : P.n - P.f ≤ (p.roundVariables r).receivedCount (.echo5 none))
       (hval : (p.roundVariables r).bothValid P)
       (hret : (p.roundVariables r).processVariables.returned = false) :
-      RoundStep P j (c, p) (Sum.inl (.retG r j .grade0 bnd))
+      RoundStep P j (c, p) (Sum.inl (.retG r j .grade0))
         (PMF.pure (c.setProcessVariables { c.processVariables with
             estimate := GBCAOutput.grade0.estimate, lastGrade := some .grade0, phase := .toCallW },
           p.setRoundVariables r ((p.roundVariables r).setProcessVariables { (p.roundVariables
@@ -477,21 +452,17 @@ inductive RoundStep (P : Parameters) (j : Fin P.n) :
       (hterm : p.terminated = false) :
       RoundStep P j (c, p) (Sum.inr (.gbcaDeliver r j k m))
         (PMF.pure (c, p.deliverTo r k m))
-  /-- The graded-agreement call against variables already called: the round loop moves, the
-  variables do not. The transition carries no termination guard, so a terminated process in
-  `toCallG` whose variables in round `r` are uncalled has no transition on either call label, a
-  gap this implementation accepts. -/
-  | gbcaCallLoop (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n) (r : ℕ) (b : Bool)
-      (hh : c.corrupted = false)
-      (hph : c.processVariables.phase = .toCallG) (hr : c.processVariables.round = r)
-      (hest : c.processVariables.estimate = some b)
-      (hin : (p.roundVariables r).processVariables.input ≠ none) :
-      RoundStep P j (c, p) (Sum.inr (.gbcaCallLoop r j b))
-        (PMF.pure (c.setProcessVariables { c.processVariables with phase := .awaitG }, p))
+  /-- Input-enabledness loop on a round delivery to a terminated program: the delivery is the
+  network's output, and the variables stand as they are (D22). -/
+  | deliverLoop (c : RoundLoopVariables P.n) (p : RoundVariablesMap P.n)
+      (r : ℕ) (k : Fin P.n) (m : GBCA.ByABDY.Message) (hh : c.corrupted = false)
+      (hterm : p.terminated = true) :
+      RoundStep P j (c, p) (Sum.inr (.gbcaDeliver r j k m)) (PMF.pure (c, p))
 
 /-- The transitions above meet the implementation's conditions: each carries a label of
-`roundOwn j`, each fires only at an unreplaced program, each is Dirac, and each
-of the three returns takes the announced bit free (D29). -/
+`roundOwn j`, each fires only at an unreplaced program, each is Dirac, and an unreplaced program
+takes every round delivery addressed to it, by `gbcaDeliverReceive` where it has not terminated and
+by `deliverLoop` where it has. -/
 instance instIsRoundStep (P : Parameters) :
     IsRoundStep P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundVariables P.n) (RoundStep P) where
   own h := by
@@ -500,7 +471,11 @@ instance instIsRoundStep (P : Parameters) :
     cases h <;> assumption
   dirac h := by
     cases h <;> exact ⟨_, rfl⟩
-  boundBitFree h := by cases h <;> constructor <;> assumption
+  deliveryEnabled {_ q _ _ _} hh := by
+    obtain ⟨c, p⟩ := q
+    cases hterm : p.terminated
+    · exact ⟨_, .gbcaDeliverReceive c p _ _ _ hh hterm⟩
+    · exact ⟨_, .deliverLoop c p _ _ _ hh hterm⟩
 
 /-! ### The step relations, the automata and the pipeline -/
 
@@ -511,13 +486,12 @@ abbrev ABAProgramStep (P : Parameters) (j : Fin P.n) :
       :=
   ProgramStep P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundVariables P.n) (RoundStep P) j
 
-/-- The step relation of the network. -/
+/-- The step relation of the network, with the ghost written by `abdyGhostStep` and read by
+`id`. -/
 abbrev NetworkStep (P : Parameters) :
     NetworkState P.n → ExtendedLabel P.n GBCA.ByABDY.Message → PMF (NetworkState P.n)
   → Prop :=
-  Implementation.NetworkStep P GBCA.ByABDY.Message Empty (Option Bool)
-    (abdyGhostStep P)
-    (abdyAnnouncedBound P)
+  Implementation.NetworkStep P GBCA.ByABDY.Message Empty (Option Bool) (abdyGhostStep P) id
 
 /-- The program of process `j`. -/
 noncomputable abbrev ABAProgram (P : Parameters) (j : Fin P.n) :
@@ -527,13 +501,10 @@ noncomputable abbrev ABAProgram (P : Parameters) (j : Fin P.n) :
 /-- The network. -/
 noncomputable abbrev network (P : Parameters) :
     System (NetworkState P.n) (ExtendedLabel P.n GBCA.ByABDY.Message) :=
-  Implementation.network P GBCA.ByABDY.Message Empty (Option Bool)
-    (abdyGhostStep P)
-    (abdyAnnouncedBound P)
+  Implementation.network P GBCA.ByABDY.Message Empty (Option Bool) (abdyGhostStep P) id
 
-
-/-- The state of the protocol: the process family, the network and
-the common coin. -/
+/-- The state of the protocol: the process family, the network and the common coin's instance
+family. -/
 abbrev ProtocolState (P : Parameters) : Type :=
   Implementation.State P GBCA.ByABDY.Message (GBCA.ByABDY.RoundVariables P.n) (Option Bool)
 
@@ -542,26 +513,18 @@ the network and the lifted common coin. -/
 noncomputable def protocolExtended (P : Parameters) : System (ProtocolState P)
   (Composition.ExtendedLabel P.n GBCA.ByABDY.Message) :=
   Implementation.systemExtended P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundVariables P.n)
-    (Option Bool)
-    (ABDY.RoundStep P)
-    (ABDY.abdyGhostStep P) (ABDY.abdyAnnouncedBound P)
+    (Option Bool) (ABDY.RoundStep P) (ABDY.abdyGhostStep P) id
 
 /-- **The protocol group**: the labels the components synchronise on hidden, the result read
 back over `Label n`. -/
 noncomputable def protocolHidden (P : Parameters) : System (ProtocolState P) (Label P.n) :=
   Implementation.systemHidden P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundVariables P.n)
-    (Option Bool)
-    (ABDY.RoundStep P)
-    (ABDY.abdyGhostStep P) (ABDY.abdyAnnouncedBound P)
+    (Option Bool) (ABDY.RoundStep P) (ABDY.abdyGhostStep P) id
 
 /-- **The protocol system**: the group with the sub-protocol API hidden. -/
 noncomputable def protocol (P : Parameters) : System (ProtocolState P) (Label P.n) :=
   Implementation.system P GBCA.ByABDY.Message Empty (GBCA.ByABDY.RoundVariables P.n)
-    (Option Bool)
-    (ABDY.RoundStep
-    P)
-    (ABDY.abdyGhostStep P) (ABDY.abdyAnnouncedBound P)
-
+    (Option Bool) (ABDY.RoundStep P) (ABDY.abdyGhostStep P) id
 
 /-! ### Reading composite transitions
 
@@ -585,11 +548,11 @@ theorem protocol_step_iff (P : Parameters) (q : ABDY.ProtocolState P) (l : Label
 /-- A synchronised transition: every process, the network and the lifted common
 coin move together, and only the coin's successor can fail to be a Dirac. -/
 theorem protocolExtended_event_cases (P : Parameters) {u : ∀ _ : Fin P.n, ProcessVariables P.n}
-    {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n} {e : NetworkEvent P.n GBCA.ByABDY.Message}
-    {μ : PMF (ABDY.ProtocolState P)}
+    {w : NetworkState P.n} {o : InstanceFamilyState (WCC.SpecState.initial P.n) (WCC.failAct P)}
+    {e : NetworkEvent P.n GBCA.ByABDY.Message} {μ : PMF (ABDY.ProtocolState P)}
     (h : (ABDY.protocolExtended P).step (u, w, o) (Sum.inr e) μ) :
     ∃ (x : ∀ _ : Fin P.n, ProcessVariables P.n) (w' : NetworkState P.n)
-      (μ₃ : PMF (ℕ → WCC.SpecState P.n)),
+      (μ₃ : PMF (InstanceFamilyState (WCC.SpecState.initial P.n) (WCC.failAct P))),
       (∀ i, ABAProgramStep P i (u i) (Sum.inr e) (PMF.pure (x i))) ∧
       NetworkStep P w (Sum.inr e) (PMF.pure w') ∧
       (coinOverRoundAlphabet P GBCA.ByABDY.Message).step o (Sum.inr e) μ₃ ∧
@@ -598,11 +561,11 @@ theorem protocolExtended_event_cases (P : Parameters) {u : ∀ _ : Fin P.n, Proc
 
 /-- A visible shared-label transition. -/
 theorem protocolExtended_label_cases (P : Parameters) {u : ∀ _ : Fin P.n, ProcessVariables P.n}
-    {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n} {l : Label P.n} (hl : l ≠ Label.tau)
-    {μ : PMF (ABDY.ProtocolState P)}
+    {w : NetworkState P.n} {o : InstanceFamilyState (WCC.SpecState.initial P.n) (WCC.failAct P)}
+    {l : Label P.n} (hl : l ≠ Label.tau) {μ : PMF (ABDY.ProtocolState P)}
     (h : (ABDY.protocolExtended P).step (u, w, o) (Sum.inl l) μ) :
     ∃ (x : ∀ _ : Fin P.n, ProcessVariables P.n) (w' : NetworkState P.n)
-      (ω : PMF (ℕ → WCC.SpecState P.n)),
+      (ω : PMF (InstanceFamilyState (WCC.SpecState.initial P.n) (WCC.failAct P))),
       (∀ i, ABAProgramStep P i (u i) (Sum.inl l) (PMF.pure (x i))) ∧
       NetworkStep P w (Sum.inl l) (PMF.pure w') ∧
       (WCC.specFamily P).step o l ω ∧
@@ -610,51 +573,71 @@ theorem protocolExtended_label_cases (P : Parameters) {u : ∀ _ : Fin P.n, Proc
   systemExtended_label_cases hl h
 
 /-- A silent shared-label transition: one process terminating, the network's own
-injection, or the resolution of one round of the common coin. -/
+injection, or the resolution of one round of the common coin's map. -/
 theorem protocolExtended_tau_cases (P : Parameters) {u : ∀ _ : Fin P.n, ProcessVariables P.n}
-    {w : NetworkState P.n} {o : ℕ → WCC.SpecState P.n}
+    {w : NetworkState P.n} {o : InstanceFamilyState (WCC.SpecState.initial P.n) (WCC.failAct P)}
     {μ : PMF (ABDY.ProtocolState P)}
     (h : (ABDY.protocolExtended P).step (u, w, o) (Sum.inl Label.tau) μ) :
     (∃ (i : Fin P.n) (y : ProcessVariables P.n),
       ABAProgramStep P i (u i) (Sum.inl Label.tau) (PMF.pure y) ∧
       μ = PMF.pure (Function.update u i y, w, o)) ∨
     (∃ w', NetworkStep P w (Sum.inl .tau) (PMF.pure w') ∧ μ = PMF.pure (u, w', o)) ∨
-    (∃ (r : ℕ) (μw : PMF (WCC.SpecState P.n)), WCC.Step P r (o r) Label.tau μw ∧
-      μ = prodPMF (PMF.pure u) (prodPMF (PMF.pure w) (μw.map (Function.update o r)))) :=
+    (∃ r ∈ o.instanceMap.keys, ∃ μw : PMF (WCC.SpecState P.n), WCC.Step P r (o r) Label.tau μw ∧
+      μ = prodPMF (PMF.pure u) (prodPMF (PMF.pure w) (μw.map (o.setInstanceState r)))) :=
   systemExtended_tau_cases h
 
 /-! ### ABDY22's own transitions, by label class
 
-Each lemma determines a round transition from its label: the participant's transition as its
-guards
-together with the Dirac it produces. The idle transition of a non-participant and the replaced
-program's self-loop are read by the implementation's own lemmas; here the label names the acting
-process, so those two systems are the ones ruled out. -/
+Each lemma reads a program's transition on a label of `roundOwn j`: the guards of the round
+transition that carries it, together with the Dirac it produces. The label names process `j`, so
+the idle transition of another process is ruled out, and so is the replaced program's self-loop on
+the labels of `actsAt j`. A round delivery lies outside `actsAt j`, and the replaced program takes
+it on its self-loop. -/
 
 section RoundStepCases
 
 variable {P : Parameters} {j : Fin P.n} {q : ProcessVariables P.n} {ν : PMF (ProcessVariables P.n)}
 
+/-- A graded-agreement call by the program records the input at a round not yet called, or moves
+the round loop alone at a round already called. -/
 theorem programStep_callG_own {r : ℕ} {b : Bool}
     (h : ABAProgramStep P j q (Sum.inl (.callG r j b)) ν) :
     q.1.corrupted = false ∧
-      q.1.processVariables.phase = .toCallG ∧ q.1.processVariables.round = r ∧ q.2.terminated =
-        false ∧
-      q.1.processVariables.estimate = some b ∧ (q.2.roundVariables r).processVariables.input = none
-        ∧
-      ν = PMF.pure (q.1.setProcessVariables { q.1.processVariables with phase := .awaitG },
-        q.2.setRoundVariables r ((q.2.roundVariables r).setProcessVariables { (q.2.roundVariables
-          r).processVariables with input := some b })) := by
+      q.1.processVariables.phase = .toCallG ∧ q.1.processVariables.round = r ∧
+      q.1.processVariables.estimate = some b ∧
+      ((q.2.terminated = false ∧ (q.2.roundVariables r).processVariables.input = none ∧
+        ν = PMF.pure (q.1.setProcessVariables { q.1.processVariables with phase := .awaitG },
+          q.2.setRoundVariables r ((q.2.roundVariables r).setProcessVariables
+            { (q.2.roundVariables r).processVariables with input := some b }))) ∨
+      ((q.2.roundVariables r).processVariables.input ≠ none ∧
+        ν = PMF.pure (q.1.setProcessVariables { q.1.processVariables with phase := .awaitG },
+          q.2))) := by
   cases h
   case roundTransition h' =>
     cases h'
-    exact ⟨by assumption, by assumption, by assumption, by assumption,
-      by assumption, by assumption, rfl⟩
+    · exact ⟨by assumption, by assumption, by assumption, by assumption,
+        Or.inl ⟨by assumption, by assumption, rfl⟩⟩
+    · exact ⟨by assumption, by assumption, by assumption, by assumption,
+        Or.inr ⟨by assumption, rfl⟩⟩
   case callGIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
-theorem programStep_retGGrade2_own {r : ℕ} {v bnd : Bool}
-    (h : ABAProgramStep P j q (Sum.inl (.retG r j (.grade2 v) bnd)) ν) :
+/-- A graded-agreement call by the program at a round whose variables hold an input is the loop
+`callGLoop`. -/
+theorem programStep_callGLoop_own {r : ℕ} {b : Bool}
+    (hin : (q.2.roundVariables r).processVariables.input ≠ none)
+    (h : ABAProgramStep P j q (Sum.inl (.callG r j b)) ν) :
+    q.1.corrupted = false ∧
+      q.1.processVariables.phase = .toCallG ∧ q.1.processVariables.round = r ∧
+      q.1.processVariables.estimate = some b ∧
+      ν = PMF.pure (q.1.setProcessVariables { q.1.processVariables with phase := .awaitG }, q.2) :=
+        by
+  obtain ⟨hh, hph, hr, hest, ⟨-, hnone, -⟩ | ⟨-, hν⟩⟩ := programStep_callG_own h
+  · exact absurd hnone hin
+  · exact ⟨hh, hph, hr, hest, hν⟩
+
+theorem programStep_retGGrade2_own {r : ℕ} {v : Bool}
+    (h : ABAProgramStep P j q (Sum.inl (.retG r j (.grade2 v))) ν) :
     q.1.corrupted = false ∧
       q.1.processVariables.phase = .awaitG ∧ q.1.processVariables.round = r ∧ q.2.terminated = false
         ∧
@@ -677,8 +660,8 @@ theorem programStep_retGGrade2_own {r : ℕ} {v bnd : Bool}
   case retGIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
-theorem programStep_retGGrade1_own {r : ℕ} {v bnd : Bool}
-    (h : ABAProgramStep P j q (Sum.inl (.retG r j (.grade1 v) bnd)) ν) :
+theorem programStep_retGGrade1_own {r : ℕ} {v : Bool}
+    (h : ABAProgramStep P j q (Sum.inl (.retG r j (.grade1 v))) ν) :
     q.1.corrupted = false ∧
       q.1.processVariables.phase = .awaitG ∧ q.1.processVariables.round = r ∧ q.2.terminated = false
         ∧
@@ -706,8 +689,8 @@ theorem programStep_retGGrade1_own {r : ℕ} {v bnd : Bool}
   case retGIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
-theorem programStep_retGGrade0_own {r : ℕ} {bnd : Bool}
-    (h : ABAProgramStep P j q (Sum.inl (.retG r j .grade0 bnd)) ν) :
+theorem programStep_retGGrade0_own {r : ℕ}
+    (h : ABAProgramStep P j q (Sum.inl (.retG r j .grade0)) ν) :
     q.1.corrupted = false ∧
       q.1.processVariables.phase = .awaitG ∧ q.1.processVariables.round = r ∧ q.2.terminated = false
         ∧
@@ -891,32 +874,20 @@ theorem programStep_gbcaSend_echo5Bot_self {r : ℕ}
   case gbcaSendIdle => exact absurd rfl ‹_ ≠ j›
   case corruptedIdle => rename_i hown; exact absurd rfl hown
 
+/-- A round delivery to the program files the message at an unreplaced program that has not
+terminated, and leaves the variables where they stand at a terminated program (`deliverLoop`) or a
+replaced one. -/
 theorem programStep_gbcaDeliver_self {r : ℕ} {k : Fin P.n} {m : GBCA.ByABDY.Message}
     (h : ABAProgramStep P j q (Sum.inr (.gbcaDeliver r j k m)) ν) :
-    q.1.corrupted = false ∧ q.2.terminated = false ∧
-      ν = PMF.pure (q.1, q.2.deliverTo r k m) := by
+    (q.1.corrupted = false ∧ q.2.terminated = false ∧ ν = PMF.pure (q.1, q.2.deliverTo r k m)) ∨
+      ((q.1.corrupted = true ∨ q.2.terminated = true) ∧ ν = PMF.pure q) := by
   cases h
   case roundTransition h' =>
     cases h'
-    exact ⟨by assumption, by assumption, rfl⟩
+    · exact Or.inl ⟨by assumption, by assumption, rfl⟩
+    · exact Or.inr ⟨Or.inr (by assumption), rfl⟩
   case gbcaDeliverIdle => exact absurd rfl ‹_ ≠ j›
-  case corruptedIdle => rename_i hown; exact absurd rfl hown
-
-theorem programStep_gbcaCallLoop_self {r : ℕ} {b : Bool}
-    (h : ABAProgramStep P j q (Sum.inr (.gbcaCallLoop r j b)) ν) :
-    q.1.corrupted = false ∧
-      q.1.processVariables.phase = .toCallG ∧ q.1.processVariables.round = r ∧
-        q.1.processVariables.estimate = some b ∧
-      (q.2.roundVariables r).processVariables.input ≠ none ∧
-      ν = PMF.pure (q.1.setProcessVariables { q.1.processVariables with phase := .awaitG }, q.2) :=
-        by
-  cases h
-  case roundTransition h' =>
-    cases h'
-    exact ⟨by assumption, by assumption, by assumption, by assumption,
-      by assumption, rfl⟩
-  case gbcaCallLoopIdle => exact absurd rfl ‹_ ≠ j›
-  case corruptedIdle => rename_i hown; exact absurd rfl hown
+  case corruptedIdle => exact Or.inr ⟨Or.inl (by assumption), rfl⟩
 
 end RoundStepCases
 

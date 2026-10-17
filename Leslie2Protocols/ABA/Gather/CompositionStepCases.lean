@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.Gather.SpecificationOverInstanceAlphabet
+import Leslie2Protocols.ABA.Gather.Composition
 import Leslie2Protocols.Framework.SynchronisedProduct
 import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 
@@ -51,11 +51,11 @@ directions. -/
 /-- The instance's step relation, unfolded to the hidden-event case and the
 interface-label case. -/
 theorem instanceOverBroadcasts_step_iff (P : Parameters) (X : Type) [DecidableEq X] {B : Type}
-    (BIn : ∀ _ : Fin P.n, System B (BRB.InstanceLabel P.n X))
-    (s : StateOverBroadcasts P.n X B) (l : InstanceLabel P.n X)
+    (BIn : ∀ _ : Fin P.n, System B (BRB.Label P.n X))
+    (s : StateOverBroadcasts P.n X B) (l : Label P.n X)
     (μ : PMF (StateOverBroadcasts P.n X B)) :
     (instanceOverBroadcasts P X BIn).step s l μ ↔
-      (l = Sum.inl Label.tau ∧ ∃ e : GatherEvent P.n X,
+      (l = Label.tau ∧ ∃ e : GatherEvent P.n X,
         (instanceOverBroadcastsExtended P X BIn).step s (Sum.inr e) μ) ∨
       (instanceOverBroadcastsExtended P X BIn).step s (Sum.inl l) μ := by
   constructor
@@ -118,7 +118,7 @@ silent label moves exactly one of the gather network or one input instance. -/
 
 section Factors
 variable [DecidableEq X] {P : Parameters} {B : Type}
-  {BIn : ∀ _ : Fin P.n, System B (BRB.InstanceLabel P.n X)}
+  {BIn : ∀ _ : Fin P.n, System B (BRB.Label P.n X)}
   {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables P.n X) (Message P.n X)}
   {w w' : NetworkState P.n X} {a a' : ∀ _ : Fin P.n, B}
   {L : GatherLabel P.n X}
@@ -159,7 +159,7 @@ theorem instanceOverBroadcastsExtended_tau_cases (hIn : ∀ k, (BIn k).IsLTS)
     (∃ v, μ = PMF.pure ((u, v), a) ∧
       NetworkStep P w (Silent.τ : GatherLabel P.n X) (PMF.pure v)) ∨
     (∃ (k : Fin P.n) (c : B), μ = PMF.pure ((u, w), Function.update a k c) ∧
-      (BIn k).step (a k) (Silent.τ : BRB.InstanceLabel P.n X) (PMF.pure c)) := by
+      (BIn k).step (a k) (Silent.τ : BRB.Label P.n X) (PMF.pure c)) := by
   rw [instanceOverBroadcastsExtended, System.parallel_step] at h
   rcases h with ⟨hτ, -⟩ | ⟨-, μ₁, hga, rfl⟩ | ⟨-, μ₂, hi, rfl⟩
   · exact absurd rfl hτ
@@ -201,7 +201,7 @@ theorem instanceOverBroadcastsExtended_tau_network
 /-- Build a silent transition of the gather programs and network beside the input
 instances from a silent step of one input instance. -/
 theorem instanceOverBroadcastsExtended_tau_input {k : Fin P.n} {c : B}
-    (h : (BIn k).step (a k) (Silent.τ : BRB.InstanceLabel P.n X) (PMF.pure c)) :
+    (h : (BIn k).step (a k) (Silent.τ : BRB.Label P.n X) (PMF.pure c)) :
     (instanceOverBroadcastsExtended P X BIn).step ((u, w), a)
     (Silent.τ : GatherLabel P.n X) (PMF.pure ((u, w), Function.update a k c)) := by
   rw [instanceOverBroadcastsExtended, System.parallel_step]
@@ -215,13 +215,13 @@ theorem instanceOverBroadcasts_event_step (e : GatherEvent P.n X)
     (hnet : NetworkStep P w (Sum.inr e) (PMF.pure w'))
     (hin : ∀ k,
       ((BIn k).mapIdle (inputBroadcastLabelMap P.n X k)).step (a k) (Sum.inr e) (PMF.pure (a' k))) :
-    (instanceOverBroadcasts P X BIn).step ((u, w), a) (Sum.inl Label.tau)
+    (instanceOverBroadcasts P X BIn).step ((u, w), a) Label.tau
       (PMF.pure ((x, w'), a')) :=
   (instanceOverBroadcasts_step_iff P X BIn _ _ _).mpr
     (Or.inl ⟨rfl, e, instanceOverBroadcastsExtended_label_step (by simp) hproc hnet hin⟩)
 
 /-- A visible interface label is a transition of the instance. -/
-theorem instanceOverBroadcasts_label_step {l : InstanceLabel P.n X} (hl : l ≠ Sum.inl Label.tau)
+theorem instanceOverBroadcasts_label_step {l : Label P.n X} (hl : l ≠ Label.tau)
     (hproc : ∀ i, ProgramStep P i (u i) (Sum.inl l) (PMF.pure (x i)))
     (hnet : NetworkStep P w (Sum.inl l) (PMF.pure w'))
     (hin : ∀ k, ((BIn k).mapIdle (inputBroadcastLabelMap P.n X k)).step (a k) (Sum.inl l)
@@ -230,13 +230,13 @@ theorem instanceOverBroadcasts_label_step {l : InstanceLabel P.n X} (hl : l ≠ 
   refine (instanceOverBroadcasts_step_iff P X BIn _ _ _).mpr (Or.inr
     (instanceOverBroadcastsExtended_label_step ?_ hproc hnet hin))
   rw [gatherLabel_tau]
-  simpa using hl
+  exact fun h => hl (Sum.inl_injective h)
 
 /-- An injection of the gather network is a silent transition of the
 instance. -/
 theorem instanceOverBroadcasts_tau_network
     (hn : NetworkStep P w (Silent.τ : GatherLabel P.n X) (PMF.pure w')) :
-    (instanceOverBroadcasts P X BIn).step ((u, w), a) (Sum.inl Label.tau)
+    (instanceOverBroadcasts P X BIn).step ((u, w), a) Label.tau
     (PMF.pure ((u, w'), a)) :=
   (instanceOverBroadcasts_step_iff P X BIn _ _ _).mpr (Or.inr
     (instanceOverBroadcastsExtended_tau_network hn))
@@ -244,8 +244,8 @@ theorem instanceOverBroadcasts_tau_network
 /-- A silent step of one input instance is a silent transition of the
 instance. -/
 theorem instanceOverBroadcasts_tau_input {k : Fin P.n} {c : B}
-    (h : (BIn k).step (a k) (Silent.τ : BRB.InstanceLabel P.n X) (PMF.pure c)) :
-    (instanceOverBroadcasts P X BIn).step ((u, w), a) (Sum.inl Label.tau)
+    (h : (BIn k).step (a k) (Silent.τ : BRB.Label P.n X) (PMF.pure c)) :
+    (instanceOverBroadcasts P X BIn).step ((u, w), a) Label.tau
       (PMF.pure ((u, w), Function.update a k c)) :=
   (instanceOverBroadcasts_step_iff P X BIn _ _ _).mpr (Or.inr
     (instanceOverBroadcastsExtended_tau_input h))
@@ -257,24 +257,23 @@ section Pullbacks
 variable {n : ℕ} (X : Type) (k id j k' i : Fin n)
 
 @[simp] theorem inputBroadcastLabelMap_call (x : X) :
-    inputBroadcastLabelMap n X k (Sum.inl (Sum.inl (.call id x))) = none := rfl
+    inputBroadcastLabelMap n X k (Sum.inl (.call id x)) = none := rfl
 @[simp] theorem inputBroadcastLabelMap_fail :
-    inputBroadcastLabelMap n X k (Sum.inl (Sum.inl (Label.fail (X := X) id))) = some (Sum.inl (.fail
-      id)) := rfl
-@[simp] theorem inputBroadcastLabelMap_ret (g : Fin n → Option X) (C : AcceptedPairs n X) :
-    inputBroadcastLabelMap n X k (Sum.inl (Sum.inl (.ret id g C))) = none := rfl
-@[simp] theorem inputBroadcastLabelMap_callLoop (x : X) :
-    inputBroadcastLabelMap n X k (Sum.inl (Sum.inr (.callLoop id x))) = none := rfl
+    inputBroadcastLabelMap n X k (Sum.inl (Label.fail (X := X) id)) = some (.fail id) := rfl
+@[simp] theorem inputBroadcastLabelMap_ret (g : Fin n → Option X) :
+    inputBroadcastLabelMap n X k (Sum.inl (.ret id g)) = none := rfl
+@[simp] theorem inputBroadcastLabelMap_core (C : AcceptedPairs n X) :
+    inputBroadcastLabelMap n X k (Sum.inl (.core C)) = none := rfl
 @[simp] theorem inputBroadcastLabelMap_send (m : Message n X) :
     inputBroadcastLabelMap n X k (Sum.inr (.send j m)) = none := rfl
 @[simp] theorem inputBroadcastLabelMap_deliver (m : Message n X) :
     inputBroadcastLabelMap n X k (Sum.inr (.deliver i j m)) = none := rfl
 @[simp] theorem inputBroadcastLabelMap_inputBroadcastCall (x : X) :
     inputBroadcastLabelMap n X k (Sum.inr (.inputBroadcastCall j x)) =
-      if k = j then some (Sum.inl (.call x)) else none := rfl
+      if k = j then some (.call x) else none := rfl
 @[simp] theorem inputBroadcastLabelMap_inputBroadcastRet (v : X) :
     inputBroadcastLabelMap n X k (Sum.inr (.inputBroadcastRet k' j v)) =
-      if k = k' then some (Sum.inl (.ret j v)) else none := rfl
+      if k = k' then some (.ret j v) else none := rfl
 
 end Pullbacks
 /-! ### One gather program's transitions, by label class
@@ -290,27 +289,25 @@ variable [DecidableEq X] {P : Parameters} {j : Fin P.n}
   {p : LocalState P.n (ProcessVariables P.n X) (Message P.n X)}
   {ν : PMF (LocalState P.n (ProcessVariables P.n X) (Message P.n X))}
 
-theorem programStep_call_own {x : X} (h : ProgramStep P j p (Sum.inl (Sum.inl (.call j x))) ν) :
-    p.processVariables.input = none ∧ ν = PMF.pure (p.setProcessVariables { p.processVariables with
-      input := some x }) := by
+/-- The two transitions of the call at its own process: the call at a program holding no input
+and the loop at a program holding one. -/
+theorem programStep_call_own {x : X} (h : ProgramStep P j p (Sum.inl (.call j x)) ν) :
+    (p.processVariables.input = none ∧ ν = PMF.pure (p.setProcessVariables { p.processVariables with
+      input := some x })) ∨ (p.processVariables.input ≠ none ∧ ν = PMF.pure p) := by
   cases h
-  case call => exact ⟨by assumption, rfl⟩
+  case call => exact Or.inl ⟨by assumption, rfl⟩
+  case callLoop => exact Or.inr ⟨by assumption, rfl⟩
   case callIdle => exact absurd rfl ‹_ ≠ j›
 
 theorem programStep_call_notOwn {i : Fin P.n} {x : X} (hi : i ≠ j)
-    (h : ProgramStep P j p (Sum.inl (Sum.inl (.call i x))) ν) : ν = PMF.pure p := by
+    (h : ProgramStep P j p (Sum.inl (.call i x)) ν) : ν = PMF.pure p := by
   cases h
   case call => exact absurd rfl hi
+  case callLoop => exact absurd rfl hi
   case callIdle => rfl
 
-theorem programStep_callLoop {i : Fin P.n} {x : X}
-    (h : ProgramStep P j p (Sum.inl (Sum.inr (.callLoop i x))) ν) : ν = PMF.pure p := by
-  cases h
-  case callLoop => rfl
-  case callLoopIdle => rfl
-
-theorem programStep_ret_own {g : Fin P.n → Option X} {C : AcceptedPairs P.n X}
-    (h : ProgramStep P j p (Sum.inl (Sum.inl (.ret j g C))) ν) :
+theorem programStep_ret_own {g : Fin P.n → Option X}
+    (h : ProgramStep P j p (Sum.inl (.ret j g)) ν) :
     p.processVariables.input ≠ none ∧ p.processVariables.sentBind ≠ none ∧
       (∀ k x, g k = some x → holdsInputBroadcastReturn p.processVariables k x) ∧
       (∃ Q : Finset (Fin P.n), P.n - P.f ≤ Q.card ∧
@@ -322,13 +319,18 @@ theorem programStep_ret_own {g : Fin P.n → Option X} {C : AcceptedPairs P.n X}
     exact ⟨by assumption, by assumption, by assumption, by assumption, by assumption, rfl⟩
   case retIdle => exact absurd rfl ‹_ ≠ j›
 
-theorem programStep_ret_notOwn {i : Fin P.n} {g : Fin P.n → Option X} {C : AcceptedPairs P.n X}
-    (hi : i ≠ j) (h : ProgramStep P j p (Sum.inl (Sum.inl (.ret i g C))) ν) : ν = PMF.pure p := by
+theorem programStep_ret_notOwn {i : Fin P.n} {g : Fin P.n → Option X}
+    (hi : i ≠ j) (h : ProgramStep P j p (Sum.inl (.ret i g)) ν) : ν = PMF.pure p := by
   cases h
   case ret => exact absurd rfl hi
   case retIdle => rfl
 
-theorem programStep_fail {i : Fin P.n} (h : ProgramStep P j p (Sum.inl (Sum.inl (.fail i))) ν) :
+theorem programStep_core {C : AcceptedPairs P.n X} (h : ProgramStep P j p (Sum.inl (.core C)) ν) :
+    ν = PMF.pure p := by
+  cases h
+  case coreIdle => rfl
+
+theorem programStep_fail {i : Fin P.n} (h : ProgramStep P j p (Sum.inl (.fail i)) ν) :
     ν = PMF.pure p := by
   cases h
   case failIdle => rfl
@@ -423,19 +425,19 @@ section NetworkStepCases
 variable [DecidableEq X] {P : Parameters} {w : NetworkState P.n X} {μ : PMF (NetworkState P.n X)}
 
 theorem networkStep_call {id : Fin P.n} {x : X}
-    (h : NetworkStep P w (Sum.inl (Sum.inl (.call id x))) μ) : μ = PMF.pure w := by
+    (h : NetworkStep P w (Sum.inl (.call id x)) μ) : μ = PMF.pure w := by
   cases h; rfl
 
-theorem networkStep_callLoop {id : Fin P.n} {x : X}
-    (h : NetworkStep P w (Sum.inl (Sum.inr (.callLoop id x))) μ) : μ = PMF.pure w := by
+theorem networkStep_ret {id : Fin P.n} {g : Fin P.n → Option X}
+    (h : NetworkStep P w (Sum.inl (.ret id g)) μ) :
+    μ = PMF.pure { w with core := some (w.core.getD (coreOfNetwork P w.network)) } := by
   cases h; rfl
 
-theorem networkStep_ret {id : Fin P.n} {g : Fin P.n → Option X} {C : AcceptedPairs P.n X}
-    (h : NetworkStep P w (Sum.inl (Sum.inl (.ret id g C))) μ) :
-    C = w.core.getD (coreOfNetwork P w.network) ∧ μ = PMF.pure { w with core := some C } := by
-  cases h; exact ⟨rfl, rfl⟩
+theorem networkStep_core {C : AcceptedPairs P.n X} (h : NetworkStep P w (Sum.inl (.core C)) μ) :
+    w.core = some C ∧ μ = PMF.pure w := by
+  cases h; exact ⟨by assumption, rfl⟩
 
-theorem networkStep_fail {i : Fin P.n} (h : NetworkStep P w (Sum.inl (Sum.inl (.fail i))) μ) :
+theorem networkStep_fail {i : Fin P.n} (h : NetworkStep P w (Sum.inl (.fail i)) μ) :
     μ = PMF.pure { w with network := w.network.corrupt P i } := by
   cases h; rfl
 
@@ -456,7 +458,7 @@ theorem networkStep_inputBroadcastRet {k j : Fin P.n} {v : X}
     (h : NetworkStep P w (Sum.inr (.inputBroadcastRet k j v)) μ) : μ = PMF.pure w := by
   cases h; rfl
 
-theorem networkStep_tau (h : NetworkStep P w (Sum.inl (Sum.inl .tau)) μ) :
+theorem networkStep_tau (h : NetworkStep P w (Sum.inl .tau) μ) :
     ∃ (j : Fin P.n) (m : Message P.n X), j ∈ w.network.F ∧
       μ = PMF.pure { w with network := w.network.recordSent j m } := by
   cases h

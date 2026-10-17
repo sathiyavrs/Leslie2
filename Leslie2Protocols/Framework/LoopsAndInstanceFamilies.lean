@@ -6,6 +6,7 @@ Authors: Sathiya / Claude
 
 import Leslie2Protocols.Framework.TraceDistributionSupport
 import Leslie2.Systems.LTS
+import Mathlib.Data.Finmap
 
 /-!
 # Idle padding, label pullbacks and ℕ-indexed instance families
@@ -23,20 +24,25 @@ emulate the blueprint's sync-set composition `∥_S`:
   leaves the system idle. This is how a component whose alphabet is coarser
   joins a composition over a finer one.
 
-* `System.family inst owns glob act` — the ℕ-indexed family of instances
-  `inst r` over a shared alphabet, with **three** step disjuncts (plus idling):
-  1. *silent or owned*: on `τ`, or on a label owned by round `r`
-     (`owns l = some r`), exactly the one instance moves; the successor
-     distribution is `μr.map (Function.update s r ·)` — no product PMFs arise.
-  2. *global broadcast* (`glob l`, e.g. corruption `fail id`): every instance
-     applies the deterministic transform `act l` simultaneously (a Dirac
-     step). This is what keeps per-instance copies of a shared variable (the
-     corrupted set) together — a single-coordinate step could not.
-  3. *not its own* (unowned, non-global): a global idle self-loop.
+* `System.family inst owns glob act initial` — the ℕ-indexed family of the instances
+  `inst r` over a shared alphabet. Its state, `InstanceFamilyState initial act`, records the
+  broadcast labels applied so far and a finite map of the instances the family has touched. A
+  round not in the map is untouched and reads as `untouchedInstance`, the instance `initial`
+  under the recorded broadcasts. The family has four step disjuncts:
+  1. *silent*: on `τ`, the instance at one round of the map moves; the successor
+     distribution is `μr.map (g.setInstanceState r)`, so no product of distributions arises.
+  2. *owned*: on a label owned by round `r` (`owns l = some r`), the instance at `r` moves,
+     in the map or not.
+  3. *broadcast* (`glob l`, the corruption `fail id`): every instance applies the
+     deterministic transformation `act l`, the untouched instance included (a Dirac step,
+     `InstanceFamilyState.applyBroadcast`). The copies of a shared variable (the corrupted
+     set) are thereby equal at every instance, which a step at one instance could not ensure.
+  4. *idle*: on an unowned label that is not a broadcast, the family does not move.
 
-  The broadcast disjunct applies `act` unconditionally (it is not required to
-  be justified by instance steps); the intended `act`s are total corruption
-  functions in the style of deviation D1.
+  The broadcast disjunct applies `act` unconditionally: no instance transition justifies it.
+  The actions of the development are total corruption functions, as D1 has it. The silent
+  disjunct ranges over the rounds of the map: the untouched rounds are infinitely many, and the
+  family would not be finitely branching if each of them could take a silent transition.
 
 All three combinators preserve `System.IsLTS`, so an LTS instance family is
 again an LTS and the `ForwardLTS` correspondence applies at family level.
@@ -163,56 +169,264 @@ theorem System.weakLStep_mapIdle (g : L → L') (hsec : ∀ x, φ (g x) = some x
 
 end MapIdleWeak
 
+/-! ### The state of a family of instances -/
+
+/-- The state of a family of instances indexed by ℕ: the broadcasts applied so far, and the
+instances the family has touched. A round not in the map is untouched and reads as the initial
+instance under the recorded broadcasts. -/
+structure InstanceFamilyState {σ L : Type} (initial : σ) (act : L → σ → σ) where
+  /-- The broadcast labels applied, the latest first. -/
+  broadcasts : List L
+  /-- The instances the family has touched, by round. -/
+  instanceMap : Finmap (fun _ : ℕ => σ)
+
+namespace InstanceFamilyState
+
+/-- The family state with no broadcast applied and no instance touched: every round reads
+`initial`. -/
+def initial {L : Type} {initial : σ} {act : L → σ → σ} : InstanceFamilyState initial act :=
+  ⟨[], ∅⟩
+
+variable {L : Type} {initial : σ} {act : L → σ → σ}
+
+/-- The instance at every round not in the map: `initial` under the recorded broadcasts, the
+oldest broadcast applied first. -/
+def untouchedInstance (g : InstanceFamilyState initial act) : σ :=
+  g.broadcasts.foldr act initial
+
+/-- The instance at round `r`: its entry in the map, or the untouched instance. -/
+@[coe] def instanceState (g : InstanceFamilyState initial act) : ℕ → σ :=
+  fun r => (g.instanceMap.lookup r).getD g.untouchedInstance
+
+instance : CoeFun (InstanceFamilyState initial act) (fun _ => ℕ → σ) := ⟨instanceState⟩
+
+/-- The instance at round `r`, unfolded. -/
+theorem apply_eq (g : InstanceFamilyState initial act) (r : ℕ) :
+    g r = (g.instanceMap.lookup r).getD g.untouchedInstance := rfl
+
+/-- A round of the map reads its entry. -/
+theorem apply_of_lookup {g : InstanceFamilyState initial act} {r : ℕ} {x : σ}
+    (h : g.instanceMap.lookup r = some x) : g r = x := by
+  rw [apply_eq, h, Option.getD_some]
+
+/-- A round not in the map reads the untouched instance. -/
+theorem apply_of_notMem {g : InstanceFamilyState initial act} {r : ℕ}
+    (h : r ∉ g.instanceMap.keys) : g r = g.untouchedInstance := by
+  rw [Finmap.mem_keys, ← Finmap.lookup_eq_none] at h
+  rw [apply_eq, h, Option.getD_none]
+
+/-- A round of the map has the entry its accessor reads. -/
+theorem lookup_of_mem {g : InstanceFamilyState initial act} {r : ℕ}
+    (h : r ∈ g.instanceMap.keys) : g.instanceMap.lookup r = some (g r) := by
+  rw [Finmap.mem_keys, Finmap.mem_iff] at h
+  obtain ⟨x, hx⟩ := h
+  rw [hx, apply_of_lookup hx]
+
+/-- Two family states are equal when their broadcasts and their maps are. Equal accessors do not
+give equal states: a map entry equal to the untouched instance reads as an absent entry does. -/
+@[ext] theorem ext {g g' : InstanceFamilyState initial act}
+    (hBroadcasts : g.broadcasts = g'.broadcasts) (hInstanceMap : g.instanceMap = g'.instanceMap) :
+    g = g' := by
+  cases g
+  cases g'
+  cases hBroadcasts
+  cases hInstanceMap
+  rfl
+
+/-- Two family states with the same broadcasts and the same rounds in their maps are equal when
+their accessors are. -/
+theorem ext_of_keys {g g' : InstanceFamilyState initial act}
+    (hBroadcasts : g.broadcasts = g'.broadcasts)
+    (hKeys : g.instanceMap.keys = g'.instanceMap.keys) (hApply : ∀ r, g r = g' r) : g = g' := by
+  refine ext hBroadcasts (Finmap.ext_lookup fun r => ?_)
+  by_cases hr : r ∈ g.instanceMap.keys
+  · rw [lookup_of_mem hr, lookup_of_mem (hKeys ▸ hr), hApply r]
+  · have hr' : r ∉ g'.instanceMap.keys := hKeys ▸ hr
+    rw [Finmap.mem_keys, ← Finmap.lookup_eq_none] at hr hr'
+    rw [hr, hr']
+
+/-! #### The initial state -/
+
+@[simp] theorem initial_broadcasts :
+    (InstanceFamilyState.initial : InstanceFamilyState initial act).broadcasts = [] := rfl
+
+@[simp] theorem initial_instanceMap :
+    (InstanceFamilyState.initial : InstanceFamilyState initial act).instanceMap = ∅ := rfl
+
+@[simp] theorem initial_apply (r : ℕ) :
+    (InstanceFamilyState.initial : InstanceFamilyState initial act) r = initial := rfl
+
+@[simp] theorem keys_initial :
+    (InstanceFamilyState.initial : InstanceFamilyState initial act).instanceMap.keys = ∅ := rfl
+
+/-! #### Setting the instance at one round -/
+
+/-- Insert `x` as the instance at round `r`. -/
+def setInstanceState (g : InstanceFamilyState initial act) (r : ℕ) (x : σ) :
+    InstanceFamilyState initial act :=
+  { g with instanceMap := g.instanceMap.insert r x }
+
+@[simp] theorem broadcasts_setInstanceState (g : InstanceFamilyState initial act) (r : ℕ)
+    (x : σ) : (g.setInstanceState r x).broadcasts = g.broadcasts := rfl
+
+@[simp] theorem untouchedInstance_setInstanceState (g : InstanceFamilyState initial act) (r : ℕ)
+    (x : σ) : (g.setInstanceState r x).untouchedInstance = g.untouchedInstance := rfl
+
+@[simp] theorem setInstanceState_apply_same (g : InstanceFamilyState initial act) (r : ℕ)
+    (x : σ) : (g.setInstanceState r x) r = x :=
+  apply_of_lookup (Finmap.lookup_insert _)
+
+@[simp] theorem setInstanceState_apply_ne (g : InstanceFamilyState initial act) {r r' : ℕ}
+    (x : σ) (h : r' ≠ r) : (g.setInstanceState r x) r' = g r' := by
+  rw [apply_eq, apply_eq, untouchedInstance_setInstanceState]
+  exact congrArg (·.getD g.untouchedInstance) (Finmap.lookup_insert_of_ne g.instanceMap h)
+
+/-- The accessor of `g.setInstanceState r x` is the accessor of `g` updated at `r`. -/
+theorem instanceState_setInstanceState (g : InstanceFamilyState initial act) (r : ℕ) (x : σ) :
+    (g.setInstanceState r x).instanceState = Function.update g.instanceState r x := by
+  funext r'
+  by_cases h : r' = r
+  · subst h
+    rw [Function.update_self]
+    exact setInstanceState_apply_same g r' x
+  · rw [Function.update_of_ne h]
+    exact setInstanceState_apply_ne g x h
+
+theorem keys_setInstanceState (g : InstanceFamilyState initial act) (r : ℕ) (x : σ) :
+    (g.setInstanceState r x).instanceMap.keys = insert r g.instanceMap.keys := by
+  ext r'
+  rw [Finset.mem_insert, Finmap.mem_keys, Finmap.mem_keys]
+  exact Finmap.mem_insert
+
+theorem mem_keys_setInstanceState_self (g : InstanceFamilyState initial act) (r : ℕ) (x : σ) :
+    r ∈ (g.setInstanceState r x).instanceMap.keys := by
+  rw [keys_setInstanceState]
+  exact Finset.mem_insert_self r _
+
+@[simp] theorem setInstanceState_setInstanceState (g : InstanceFamilyState initial act) (r : ℕ)
+    (x y : σ) : (g.setInstanceState r x).setInstanceState r y = g.setInstanceState r y :=
+  ext rfl (Finmap.insert_insert _)
+
+/-- Setting a round of the map to the instance it reads leaves the state where it is. -/
+theorem setInstanceState_apply_self {g : InstanceFamilyState initial act} {r : ℕ}
+    (h : r ∈ g.instanceMap.keys) : g.setInstanceState r (g r) = g := by
+  refine ext_of_keys rfl ?_ fun r' => ?_
+  · rw [keys_setInstanceState, Finset.insert_eq_of_mem h]
+  · by_cases hr : r' = r
+    · subst hr
+      exact setInstanceState_apply_same g r' _
+    · exact setInstanceState_apply_ne g _ hr
+
+/-! #### Applying a broadcast -/
+
+/-- The entries of a map with `f` applied to every value have the keys of the map. -/
+private theorem keys_map_values (s : Finmap (fun _ : ℕ => σ)) (f : σ → σ) :
+    (s.entries.map (fun e : (Σ _ : ℕ, σ) => (⟨e.1, f e.2⟩ : Σ _ : ℕ, σ))).keys
+      = s.entries.keys := by
+  rw [Multiset.keys, Multiset.keys, Multiset.map_map]
+  rfl
+
+/-- Apply the broadcast `l`: record it, and apply `act l` to every instance of the map. The
+untouched instance reads the recorded broadcasts, so `act l` applies to it as well
+(`applyBroadcast_apply`). -/
+def applyBroadcast (g : InstanceFamilyState initial act) (l : L) :
+    InstanceFamilyState initial act where
+  broadcasts := l :: g.broadcasts
+  instanceMap :=
+    { entries := g.instanceMap.entries.map
+        (fun e : (Σ _ : ℕ, σ) => (⟨e.1, act l e.2⟩ : Σ _ : ℕ, σ))
+      nodupKeys := Multiset.nodup_keys.mp
+        ((keys_map_values g.instanceMap (act l)).symm ▸ g.instanceMap.nodupKeys.nodup_keys) }
+
+@[simp] theorem broadcasts_applyBroadcast (g : InstanceFamilyState initial act) (l : L) :
+    (g.applyBroadcast l).broadcasts = l :: g.broadcasts := rfl
+
+@[simp] theorem untouchedInstance_applyBroadcast (g : InstanceFamilyState initial act) (l : L) :
+    (g.applyBroadcast l).untouchedInstance = act l g.untouchedInstance := rfl
+
+@[simp] theorem keys_applyBroadcast (g : InstanceFamilyState initial act) (l : L) :
+    (g.applyBroadcast l).instanceMap.keys = g.instanceMap.keys :=
+  Finset.val_injective (keys_map_values g.instanceMap (act l))
+
+theorem lookup_applyBroadcast (g : InstanceFamilyState initial act) (l : L) (r : ℕ) :
+    (g.applyBroadcast l).instanceMap.lookup r = (g.instanceMap.lookup r).map (act l) := by
+  cases h : g.instanceMap.lookup r with
+  | none =>
+    rw [Option.map_none, Finmap.lookup_eq_none, ← Finmap.mem_keys, keys_applyBroadcast,
+      Finmap.mem_keys, ← Finmap.lookup_eq_none]
+    exact h
+  | some x =>
+    rw [Option.map_some, Finmap.lookup_eq_some_iff]
+    exact Multiset.mem_map.mpr ⟨⟨r, x⟩, Finmap.lookup_eq_some_iff.mp h, rfl⟩
+
+/-- A broadcast applies `act l` at every round, in the map or not. -/
+@[simp] theorem applyBroadcast_apply (g : InstanceFamilyState initial act) (l : L) (r : ℕ) :
+    (g.applyBroadcast l) r = act l (g r) := by
+  rw [apply_eq, apply_eq, lookup_applyBroadcast, untouchedInstance_applyBroadcast,
+    Option.getD_map]
+
+end InstanceFamilyState
+
 /-! ### ℕ-indexed instance families -/
 
 variable [Silent Label]
 
-/-- The ℕ-indexed family of the instances `inst r` over a shared alphabet.
-`owns` assigns API labels to their instance, `glob` marks broadcast labels
-(corruption), `act` is the deterministic broadcast transform. -/
+/-- The ℕ-indexed family of the instances `inst r` over a shared alphabet, on the state
+`InstanceFamilyState initial act`. `owns` assigns a label to the round of the instance it belongs
+to, `glob` marks the broadcast labels (corruption), and `act l` is the deterministic transformation
+the broadcast `l` applies to every instance. The family starts with no instance touched, so every
+round reads `initial`; it equals `(inst r).init` at every round when `initial` is the instances'
+common initial state (`System.family_init_apply`). -/
 def System.family (inst : ℕ → System σ Label)
-    (owns : Label → Option ℕ) (glob : Label → Prop) (act : Label → σ → σ) :
-    System (ℕ → σ) Label where
-  init := fun r => (inst r).init
-  step s l μ :=
-    (l = Silent.τ ∧ ∃ r μr, (inst r).step (s r) l μr ∧
-      μ = μr.map (Function.update s r)) ∨
-    ((∃ r, owns l = some r ∧ ∃ μr, (inst r).step (s r) l μr ∧
-      μ = μr.map (Function.update s r))) ∨
-    (¬ l = Silent.τ ∧ owns l = none ∧ glob l ∧
-      μ = PMF.pure (fun r => act l (s r))) ∨
-    (¬ l = Silent.τ ∧ owns l = none ∧ ¬ glob l ∧ μ = PMF.pure s)
+    (owns : Label → Option ℕ) (glob : Label → Prop) (act : Label → σ → σ) (initial : σ) :
+    System (InstanceFamilyState initial act) Label where
+  init := InstanceFamilyState.initial
+  step g l μ :=
+    (l = Silent.τ ∧ ∃ r ∈ g.instanceMap.keys, ∃ μr, (inst r).step (g r) l μr ∧
+      μ = μr.map (g.setInstanceState r)) ∨
+    ((∃ r, owns l = some r ∧ ∃ μr, (inst r).step (g r) l μr ∧
+      μ = μr.map (g.setInstanceState r))) ∨
+    (¬ l = Silent.τ ∧ owns l = none ∧ glob l ∧ μ = PMF.pure (g.applyBroadcast l)) ∨
+    (¬ l = Silent.τ ∧ owns l = none ∧ ¬ glob l ∧ μ = PMF.pure g)
 
 @[simp] theorem System.family_init (inst : ℕ → System σ Label)
-    (owns : Label → Option ℕ) (glob : Label → Prop) (act : Label → σ → σ) :
-    (System.family inst owns glob act).init = fun r => (inst r).init := rfl
+    (owns : Label → Option ℕ) (glob : Label → Prop) (act : Label → σ → σ) (initial : σ) :
+    (System.family inst owns glob act initial).init = InstanceFamilyState.initial := rfl
+
+/-- When every instance starts from `initial`, the family starts from the instances' initial
+states. -/
+theorem System.family_init_apply {inst : ℕ → System σ Label}
+    (owns : Label → Option ℕ) (glob : Label → Prop) (act : Label → σ → σ) {initial : σ}
+    (hInitial : ∀ r, (inst r).init = initial) (r : ℕ) :
+    (System.family inst owns glob act initial).init r = (inst r).init := by
+  rw [hInitial r]
+  rfl
 
 /-- The step disjunction of `System.family`, by name. -/
 theorem System.family_step_iff (inst : ℕ → System σ Label)
-    (owns : Label → Option ℕ) (glob : Label → Prop) (act : Label → σ → σ)
-    {s : ℕ → σ} {l : Label} {μ : PMF (ℕ → σ)} :
-    (System.family inst owns glob act).step s l μ ↔
-      (l = Silent.τ ∧ ∃ r μr, (inst r).step (s r) l μr ∧
-        μ = μr.map (Function.update s r)) ∨
-      ((∃ r, owns l = some r ∧ ∃ μr, (inst r).step (s r) l μr ∧
-        μ = μr.map (Function.update s r))) ∨
-      (¬ l = Silent.τ ∧ owns l = none ∧ glob l ∧
-        μ = PMF.pure (fun r => act l (s r))) ∨
-      (¬ l = Silent.τ ∧ owns l = none ∧ ¬ glob l ∧ μ = PMF.pure s) := Iff.rfl
+    (owns : Label → Option ℕ) (glob : Label → Prop) (act : Label → σ → σ) (initial : σ)
+    {g : InstanceFamilyState initial act} {l : Label} {μ : PMF (InstanceFamilyState initial act)} :
+    (System.family inst owns glob act initial).step g l μ ↔
+      (l = Silent.τ ∧ ∃ r ∈ g.instanceMap.keys, ∃ μr, (inst r).step (g r) l μr ∧
+        μ = μr.map (g.setInstanceState r)) ∨
+      ((∃ r, owns l = some r ∧ ∃ μr, (inst r).step (g r) l μr ∧
+        μ = μr.map (g.setInstanceState r))) ∨
+      (¬ l = Silent.τ ∧ owns l = none ∧ glob l ∧ μ = PMF.pure (g.applyBroadcast l)) ∨
+      (¬ l = Silent.τ ∧ owns l = none ∧ ¬ glob l ∧ μ = PMF.pure g) := Iff.rfl
 
-/-- A family of LTS instances is an LTS: every disjunct's successor
-distribution is a Dirac (single-coordinate updates of Diracs included). -/
+/-- A family of LTS instances is an LTS: every disjunct's successor distribution is a Dirac,
+the image of a Dirac under `setInstanceState` included. -/
 theorem System.family_isLTS {inst : ℕ → System σ Label}
     (h : ∀ r, (inst r).IsLTS)
-    (owns : Label → Option ℕ) (glob : Label → Prop) (act : Label → σ → σ) :
-    (System.family inst owns glob act).IsLTS := by
-  rintro s l μ (⟨-, r, μr, hstep, rfl⟩ | ⟨r, -, μr, hstep, rfl⟩ |
+    (owns : Label → Option ℕ) (glob : Label → Prop) (act : Label → σ → σ) (initial : σ) :
+    (System.family inst owns glob act initial).IsLTS := by
+  rintro g l μ (⟨-, r, -, μr, hstep, rfl⟩ | ⟨r, -, μr, hstep, rfl⟩ |
     ⟨-, -, -, rfl⟩ | ⟨-, -, -, rfl⟩)
   · obtain ⟨x, rfl⟩ := h r _ _ _ hstep
-    exact ⟨Function.update s r x, by rw [PMF.pure_map]⟩
+    exact ⟨g.setInstanceState r x, by rw [PMF.pure_map]⟩
   · obtain ⟨x, rfl⟩ := h r _ _ _ hstep
-    exact ⟨Function.update s r x, by rw [PMF.pure_map]⟩
+    exact ⟨g.setInstanceState r x, by rw [PMF.pure_map]⟩
   · exact ⟨_, rfl⟩
-  · exact ⟨s, rfl⟩
+  · exact ⟨g, rfl⟩
 
 end PLTS

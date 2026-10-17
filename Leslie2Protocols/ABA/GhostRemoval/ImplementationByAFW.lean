@@ -11,25 +11,27 @@ import Leslie2Protocols.ABA.Results
 /-!
 # The ghost-free gather-based protocol
 
-The network of `AFW.protocol` holds one ghost per round that no program
-reads: the two gathers' recorded cores and the round's bound bit, written by
-`AFW.ghostStep` and announced on every graded-agreement return by `AFW.announcedBound`.
-`AFW.ghostFreeProtocol` is the protocol as it runs with that ghost dropped and the adversary
-free to announce either bit on a return.
+The network of `AFW.protocol` holds, for every round, a ghost of type `AFW.Ghost`: the first
+gather's recorded core, the second gather's recorded core and the round's bound bit, each written
+once (D30). `AFW.ghostStep` writes it at the first return of each of the two gathers and at the
+round's first return, and no guard of a program reads it. The ghost enables one transition, the
+network's announcement `boundG r b`, enabled exactly when `AFW.ghostBound` of the ghost of round
+`r` is `some b` (D29). The announcement lies in `Label.hiddenAPI`, so it is hidden at protocol
+level. `AFW.ghostFreeProtocol` is the protocol with the ghost removed: its network holds the
+one-element ghost `Unit` and announces nothing.
 
-`AFW.protocol_ghostRemoval` is the statement that the ghost costs nothing: the ghost never
-blocks a step and never adds one, so the two systems have the same achievable trace
-distributions. Every headline about the protocol therefore holds of the ghost-free
-protocol, and the rest of this file re-derives them: the composition inclusion into
-`AFW.composed`, trace-distribution refinement into the ABA specification, Validity and
-Agreement of every positive-probability trace, and trace conservativity against the
-protocol-shaped specification `hybrid`.
+`AFW.protocol_ghostRemoval` states that the protocol and the ghost-free protocol achieve the same
+trace distributions. Every headline about the protocol therefore holds of the ghost-free protocol,
+and the rest of this file derives them: the composition inclusion into `AFW.composed`,
+trace-distribution refinement into the ABA specification, Validity and Agreement of every
+positive-probability trace, and trace conservativity against the protocol-shaped specification
+`hybrid`.
 
-The proof is the auxiliary variable removal of `ABA/GhostRemoval/GhostFreeSystem.lean` carried
-through the composition pipeline. Its hypothesis is that every round, process and graded outcome
-admits an announced bit, which here is the equation `bnd = AFW.ghostOutput P w r id out` read at its
-own right-hand side. The announced bit is silent at protocol level — a `retG` label lies in
-`Label.hiddenAPI` — which is why no label map appears in the statement.
+The proof is the removal of an auxiliary variable, `Implementation.system_ghostRemoval`
+(`ABA/GhostRemoval/GhostFreeSystem.lean`), at the gather-based implementation's ghost: the type
+`AFW.Ghost`, the write `AFW.ghostStep` and the read `AFW.ghostBound`, the arguments `AFW.protocol`
+passes. Since the announcement labels are hidden, the removal is at the identity on labels, and no
+label map appears in the statement.
 -/
 
 namespace PLTS
@@ -39,23 +41,20 @@ namespace AFW
 open Implementation
 
 /-- **The ghost-free gather-based protocol**: the `n` programs and the common coin of
-`AFW.protocol` beside the network over the trivial ghost, whose
-graded-agreement returns announce any bit. -/
+`AFW.protocol` beside the network over the one-element ghost `Unit`, which holds no core and no
+bit, so that the announcement `boundG` never fires. -/
 noncomputable def ghostFreeProtocol (P : Parameters) :
     System (Implementation.State P (Message P.n) (RoundVariables P.n) Unit) (Label P.n) :=
   Implementation.systemGhostFree P (Message P.n) (RoundEvent P.n) (RoundVariables P.n) (RoundStep P)
 
-/-- **The ghost costs nothing.** The ghost the network keeps for each round is
-written by no guard and read by no program, and the label that announces its bit is
-hidden at protocol level, so the protocol and the ghost-free protocol achieve the same
-trace distributions. -/
+/-- **The ghost changes no trace distribution.** The ghost of a round holds the two gathers'
+recorded cores and the round's bound bit, no guard of a program reads it, and the network's
+announcement `boundG` is the one transition it enables. The announcement is hidden at protocol
+level, so the protocol and the ghost-free protocol achieve the same trace distributions. -/
 theorem protocol_ghostRemoval (P : Parameters) :
     achievableTraceDists (protocol P) = achievableTraceDists (ghostFreeProtocol P) :=
-  Implementation.system_ghostRemoval P (Message P.n) (RoundEvent P.n) (RoundVariables P.n) (Ghost
-    P.n)
-    (RoundStep P)
-    (ghostStep P) (announcedBound P)
-    (fun w r id out => ⟨ghostOutput P w r id out, rfl⟩)
+  Implementation.system_ghostRemoval P (Message P.n) (RoundEvent P.n) (RoundVariables P.n)
+    (Ghost P.n) (RoundStep P) (ghostStep P) ghostBound
 
 /-! ### The headlines at the ghost-free protocol -/
 

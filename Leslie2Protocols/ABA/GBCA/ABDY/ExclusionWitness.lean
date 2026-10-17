@@ -34,7 +34,7 @@ quorum yields a witness for *some* bit (`exclusionWitness_of_echo5Bot_quorum`): 
 correct bit-voter exists anywhere, its `vote_confirmed` quorum of received messages is Case A for
 the opposite bit; otherwise the correct vote prefix is all-⊥ and the `VoteQuorumAgainst` holds for
 both bits at once (`exclusionWitness_of_noCorrectVote`). `exclusionWitness_boundOf_grade0` witnesses
-the complement of the bit a grade-0 return announces.
+the complement of the bound bit a grade-0 return writes at the round's first return.
 
 Two lemmas carry a Case A quorum between the `ECHO` level and its neighbours:
 `receivedEchoQuorum_of_received_votes` derives one from `f + 1` received `VOTE v` messages, and
@@ -173,8 +173,8 @@ theorem exclusionWitness_ret {s : RoundState P.n} {id : Fin P.n} {b : Bool}
         exact hk)
     (Finset.Subset.refl _) h
 
-/-- `ExclusionWitness` is stable under the ghost write (no clause reads the bound
-bit). -/
+/-- `ExclusionWitness` is stable under the write of the round's bound bit (no clause reads the
+bound bit). -/
 theorem exclusionWitness_setBound {s : RoundState P.n} {b β : Bool}
     (h : ExclusionWitness P s b) : ExclusionWitness P (s.setBound β) b :=
   ExclusionWitness.mono (s := s) (fun _ _ _ hm => hm) (fun _ _ hk => hk)
@@ -311,7 +311,7 @@ theorem exclusionWitness_of_echo5Bot_quorum {s : RoundState P.n} (hI : Invariant
     exact ⟨k, hI.vote_confirmed k b hkF hks⟩
   · exact ⟨false, exclusionWitness_of_noCorrectVote hI h hcase false⟩
 
-/-- **The grade-0 return's announced bit is witnessed.** At an `n − f` quorum of received `ECHO5 ⊥`
+/-- **The bound bit of a grade-0 return is witnessed.** At an `n − f` quorum of received `ECHO5 ⊥`
 messages the complement of `boundOf … C` carries an exclusion witness. Where a correct bit-voter
 exists its `vote_confirmed` quorum of received messages is Case A for the opposite bit, which is the
 bit `boundOf` names;

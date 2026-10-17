@@ -19,14 +19,21 @@ that leads the first `retABA` transition.
 
 * `AbstractState` — the abstract-state constraints (C1 `F_eq`, C2 `ret_eq`, `mode_flipEnabled`,
   `input_sync`, and C3/C7 `phase`).
-* `Invariant` — the concrete invariant (forty fields, docstring-numbered I0–I30, a few numbers
+* `Invariant` — the concrete invariant (forty-one fields, docstring-numbered I0–I30, a few numbers
   covering a small group of fields: the replacement flag against the corrupted set, `F` equality,
-  input coherence, the `RoundSettled`-keyed round skeleton with quiescence, DECIDED coherence,
+  input coherence, the `RoundSettled`-keyed round skeleton with quiescence, DECIDED coherence with
+  the agreement of a correct round loop's record of its DECIDED sends with the network's,
   grade-2 commitment, delivery soundness, round/phase coherence, support sent sets, and the
   conjuncts I28–I30, which are stated without the guard pair `(!b) ∈ excluded ∧ b ∉ excluded`).
 * `hybridSpecificationStateRelation` — the simulation relation `Invariant ∧ AbstractState`, wrapped
 in `diracRel` by
   `HybridRefinesSpecification/Simulation.lean`.
+
+Both predicates read the graded-agreement family and the coin family of a protocol-shaped state
+through their accessors, as functions `ℕ → GBCA.SpecState n` and `ℕ → WCC.SpecState n`, and the
+ABA state through the accessors of `ABAState`. The rounds in the families' maps and the network's
+started rounds are read by neither, so a write of the started rounds preserves both
+(`Invariant.recordStartedRound`, `AbstractState.recordStartedRound`).
 
 This file holds the two predicates, the lemmas that preserve them under a write elsewhere, the
 lemmas that read their fields, and the initial states. The proof that
@@ -45,12 +52,16 @@ open Implementation Composition
 
 variable {P : Parameters}
 
+/-! `M` is the type of the messages a graded-agreement round exchanges. -/
+
+variable {M : Type}
+
 /-- The ABA components of a protocol-shaped state, read as one state: the round loops beside the
 network they share. -/
-abbrev HybridState.aba (s : HybridState P) : ABAState P := (s.2.1, s.2.2.1)
+abbrev HybridState.aba (s : HybridState P M) : ABAState P := (s.2.1, s.2.2.1)
 
-/-- The common coin's component. -/
-abbrev HybridState.wcc (s : HybridState P) : ℕ → WCC.SpecState P.n := s.2.2.2
+/-- The common coin's component, read through its accessor. -/
+abbrev HybridState.wcc (s : HybridState P M) : ℕ → WCC.SpecState P.n := ⇑s.2.2.2
 
 /-- The last-bound-round condition on a family: round `r`'s exclusion set is non-empty
 and round `r + 1`'s is still empty.
@@ -304,6 +315,14 @@ structure Invariant (P : Parameters) (g : ℕ → GBCA.SpecState P.n) (c : ABASt
   contains a never-corrupted sender of `b` (pigeonhole, at the `retABA` transition),
   and *that* sender's sent `b` carries the grade-2 witness. -/
   decided_source : ∀ id b, id ∉ c.F → b ∈ c.decidedSent id → ∃ r, Grade2Witness P g c r b
+  /-- I4' (D12′): at a correct process the round loop's own record of its DECIDED sends is the
+  network's. The two halves of a correct `decidedSend` and of a correct `decidedRelay` insert the
+  same bit into both, and the DECIDED injection and the relay of a corrupted process, which write
+  the network's alone, are at a process of `F`. The round loop's `ret` asks for the bit in its own
+  record (`b ∈ decidedSent`, "having sent it" in Algorithm 1 of LeslieBP) and its `decidedRelay`
+  for the bit outside it ("having not sent it"); through this clause both read the network's
+  record, which `decided_source` reads. -/
+  decidedSent_recorded : ∀ j, j ∉ c.F → (c.1 j).decidedSent = c.decidedSent j
   /-- I3b: a round bound at grade 2 whose bit `b` is not excluded commits
   everything at and above it. The clause is keyed on the guard pair
   `(!b) ∈ excluded ∧ b ∉ excluded`. A write that adds an exclusion creates no instance of the pair
@@ -408,7 +427,8 @@ structure Invariant (P : Parameters) (g : ℕ → GBCA.SpecState P.n) (c : ABASt
   /-- I22 : a correct process that has never received its external input has never
   called any `WCC` instance (the sole idle-exit, `callABA`'s correct `input` ctor, is what first
   makes a `callW` call reachable; `input` is write-once, so this is preserved trivially
-  once `input ≠ none`). Feeds `wcc_callRound`'s self-corner at the fresh `callABA` transition. -/
+  once `input ≠ none`). Feeds the case `id' = id` of `wcc_callRound` at the `callABA` transition
+  of a process holding no input. -/
   idle_no_wccCall : ∀ id, id ∉ c.F → (c.processes id).input = none → ∀ r, (w r).called id = false
   /-- I23 : a `GBCA_r` consequence analogous to `flip_witness` (I21), but keyed on a correct
   process's own round-`r` progress rather than round `r`'s coin: once a correct process has reached
@@ -474,9 +494,35 @@ structure Invariant (P : Parameters) (g : ℕ → GBCA.SpecState P.n) (c : ABASt
 
 /-- The core simulation relation (pre-`diracRel`): the concrete invariant
 plus the abstract-state constraints. -/
-def hybridSpecificationStateRelation (P : Parameters) (s : HybridState P) (a : SpecState P.n) : Prop
-  :=
+def hybridSpecificationStateRelation (P : Parameters) (s : HybridState P M) (a : SpecState P.n) :
+    Prop :=
   Invariant P s.1 s.aba s.wcc ∧ AbstractState P s.1 s.aba s.wcc a
+
+/-! ### A write of the started rounds
+
+`Invariant` and `AbstractState` read the ABA network through its DECIDED sets and its corrupted
+set, so a write of the started rounds preserves both. A correct graded-agreement call writes them
+(`ABANetworkState.recordStartedRound`, D37). -/
+
+/-- A write of the started rounds preserves `Invariant`. -/
+theorem Invariant.recordStartedRound {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
+    {w : ℕ → WCC.SpecState P.n} (hI : Invariant P g c w) (r : ℕ) (id : Fin P.n) :
+    Invariant P g (c.1, c.2.recordStartedRound r id) w := by
+  obtain ⟨C, A⟩ := c
+  unfold ABANetworkState.recordStartedRound
+  split
+  · exact { hI with }
+  · exact hI
+
+/-- A write of the started rounds preserves `AbstractState`. -/
+theorem AbstractState.recordStartedRound {g : ℕ → GBCA.SpecState P.n} {c : ABAState P}
+    {w : ℕ → WCC.SpecState P.n} {a : SpecState P.n} (hA : AbstractState P g c w a) (r : ℕ)
+    (id : Fin P.n) : AbstractState P g (c.1, c.2.recordStartedRound r id) w a := by
+  obtain ⟨C, A⟩ := c
+  unfold ABANetworkState.recordStartedRound
+  split
+  · exact { hA with }
+  · exact hA
 
 /-- The GBCA quorum guard is monotone: enlarging `F` and preserving non-`⊥` calls only
 enlarges the counted union `{correct callers} ∪ F`. -/
@@ -644,6 +690,7 @@ theorem Invariant.initial (P : Parameters) :
   wcc_bound := fun _ h => absurd rfl h
   received_sound := fun i j b h => absurd h (by simp [ABAState.initial])
   decided_source := fun id b _ h => absurd h (by simp [ABAState.initial])
+  decidedSent_recorded := fun _ _ => rfl
   grade2Bound_commit := fun r b hg => absurd hg (by simp [GBCA.SpecState.initial])
   round_bound := fun id _ r h => absurd h (by simp [ABAState.initial])
   agree_bound := fun r v _ hb => absurd hb (by simp [GBCA.SpecState.initial])
@@ -690,6 +737,12 @@ theorem AbstractState.initial (P : Parameters) :
   mode_flipEnabled := rfl
   input_sync := fun _ _ => by simp [ABAState.initial, SpecState.initial]
   phase := Or.inl rfl
+
+/-- The initial states of `hybrid` and of the ABA specification are related: every round of
+either family reads its initial instance. -/
+theorem hybridSpecificationStateRelation_init (P : Parameters) (M : Type) [DecidableEq M] :
+    hybridSpecificationStateRelation P (hybrid P M).init (SpecState.initial P.n) :=
+  ⟨Invariant.initial P, AbstractState.initial P⟩
 
 end ABA
 end PLTS

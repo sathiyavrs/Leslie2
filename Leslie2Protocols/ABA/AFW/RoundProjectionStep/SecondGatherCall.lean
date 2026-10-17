@@ -12,7 +12,8 @@ import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ProjectionAfterOneWrite
 `roundProjection_secondGatherCall`: the projection of the composed round after the acting process
 calls the second gather with the candidate on record. The transition writes the second gather's
 input and sends nothing, which is what the composed round's `secondGatherCall` event and the
-gather's own call write. `afterSecondGatherCall` names the state the call reaches.
+gather's own call write. The ghost and the round's network stand. `afterSecondGatherCall` names the
+state the call reaches.
 -/
 
 namespace PLTS

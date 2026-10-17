@@ -11,11 +11,16 @@ import Leslie2Protocols.ABA.AFW.RoundProjectionStep.ProjectionAfterOneWrite
 
 `roundProjection_firstGatherReturn`: the projection of the composed round after the first gather
 returns to the acting process. The transition records the candidate the returned entries determine
-and marks the gather variables returned, and its ghost write is the first gather's core and the
-round's bound bit, which is what the composed round's `firstGatherReturn` event writes.
-`afterFirstGatherReturn` names the state the return reaches, and `firstGatherReturnCore` is the
-core the return carries. `firstGatherProjection_writeNoSent` and its companion at the second
-gather read a write that records no message through the projection of one gather instance.
+and marks the gather variables returned, and its ghost write records the first gather's core where
+none is recorded. The composed round matches it by two events. On the first gather's return the
+program records the candidate, and the gather records its core and marks the process returned
+(`Gather.AlgorithmOverBracha.ret`). On the gather's announcement of that core, `firstGatherCore`,
+the round's network records the core where none is recorded. The ghost write leaves the round's
+bound bit, which the graded return writes and the round's network announces on `boundG` (D29).
+`afterFirstGatherReturn` names the state the two events reach, and `firstGatherReturnCore` is the
+core the first gather holds after the return. `firstGatherProjection_writeNoSent` and its companion
+at the second gather read a write that records no message through the projection of one gather
+instance.
 -/
 
 namespace PLTS
@@ -34,7 +39,7 @@ variable {u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n} {w : NetworkState P.n} 
 /-! ### The first gather's return
 
 The transition records the candidate and marks the gather variables returned. It sends nothing, and
-its ghost write is the first gather's core beside the round's bound bit. -/
+its ghost write records the first gather's core. -/
 
 /-- The projection onto the first gather instance after a write that records nothing. -/
 theorem firstGatherProjection_writeNoSent (u : ∀ _ : Fin P.n, AFW.ProcessVariables P.n)
@@ -52,7 +57,7 @@ theorem secondGatherProjection_writeNoSent (u : ∀ _ : Fin P.n, AFW.ProcessVari
     GBCA.ByAFW.secondGather (roundProjectionUpdate P u w r j sr (w.sent r)) :=
   congrArg GBCA.ByAFW.secondGather (roundProjection_writeNoSent u w j c r sr)
 
-/-- The core the first gather's return carries: the recorded one, and the core
+/-- The core the first gather holds after its return: the recorded one, and the core
 of the gather's network state where none is recorded. -/
 noncomputable def firstGatherReturnCore (P : Parameters) (s : GBCA.ByAFW.RoundStateOverBracha P.n) :
     Gather.AcceptedPairs P.n Bool :=
@@ -60,17 +65,18 @@ noncomputable def firstGatherReturnCore (P : Parameters) (s : GBCA.ByAFW.RoundSt
     (Gather.gatherProgramsAndNetwork
     (GBCA.ByAFW.firstGather s)).2)
 
-/-- **The round after the first gather's return to `j` over `g`**: the program
-records the candidate, the round's bound bit is written from the core the
-return carries, and the first gather takes `Gather.AlgorithmOverBracha.ret`. -/
+/-- **The round after the first gather's return to `j` over `g` and the announcement of its
+core**: the program records the candidate, the first gather takes `Gather.AlgorithmOverBracha.ret`,
+and the round's network records the gather's core where none is recorded. -/
 noncomputable def afterFirstGatherReturn (P : Parameters) (s : GBCA.ByAFW.RoundStateOverBracha P.n)
-  (j : Fin P.n)
-    (g : Fin P.n → Option Bool) : GBCA.ByAFW.RoundStateOverBracha P.n :=
+    (j : Fin P.n) (g : Fin P.n → Option Bool) : GBCA.ByAFW.RoundStateOverBracha P.n :=
   GBCA.ByAFW.setFirstGather
-    (GBCA.ByAFW.setBound
+    (GBCA.ByAFW.setNetwork
       (GBCA.ByAFW.setPrograms s (Function.update (GBCA.ByAFW.programs s) j
         { GBCA.ByAFW.programs s j with candidate := some (GBCA.candidate P g) }))
-      (some ((GBCA.ByAFW.bound s).getD (GBCA.boundOfCore P (firstGatherReturnCore P s)))))
+      { GBCA.ByAFW.network s with
+        firstGatherCore := some ((GBCA.ByAFW.network s).firstGatherCore.getD
+          (firstGatherReturnCore P s)) })
     (Gather.setCore
       (Gather.setGatherProgramsAndNetwork (GBCA.ByAFW.firstGather s)
         ((Gather.gatherProgramsAndNetwork (GBCA.ByAFW.firstGather s)).setProcessVariables j
@@ -80,7 +86,8 @@ noncomputable def afterFirstGatherReturn (P : Parameters) (s : GBCA.ByAFW.RoundS
       (some (firstGatherReturnCore P s)))
 
 /-- **The first gather's return, read through the projection.** The first gather returns to `j`,
-which records the candidate; the round's bound bit is written from the core the return carries. -/
+which records the candidate, and the round's network records the gather's core where none is
+recorded. -/
 theorem roundProjection_firstGatherReturn (hu : (u j).2 = p) (r : ℕ)
     (g : Fin P.n → Option Bool) :
     roundProjection P (Function.update u j (c, p.setRoundVariables r
@@ -102,13 +109,14 @@ theorem roundProjection_firstGatherReturn (hu : (u j).2 = p) (r : ℕ)
     firstGatherProjection_writeNoSent, secondGatherProjection_writeNoSent]
   refine roundStateOverGathers_ext ?_ ?_ ?_ ?_
   · simp only [afterFirstGatherReturn, GBCA.ByAFW.programs_setFirstGather,
-      GBCA.ByAFW.programs_setBound, GBCA.ByAFW.programs_setPrograms, programs_roundProjection_eq,
+      GBCA.ByAFW.programs_setNetwork, GBCA.ByAFW.programs_setPrograms, programs_roundProjection_eq,
       roundVariables_update_self rfl, locals_programProjection_if]
     simp only [programs_mk, programProjection, LocalState.setProcessVariables]
-  · simp only [afterFirstGatherReturn, GBCA.ByAFW.bound_setFirstGather,
-      GBCA.ByAFW.bound_setBound, bound_roundProjection, firstGatherReturnCore,
-      firstGather_roundProjection, core_firstGatherProjection]
-    simp only [bound_mk, ghostStep, hcore]
+  · simp only [afterFirstGatherReturn, GBCA.ByAFW.network_setFirstGather,
+      GBCA.ByAFW.network_setNetwork, network_roundProjection,
+      firstGatherReturnCore, firstGather_roundProjection, core_firstGatherProjection, network_mk,
+      networkProjection_ghostStep_firstGatherReturn, firstGatherCore_networkProjection, ← hcore]
+    cases (w.ghost r).1 <;> rfl
   · simp only [afterFirstGatherReturn, GBCA.ByAFW.firstGather_setFirstGather,
       firstGather_roundProjection]
     simp only [firstGather_mk]
@@ -129,7 +137,7 @@ theorem roundProjection_firstGatherReturn (hu : (u j).2 = p) (r : ℕ)
         core_firstGatherProjection]
       simp only [ghostStep, hcore]
   · simp only [afterFirstGatherReturn, GBCA.ByAFW.secondGather_setFirstGather,
-      GBCA.ByAFW.secondGather_setBound, GBCA.ByAFW.secondGather_setPrograms,
+      GBCA.ByAFW.secondGather_setNetwork, GBCA.ByAFW.secondGather_setPrograms,
       secondGather_roundProjection]
     simp only [secondGather_mk, ghostStep]
     refine stateOverBroadcasts_ext ?_ ?_ ?_

@@ -27,12 +27,14 @@ import Leslie2Protocols.ABA.AFW.System
 import Leslie2Protocols.ABA.Composition.ABAState
 import Leslie2Protocols.ABA.Composition.Components
 import Leslie2Protocols.ABA.Composition.Hybrid
+import Leslie2Protocols.ABA.Composition.InputEnabledness
 import Leslie2Protocols.ABA.GBCA.ABDY.Algorithm
 import Leslie2Protocols.ABA.GBCA.ABDY.Binding
 import Leslie2Protocols.ABA.GBCA.ABDY.Components
 import Leslie2Protocols.ABA.GBCA.ABDY.Composition
 import Leslie2Protocols.ABA.GBCA.ABDY.CompositionStepCases
 import Leslie2Protocols.ABA.GBCA.ABDY.ExclusionWitness
+import Leslie2Protocols.ABA.GBCA.ABDY.InputEnabledness
 import Leslie2Protocols.ABA.GBCA.ABDY.Invariant
 import Leslie2Protocols.ABA.GBCA.ABDY.MessagesAndVariables
 import Leslie2Protocols.ABA.GBCA.ABDY.RefinesSpecification
@@ -46,6 +48,7 @@ import Leslie2Protocols.ABA.GBCA.AFW.Composition
 import Leslie2Protocols.ABA.GBCA.AFW.CompositionStepCases
 import Leslie2Protocols.ABA.GBCA.AFW.Counting
 import Leslie2Protocols.ABA.GBCA.AFW.GatherSubstitution
+import Leslie2Protocols.ABA.GBCA.AFW.InputEnabledness
 import Leslie2Protocols.ABA.GBCA.AFW.Invariant
 import Leslie2Protocols.ABA.GBCA.AFW.OutputWitness
 import Leslie2Protocols.ABA.GBCA.AFW.RefinesSpecification
@@ -62,11 +65,11 @@ import Leslie2Protocols.ABA.Gather.CommonCoreCounting
 import Leslie2Protocols.ABA.Gather.Components
 import Leslie2Protocols.ABA.Gather.Composition
 import Leslie2Protocols.ABA.Gather.CompositionStepCases
+import Leslie2Protocols.ABA.Gather.InputEnabledness
 import Leslie2Protocols.ABA.Gather.Invariant
 import Leslie2Protocols.ABA.Gather.MessagesAndCommonCore
 import Leslie2Protocols.ABA.Gather.RefinesSpecification
 import Leslie2Protocols.ABA.Gather.Specification
-import Leslie2Protocols.ABA.Gather.SpecificationOverInstanceAlphabet
 import Leslie2Protocols.ABA.Gather.SpecificationRelation
 import Leslie2Protocols.ABA.Gather.SpecificationSafety
 import Leslie2Protocols.ABA.GhostRemoval.GhostFreeSystem
@@ -93,6 +96,7 @@ import Leslie2Protocols.ABA.HybridRefinesSpecification.Simulation
 import Leslie2Protocols.ABA.HybridRefinesSpecification.WeakTransitions
 import Leslie2Protocols.ABA.Implementation.Alphabet
 import Leslie2Protocols.ABA.Implementation.CompositeTransitions
+import Leslie2Protocols.ABA.Implementation.InputEnabledness
 import Leslie2Protocols.ABA.Implementation.NetworkStateWritesAndRemovals
 import Leslie2Protocols.ABA.Implementation.StepCases
 import Leslie2Protocols.ABA.Implementation.System
@@ -101,10 +105,10 @@ import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.Components
 import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.Composition
 import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.CompositionStepCases
 import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.EchoWitness
+import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.InputEnabledness
 import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.Invariant
 import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.MessagesAndVariables
 import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.RefinesSpecification
-import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.SpecificationOverInstanceAlphabet
 import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.SpecificationRelation
 import Leslie2Protocols.ABA.ReliableBroadcast.Specification
 import Leslie2Protocols.ABA.Results
@@ -120,6 +124,7 @@ import Leslie2Protocols.Framework.Congruence
 import Leslie2Protocols.Framework.DiracRelationCoupling
 import Leslie2Protocols.Framework.FamilySimulation
 import Leslie2Protocols.Framework.FinerAlphabetCongruence
+import Leslie2Protocols.Framework.InputEnabledness
 import Leslie2Protocols.Framework.LoopsAndInstanceFamilies
 import Leslie2Protocols.Framework.Relabel
 import Leslie2Protocols.Framework.SynchronisedProduct

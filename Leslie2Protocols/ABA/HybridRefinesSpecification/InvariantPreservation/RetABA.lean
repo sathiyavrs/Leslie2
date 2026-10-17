@@ -10,10 +10,15 @@ import Leslie2Protocols.ABA.Composition.Hybrid
 /-!
 # `Invariant` across the `retABA` transitions of `hybrid`
 
-`Invariant.step_retABA`, preservation of `Invariant` at a return of the ABA interface. A
-never-corrupted process's return only sets `returned`, a field `Invariant` never inspects, so
-`Invariant` transfers verbatim modulo the pointwise-unchanged projections of `processes`. A
-corrupted process's return is a state identity, and `Invariant` transfers outright.
+`Invariant.step_retABA`, preservation of `Invariant` at a return of the ABA interface. The return
+of a correct process is its round loop's output. Its guard reads the round loop's own record of
+its DECIDED sends, `b ∈ decidedSent` ("having sent it" in Algorithm 1 of LeslieBP), which
+`decidedSent_recorded` (I4') identifies with the network's set `c.decidedSent id`, so the
+statement below reads the network's set, as `hybrid_step_retABA` does. The network takes the
+return on its one unguarded transition `ABANetworkStep.retABAIdle`. The return writes only
+`returned`, a field `Invariant` does not read, so every clause transfers through the unchanged
+projections of `processes`. The return of a process of `F` is the replaced round loop's
+self-loop, which leaves the state as it stands, and `Invariant` transfers outright.
 -/
 
 namespace PLTS
@@ -47,6 +52,11 @@ theorem Invariant.step_retABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
       ABAState.setProcessVariables_decidedReceived _ _ _
     have hDC : ∀ i b', c'.decidedCount i b' = c.decidedCount i b' :=
       fun i b' => ABAState.setProcessVariables_decidedCount _ _ _ _ _
+    have hRecorded : ∀ j, (c'.1 j).decidedSent = (c.1 j).decidedSent := by
+      intro j
+      by_cases hj : j = id
+      · rw [hj, hc'def]; simp [ABAState.setProcessVariables]
+      · rw [hc'def]; simp [ABAState.setProcessVariables, Function.update_of_ne hj]
     have hInput : ∀ id', (c'.processes id').input = (c.processes id').input := by
       intro id'; by_cases h : id' = id
       · subst h; rw [hc'def, ABAState.setProcessVariables_processes_self]
@@ -83,8 +93,10 @@ theorem Invariant.step_retABA {P : Parameters} {g : ℕ → GBCA.SpecState P.n}
       fun v _ hpin j b' hj hh => hpin j b' (hF ▸ hj) (hHold j b' hh)⟩
     refine ⟨fun id' => by rw [hCorr, hF]; exact hI.corrupted_F id',
       fun r => (hI.F_gbca r).trans hF.symm, fun r => ?_, ?_, ?_, ?_, ?_,
-      hI.down_settled, hI.quiescent, hI.wcc_bound, ?_, ?_, ?_, ?_, ?_,
-      hI.grade2_needs_bind, ?_, ?_, ?_, ?_, ?_, ?_, hI.bind_succ, ?_, ?_, hI.grade0_chain, ?_,
+      hI.down_settled, hI.quiescent, hI.wcc_bound, ?_, ?_,
+      fun j hj => by rw [hRecorded j, hDS]; exact hI.decidedSent_recorded j (hF ▸ hj),
+      ?_, ?_, ?_, hI.grade2_needs_bind, ?_, ?_, ?_, ?_, ?_, ?_, hI.bind_succ, ?_, ?_,
+      hI.grade0_chain, ?_,
       hI.wcc_order, ?_, ?_, ?_, ?_, ?_, ?_, hI.bound_quorum,
       fun r v hb => (hI.bind_support r v hb).mono
         (fun id' b' h => by rw [hInput]; exact h) (fun x hx => by rw [hF]; exact hx),

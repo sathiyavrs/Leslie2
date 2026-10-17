@@ -15,7 +15,8 @@ witnesses its invariant and its relation carry.
 The counting lemmas are stated on a gather specification state and on the graded agreement
 specification's `call` map. Committed entries and `call` maps only grow
 (`firstGatherSupport_mono`, `call_mono`); a call writes the caller's entry alone and leaves the
-committed entries, the core and the corrupted set (`call_val`, `call_unchanged`); and a committed
+committed entries, the core and the corrupted set (`call_val`, `call_unchanged`); a return leaves
+all four and carries its guards (`ret_unchanged`); and a committed
 entry of a correct process reads as call support on the specification
 (`callSupport_of_firstGatherSupport`, `callSupport_of_core`). `quorum_of_core` discharges the
 specification's quorum guard from the first gather's core: the core's `n − f` distinct processes
@@ -155,6 +156,20 @@ theorem call_unchanged {X : Type} [DecidableEq X] {c c' : Gather.SpecState P.n X
     have hc' := PMF.pure_injective hμ
     subst hc'
     exact ⟨rfl, rfl, rfl⟩
+
+/-- A return of the gather specification leaves the calls, the committed entries, the core and
+the corrupted set alone, and its guards hold: the core is written and lies below the returned map,
+and every entry of the returned map is committed. -/
+theorem ret_unchanged {X : Type} [DecidableEq X] {c c' : Gather.SpecState P.n X}
+    {id : Fin P.n} {g : Fin P.n → Option X} (h : Gather.Step P c (.ret id g) (PMF.pure c')) :
+    c'.call = c.call ∧ c'.val = c.val ∧ c'.core = c.core ∧ c'.F = c.F ∧
+      ∃ C, c.core = some C ∧ C.subMap g ∧ ∀ k x, g k = some x → c.val k = some x := by
+  generalize hμ : (PMF.pure c' : PMF (Gather.SpecState P.n X)) = μ at h
+  cases h with
+  | ret _ _ C hC hmem hsub _ =>
+    have hc' := PMF.pure_injective hμ
+    subst hc'
+    exact ⟨rfl, rfl, rfl, rfl, C, hC, hmem, hsub⟩
 
 /-- The `call` map of a gather specification only grows. -/
 theorem call_mono {X : Type} [DecidableEq X] {c c' : Gather.SpecState P.n X}

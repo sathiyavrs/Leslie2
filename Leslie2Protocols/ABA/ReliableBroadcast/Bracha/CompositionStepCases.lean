@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Sathiya / Claude
 -/
 
-import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.SpecificationOverInstanceAlphabet
+import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.Composition
 import Leslie2Protocols.Framework.SynchronisedProduct
 import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 
@@ -14,16 +14,17 @@ import Leslie2Protocols.Framework.SynchronisedProductAlongPullbacks
 The composition is `relabel ∘ abstract ∘ parallel` over the synchronised group of programs
 and the instance's network. The lemmas here unfold that pipeline in both directions.
 
-`brachaInstance_step_iff` splits a transition of the instance into a hidden synchronisation and an
-interface label. Over the instance-internal alphabet, a visible label moves both factors, the
-programs and the network, and the product distribution is their Dirac product. A silent label
-moves the network alone. `brachaInstanceExtended_synchronised_cases` and
+`brachaInstance_step_iff` splits a transition of the instance into a hidden synchronisation and a
+transition at an interface label. Over the instance-internal alphabet, a visible label moves both
+factors, the programs and the network, and the product distribution is their Dirac product. A
+silent label moves the network alone. `brachaInstanceExtended_synchronised_cases` and
 `brachaInstanceExtended_tau_cases` read a synchronised step that way, and the `_step` lemmas build
 one from the transitions of the factors.
 
 `programStep_*` determines one program's transition from its label: the participant's guards
 together with the Dirac it produces, and the idle transition of a non-participant as the identity.
-`networkStep_*` does the same for the instance's network.
+At the call label the leader's program records the payload when it holds no input and loops when
+it holds one (`programStep_call_leader`). `networkStep_*` does the same for the instance's network.
 
 A synchronised step delivers a program function given pointwise, by its value at the acting process
 and its agreement with the old function elsewhere. `Function.eq_update_iff` identifies that
@@ -86,9 +87,9 @@ theorem broadcastProgramProduct_no_tau {P : Parameters} {ldr : Fin P.n}
 /-- The instance's step relation, unfolded to the hidden-synchronisation case and
 the interface-label case. -/
 theorem brachaInstance_step_iff (P : Parameters) (ldr : Fin P.n) (q : BrachaState P.n M)
-    (l : InstanceLabel P.n M) (μ : PMF (BrachaState P.n M)) :
+    (l : Label P.n M) (μ : PMF (BrachaState P.n M)) :
     (brachaInstance P ldr M).step q l μ ↔
-      (l = Sum.inl Label.tau ∧ ∃ e : BroadcastEvent P.n M,
+      (l = Label.tau ∧ ∃ e : BroadcastEvent P.n M,
         (brachaInstanceExtended P ldr M).step q (Sum.inr e) μ) ∨
       (brachaInstanceExtended P ldr M).step q (Sum.inl l) μ := by
   constructor
@@ -115,7 +116,7 @@ theorem brachaInstanceExtended_event_step (P : Parameters) (ldr : Fin P.n)
 interface label. -/
 theorem brachaInstanceExtended_label_step (P : Parameters) (ldr : Fin P.n)
     {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables M) (Message M)}
-    {w w' : NetworkState P.n (Message M)} {l : InstanceLabel P.n M} (hl : l ≠ Sum.inl Label.tau)
+    {w w' : NetworkState P.n (Message M)} {l : Label P.n M} (hl : l ≠ Label.tau)
     (hall : ∀ i, ProgramStep P ldr i (u i) (Sum.inl l) (PMF.pure (x i)))
     (hn : NetworkStep P ldr w (Sum.inl l) (PMF.pure w')) :
     (brachaInstanceExtended P ldr M).step (u, w) (Sum.inl l) (PMF.pure (x, w')) := by
@@ -130,8 +131,8 @@ network-local one. -/
 theorem brachaInstanceExtended_tau_network (P : Parameters) (ldr : Fin P.n)
     {u : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables M) (Message M)}
     {w w' : NetworkState P.n (Message M)}
-    (hn : NetworkStep P ldr w (Sum.inl (Sum.inl .tau)) (PMF.pure w')) :
-    (brachaInstanceExtended P ldr M).step (u, w) (Sum.inl (Sum.inl .tau)) (PMF.pure (u, w')) := by
+    (hn : NetworkStep P ldr w (Sum.inl .tau) (PMF.pure w')) :
+    (brachaInstanceExtended P ldr M).step (u, w) (Sum.inl .tau) (PMF.pure (u, w')) := by
   rw [brachaInstanceExtended, System.parallel_step]
   exact Or.inr (Or.inr ⟨rfl, PMF.pure w', hn, (prodPMF_pure_pure _ _).symm⟩)
 
@@ -141,14 +142,14 @@ theorem brachaInstance_event_step (P : Parameters) (ldr : Fin P.n)
     {w w' : NetworkState P.n (Message M)} (e : BroadcastEvent P.n M)
     (hall : ∀ i, ProgramStep P ldr i (u i) (Sum.inr e) (PMF.pure (x i)))
     (hn : NetworkStep P ldr w (Sum.inr e) (PMF.pure w')) :
-    (brachaInstance P ldr M).step (u, w) (Sum.inl Label.tau) (PMF.pure (x, w')) :=
+    (brachaInstance P ldr M).step (u, w) Label.tau (PMF.pure (x, w')) :=
   (brachaInstance_step_iff P ldr _ _ _).mpr (Or.inl ⟨rfl, e,
     brachaInstanceExtended_event_step P ldr e hall hn⟩)
 
 /-- A visible interface label is a transition of the instance. -/
 theorem brachaInstance_label_step (P : Parameters) (ldr : Fin P.n)
     {u x : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables M) (Message M)}
-    {w w' : NetworkState P.n (Message M)} {l : InstanceLabel P.n M} (hl : l ≠ Sum.inl Label.tau)
+    {w w' : NetworkState P.n (Message M)} {l : Label P.n M} (hl : l ≠ Label.tau)
     (hall : ∀ i, ProgramStep P ldr i (u i) (Sum.inl l) (PMF.pure (x i)))
     (hn : NetworkStep P ldr w (Sum.inl l) (PMF.pure w')) :
     (brachaInstance P ldr M).step (u, w) l (PMF.pure (x, w')) :=
@@ -159,8 +160,8 @@ theorem brachaInstance_label_step (P : Parameters) (ldr : Fin P.n)
 theorem brachaInstance_tau_network (P : Parameters) (ldr : Fin P.n)
     {u : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables M) (Message M)}
     {w w' : NetworkState P.n (Message M)}
-    (hn : NetworkStep P ldr w (Sum.inl (Sum.inl .tau)) (PMF.pure w')) :
-    (brachaInstance P ldr M).step (u, w) (Sum.inl Label.tau) (PMF.pure (u, w')) :=
+    (hn : NetworkStep P ldr w (Sum.inl .tau) (PMF.pure w')) :
+    (brachaInstance P ldr M).step (u, w) Label.tau (PMF.pure (u, w')) :=
   (brachaInstance_step_iff P ldr _ _ _).mpr (Or.inr (brachaInstanceExtended_tau_network P ldr hn))
 
 /-- A visible transition of the programs beside the network: every program and
@@ -187,9 +188,9 @@ injection: no program steps on `τ`. -/
 theorem brachaInstanceExtended_tau_cases {P : Parameters} {ldr : Fin P.n}
     {u : ∀ _ : Fin P.n, LocalState P.n (ProcessVariables M) (Message M)}
     {w : NetworkState P.n (Message M)} {μ : PMF (BrachaState P.n M)}
-    (h : (brachaInstanceExtended P ldr M).step (u, w) (Sum.inl (Sum.inl Label.tau)) μ) :
+    (h : (brachaInstanceExtended P ldr M).step (u, w) (Sum.inl Label.tau) μ) :
     ∃ w' : NetworkState P.n (Message M), μ = PMF.pure (u, w') ∧ NetworkStep P ldr w
-    (Sum.inl (Sum.inl Label.tau)) (PMF.pure w') := by
+    (Sum.inl Label.tau) (PMF.pure w') := by
   rw [brachaInstanceExtended, System.parallel_step] at h
   rcases h with ⟨hτ, -⟩ | ⟨-, μ₁, hs, rfl⟩ | ⟨-, μ₂, hn, rfl⟩
   · exact absurd rfl hτ
@@ -208,27 +209,27 @@ section ProgramStepCases
 variable {P : Parameters} {ldr j : Fin P.n} {p : LocalState P.n (ProcessVariables M) (Message M)}
   {ν : PMF (LocalState P.n (ProcessVariables M) (Message M))}
 
+/-- At the call label the leader records the payload when it holds no input, and loops when it
+holds one. -/
 theorem programStep_call_leader {m : M}
-    (h : ProgramStep P ldr ldr p (Sum.inl (Sum.inl (.call m))) ν) :
-    p.processVariables.input = none ∧ ν = PMF.pure (p.setProcessVariables { p.processVariables with
-      input := some m }) := by
+    (h : ProgramStep P ldr ldr p (Sum.inl (.call m)) ν) :
+    (p.processVariables.input = none ∧ ν = PMF.pure (p.setProcessVariables
+      { p.processVariables with input := some m })) ∨
+    (p.processVariables.input ≠ none ∧ ν = PMF.pure p) := by
   cases h
-  case call => exact ⟨by assumption, rfl⟩
+  case call => exact Or.inl ⟨by assumption, rfl⟩
+  case callLoop => exact Or.inr ⟨by assumption, rfl⟩
   case callIdle => exact absurd rfl ‹_ ≠ ldr›
 
 theorem programStep_call_notOwn {m : M} (hj : j ≠ ldr)
-    (h : ProgramStep P ldr j p (Sum.inl (Sum.inl (.call m))) ν) : ν = PMF.pure p := by
+    (h : ProgramStep P ldr j p (Sum.inl (.call m)) ν) : ν = PMF.pure p := by
   cases h
   case call => exact absurd ‹j = ldr› hj
+  case callLoop => exact absurd ‹j = ldr› hj
   case callIdle => rfl
 
-theorem programStep_callLoop {m : M}
-    (h : ProgramStep P ldr j p (Sum.inl (Sum.inr (.callLoop m))) ν) : ν = PMF.pure p := by
-  cases h
-  case callLoop => rfl
-
 theorem programStep_ret_own {m : M}
-    (h : ProgramStep P ldr j p (Sum.inl (Sum.inl (.ret j m))) ν) :
+    (h : ProgramStep P ldr j p (Sum.inl (.ret j m)) ν) :
     2 * P.f + 1 ≤ p.receivedCount (.vote m) ∧ p.processVariables.returned = false ∧
       ν = PMF.pure (p.setProcessVariables { p.processVariables with returned := true }) := by
   cases h
@@ -236,13 +237,13 @@ theorem programStep_ret_own {m : M}
   case retIdle => exact absurd rfl ‹_ ≠ j›
 
 theorem programStep_ret_notOwn {i : Fin P.n} {m : M} (hi : i ≠ j)
-    (h : ProgramStep P ldr j p (Sum.inl (Sum.inl (.ret i m))) ν) : ν = PMF.pure p := by
+    (h : ProgramStep P ldr j p (Sum.inl (.ret i m)) ν) : ν = PMF.pure p := by
   cases h
   case ret => exact absurd rfl hi
   case retIdle => rfl
 
 theorem programStep_fail {i : Fin P.n}
-    (h : ProgramStep P ldr j p (Sum.inl (Sum.inl (.fail i))) ν) : ν = PMF.pure p := by
+    (h : ProgramStep P ldr j p (Sum.inl (.fail i)) ν) : ν = PMF.pure p := by
   cases h
   case failIdle => rfl
 
@@ -298,19 +299,15 @@ section NetworkStepCases
 variable {P : Parameters} {ldr : Fin P.n} {w : NetworkState P.n (Message M)}
   {μ : PMF (NetworkState P.n (Message M))}
 
-theorem networkStep_call {m : M} (h : NetworkStep P ldr w (Sum.inl (Sum.inl (.call m))) μ) :
-    μ = PMF.pure w := by
-  cases h; rfl
-
-theorem networkStep_callLoop {m : M} (h : NetworkStep P ldr w (Sum.inl (Sum.inr (.callLoop m))) μ) :
+theorem networkStep_call {m : M} (h : NetworkStep P ldr w (Sum.inl (.call m)) μ) :
     μ = PMF.pure w := by
   cases h; rfl
 
 theorem networkStep_ret {i : Fin P.n} {m : M}
-    (h : NetworkStep P ldr w (Sum.inl (Sum.inl (.ret i m))) μ) : μ = PMF.pure w := by
+    (h : NetworkStep P ldr w (Sum.inl (.ret i m)) μ) : μ = PMF.pure w := by
   cases h; rfl
 
-theorem networkStep_fail {i : Fin P.n} (h : NetworkStep P ldr w (Sum.inl (Sum.inl (.fail i))) μ) :
+theorem networkStep_fail {i : Fin P.n} (h : NetworkStep P ldr w (Sum.inl (.fail i)) μ) :
     μ = PMF.pure (w.corrupt P i) := by
   cases h; rfl
 
@@ -322,7 +319,7 @@ theorem networkStep_deliver {i j : Fin P.n} {m : Message M}
     (h : NetworkStep P ldr w (Sum.inr (.deliver i j m)) μ) : m ∈ w.sent j ∧ μ = PMF.pure w := by
   cases h; exact ⟨by assumption, rfl⟩
 
-theorem networkStep_tau (h : NetworkStep P ldr w (Sum.inl (Sum.inl .tau)) μ) :
+theorem networkStep_tau (h : NetworkStep P ldr w (Sum.inl .tau) μ) :
     ∃ (j : Fin P.n) (m : Message M), j ∈ w.F ∧ μ = PMF.pure (w.recordSent j m) := by
   cases h
   case byzantine j m hF => exact ⟨j, m, hF, rfl⟩

@@ -11,23 +11,22 @@ import Leslie2Protocols.ABA.ReliableBroadcast.Bracha.SpecificationRelation
 
 `BRB.brachaRefinesSpecification`: the reliable-broadcast instance `BRB.brachaInstance`
 (`ABA/ReliableBroadcast/Bracha/Composition.lean`) is forward simulated by the broadcast
-specification instance with the same leader, read over the instance's interface
-(`BRB.specificationOverInstanceAlphabet`), along `BRB.SpecificationRelation`.
+specification instance with the same leader, `BRB.specInst`, along `BRB.SpecificationRelation`.
+The two systems share the alphabet `BRB.Label`.
 
 The refinement runs in two steps. The first is strong and functional: a transition of the instance
-is one transition of `BRB.BrachaAlgorithm` at the same state, at the specification label the
-interface label projects to (`BRB.brachaInstance_step_algorithm`). The second is the matching
-`BRB.specificationRelation_transition`, whose matching run is a weak run of the specification over
-`BRB.Label`; it is lifted to the interface along a section of `BRB.specificationLabelMap`, which is
-where the call loop is answered by the specification's own loop.
+is one transition of `BRB.BrachaAlgorithm` at the same state and the same label
+(`BRB.brachaInstance_step_algorithm`). The second is the matching
+`BRB.specificationRelation_transition`, whose matching run is a weak run of the specification at
+that label.
 
 The matching is stated here, one transition of `BRB.BrachaAlgorithm` at a time, along
 `BRB.SpecificationRelation` (`ABA/ReliableBroadcast/Bracha/SpecificationRelation.lean`). The
-internal transitions stutter. The call and corruption are matched by the specification's own
-transitions. A return is matched by `ret` alone when `val` is already committed, the witnesses
-identifying the two values, and by the two-step run `commit ; ret` when it is not, with `commit`'s
-guard discharged by `input_of_echoWitness` under a correct leader and by membership in the
-corrupted set otherwise.
+internal transitions stutter. The call, the call loop and corruption are matched by the
+specification's `call`, `callLoop` and `fail`. A return is matched by `ret` alone when `val` is
+already committed, the witnesses identifying the two values, and by the two-step run
+`commit ; ret` when it is not, with `commit`'s guard discharged by `input_of_echoWitness` under a
+correct leader and by membership in the corrupted set otherwise.
 
 Four lemmas beside the refinement hold the relation across one transition:
 `specificationRelation_tau` for an internal transition under a stuttering specification,
@@ -51,9 +50,9 @@ variable {M : Type} [DecidableEq M] {P : Parameters} {ldr : Fin P.n}
 
 /-- **The relation across one transition**: every transition of `BrachaAlgorithm` at a related
 pair is matched by a weak run of the specification instance, ending at a related state. The
-internal transitions stutter; `call` and `fail` are matched by the specification's own
-transitions; `ret id m` is matched by `ret` alone when `val` is already committed, and by the
-two-step run `commit ; ret` when it is not. -/
+internal transitions stutter; `call`, `callLoop` and `fail` are matched by the specification's
+transitions of the same names; `ret id m` is matched by `ret` alone when `val` is already
+committed, and by the two-step run `commit ; ret` when it is not. -/
 theorem specificationRelation_transition (P : Parameters) (ldr : Fin P.n) (q₁ : BrachaState P.n M)
     (q₂ : SpecState P.n M) (hR : SpecificationRelation P ldr q₁ q₂) (l : Label P.n M)
     (μ : PMF (BrachaState P.n M)) (hstep : BrachaAlgorithm P ldr q₁ l μ)
@@ -283,31 +282,13 @@ theorem specificationRelation_transition (P : Parameters) (ldr : Fin P.n) (q₁ 
 /-! ### The refinement -/
 
 /-- **The reliable-broadcast refinement**: the reliable-broadcast instance is forward simulated
-by the specification instance with the same leader, read over the instance's interface. A
-transition of the instance is one transition of `BrachaAlgorithm`
-(`BRB.brachaInstance_step_algorithm`), that transition is matched by a weak run of the
-specification (`specificationRelation_transition`), and the run is lifted to the interface along a
-section of `specificationLabelMap`, which is where the call loop is answered by the specification's
-own loop. -/
+by the specification instance with the same leader. A transition of the instance is one
+transition of `BrachaAlgorithm` at the same label (`BRB.brachaInstance_step_algorithm`), and that
+transition is matched by a weak run of the specification (`specificationRelation_transition`). -/
 theorem brachaRefinesSpecification (P : Parameters) (ldr : Fin P.n) :
-    ForwardSimulation (brachaInstance P ldr M) (specificationOverInstanceAlphabet P ldr M)
-    (SpecificationRelation P ldr) := by
-  constructor
-  intro q₁ q₂ hR l μ hstep q₁' hq₁'
-  obtain ⟨l₀, hpull, htransition⟩ := brachaInstance_step_algorithm P ldr q₁ l μ hstep
-  obtain ⟨s', hdis, hrel⟩ := specificationRelation_transition P ldr q₁ q₂ hR l₀ μ htransition q₁'
-    hq₁'
-  refine ⟨s', ?_, hrel⟩
-  rcases hdis with ⟨hτ, hweak⟩ | ⟨hτ, hweak⟩
-  · exact Or.inl ⟨specificationLabelMap_eq_tau (by rw [hpull, hτ]; rfl),
-      weakLSilent_specificationOverInstanceAlphabet P ldr hweak⟩
-  · refine Or.inr ⟨?_, weakLStep_specificationOverInstanceAlphabet P ldr hτ hpull hweak⟩
-    intro hl
-    refine hτ ?_
-    have h2 : specificationLabelMap P.n M (Silent.τ : InstanceLabel P.n M) = some l₀ := by
-      rw [← hl]; exact hpull
-    rw [specificationLabelMap_tau] at h2
-    exact (Option.some.inj h2).symm
+    ForwardSimulation (brachaInstance P ldr M) (specInst P ldr M) (SpecificationRelation P ldr) :=
+  ⟨fun q₁ q₂ hR l μ hstep q₁' hq₁' => specificationRelation_transition P ldr q₁ q₂ hR l μ
+    (brachaInstance_step_algorithm P ldr q₁ l μ hstep) q₁' hq₁'⟩
 
 /-! ### The relation across the internal and the call transitions
 

@@ -5,7 +5,7 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.Vocabulary.Labels
-import Leslie2Protocols.Framework.LoopsAndInstanceFamilies
+import Leslie2Protocols.Framework.InputEnabledness
 
 /-!
 # The GBCA specification instance (blueprint Transition System 2)
@@ -40,27 +40,28 @@ later return of `w` needs `w ∉ excluded`, so `w ≠ !v`, so `w = v`. Two retur
 one execution therefore name the same bit whatever their grades. Once a return of grade 1
 or 2 has fired, the bit not excluded is the only bit any extension can return.
 
-## The bound bit on the label
+## The announced bound bit
 
-Every return transition takes a bit `bnd` under the guard `(!bnd) ∈ excluded` and
-announces it on the label `.retG r id out bnd`. The bit is a ghost output: it is
-the value the specification holds as state, and no program reads it. On a
-reachable state `excluded` holds at most one bit, so the guard determines `bnd`
-as the complement of the excluded bit. All the returns of a round therefore
-announce one bit. A return of grade 1 or 2 carries `(!v) ∈ excluded` as well, so it
-announces `bnd = v`. This makes binding a property of the trace alone: the
-round-`r` returns of a trace name a single bit, and each of them that returns a
-value returns that bit.
+The transition `announceBound b` announces the bound bit `b` on the label `.boundG r b` under the
+guard `(!b) ∈ excluded`. It is a Dirac self-loop: it writes nothing, it is enabled at every state
+from the exclusion on, and it may repeat (D29). The bit is a ghost output: it is the value the
+specification holds as state, and no program reads it. On a reachable state `excluded` holds at
+most one bit, so the guard determines `b` as the complement of the excluded bit, and all the
+announcements of a round name one bit. A return of grade 1 or 2 of `v` carries
+`(!v) ∈ excluded`, so `v` is the announced bit. Every return requires an excluded bit, so the
+announcement is enabled at every state from the round's first return on, and every trace with a
+return extends by it. This makes binding a property of the trace alone: the round-`r`
+announcements of a trace name a single bit, and each round-`r` return of a value returns that bit.
 
 ## `retGrade0` and Graded Binding
 
-The grade-0 return's guard `(!bnd) ∈ excluded` is ABDY22's Graded Binding clause read
+The grade-0 return's guard `excluded ≠ ∅` is ABDY22's Graded Binding clause read
 on this state: *there is a bit `b` such that no non-faulty party decides `1 − b`
-at grade `≥ 1` in any extension*. The witness is the announced bit `bnd`, and the
-bit no extension can return is `!bnd`, because the grade-1 and grade-2 returns refuse
-an excluded bit and `excluded` only grows. The witness is thus valid in every
-extension of the run and not merely at the moment of the return. A grade-0 return
-commits the instance: from that point on at most one bit is not excluded in any later
+at grade `≥ 1` in any extension*. The witness is the bit not excluded, which the
+announcement names, and the bit no extension can return is the excluded bit, because the
+grade-1 and grade-2 returns refuse an excluded bit and `excluded` only grows. The witness is
+thus valid in every extension of the run and not merely at the moment of the return. A grade-0
+return commits the instance: from that point on at most one bit is not excluded in any later
 state, which is what makes returning no bit the right answer. `retGrade0`
 additionally requires `f + 1` F-blind support for each bit (D15), which is what
 witnesses that neither bit was forced.
@@ -68,13 +69,12 @@ witnesses that neither bit was forced.
 ## The all-⊥ run
 
 In a round where neither bit is decidable the specification still commits to a
-single excluded bit, and the run ends with grade-0 returns alone. Those returns
-announce its complement, so the round is bound to one bit on the trace even
+single excluded bit, and the run ends with grade-0 returns alone. The announcement
+names its complement, so the round is bound to one bit on the trace even
 though no process is handed a value. The commitment is sound because the
 announced bit is a ghost output: it is program data for no component, so no
-process is answered with the internal choice. The guard `(!bnd) ∈ excluded` is
-the binding witness either way. The bit `!bnd` is a bit that no extension can return,
-whether the round goes on to return `bnd` or returns no bit at all.
+process is answered with the internal choice. The excluded bit is a bit that no extension can
+return, whether the round goes on to return the bit not excluded or returns no bit at all.
 
 ## Where a returned value comes from (D14/D15)
 
@@ -113,13 +113,23 @@ whether the round goes on to return `bnd` or returns no bit at all.
   in the cardinality. The blueprint's `bind = some v` guard on the
   grade-1 and grade-2 returns becomes the pair `v ∉ excluded ∧ (!v) ∈ excluded`, its
   `bind = none` guard on binding becomes `excluded = ∅`, and the grade-0 return's
-  binding obligation `bind ≠ ⊥` becomes `(!bnd) ∈ excluded`. The source puts the
-  bound value on the grade-0 return label; here `bnd` is that value, announced on
-  every return label as a ghost output.
+  binding obligation `bind ≠ ⊥` becomes `excluded ≠ ∅`. The source puts the
+  bound value on every return label, `return(id, x, bind)`; here every return carries
+  the returned value alone, and `announceBound` announces the bound value on `boundG r b`
+  (D29).
 
 Every transition is Dirac, so the instance is an LTS and the `ForwardLTS`
 correspondence applies. `fail` is the determinised D1 `corrupt`; the family
 (`GBCA.specFamily`) broadcasts it to all rounds.
+
+## Inputs and outputs
+
+The calls `callG r id b` and the corruptions `fail id` are the inputs of the round-`r` instance,
+and the returns `retG r id out` and the announcements `boundG r b` are its outputs
+(`GBCA.specInstInputOutputLabels`). `Step.callLoop` takes a call at every state and `Step.fail` a
+corruption, so the instance is input-enabled (`GBCA.specInst_inputEnabled`); the guards of the
+returns and of the announcement sit on outputs. The family takes every non-silent label other
+than a return and an announcement as an input (`GBCA.specFamily_inputEnabled`).
 -/
 
 namespace PLTS
@@ -216,42 +226,53 @@ inductive Step (P : Parameters) (r : ℕ) :
       (hd0 : s.excluded = ∅) :
       Step P r s .tau (PMF.pure { s with excluded := insert b s.excluded })
   /-- Grade-1 return: adopt the bit `v`, which is not excluded (`f + 1` dissenting supporters,
-  D15). The guard pair `v ∉ excluded`, `(!v) ∈ excluded` is graded agreement; the
-  announced bit `bnd` is the one whose complement is excluded. -/
-  | retGrade1 (s : SpecState P.n) (id : Fin P.n) (v : Bool) (bnd : Bool)
+  D15). The guard pair `v ∉ excluded`, `(!v) ∈ excluded` is graded agreement; the label
+  carries the returned value alone. -/
+  | retGrade1 (s : SpecState P.n) (id : Fin P.n) (v : Bool)
       (hlive : v ∉ s.excluded) (hexcluded : (!v) ∈ s.excluded)
-      (hbnd : (!bnd) ∈ s.excluded)
       (hw : P.f + 1 ≤ (Finset.univ.filter
         (fun id' => s.call id' = some (!v) ∨ id' ∈ s.F)).card)
       (hr : s.ret id = false) :
-      Step P r s (.retG r id (.grade1 v) bnd)
+      Step P r s (.retG r id (.grade1 v))
         (PMF.pure { s with ret := Function.update s.ret id true })
   /-- Grade-2 return: decide the bit `v`, which is not excluded (writes grade 2). Same guard pair
-  and same announced bit as `retGrade1`. -/
-  | retGrade2 (s : SpecState P.n) (id : Fin P.n) (v : Bool) (bnd : Bool)
+  as `retGrade1`. -/
+  | retGrade2 (s : SpecState P.n) (id : Fin P.n) (v : Bool)
       (hlive : v ∉ s.excluded) (hexcluded : (!v) ∈ s.excluded)
-      (hbnd : (!bnd) ∈ s.excluded)
       (hg : s.grade = none ∨ s.grade = some true)
       (hr : s.ret id = false) :
-      Step P r s (.retG r id (.grade2 v) bnd)
+      Step P r s (.retG r id (.grade2 v))
         (PMF.pure { s with grade := some true, ret := Function.update s.ret id true })
-  /-- Grade-0 return: no output, but the bound bit is announced. The guard `(!bnd) ∈ excluded` is
-  the Graded Binding witness, valid in every extension because `excluded` only grows, and it names
-  `bnd` as the bit not excluded. Both bits carry `f + 1` F-blind support (D15), which is what makes
-  returning no bit the right answer; the grade is written 0. -/
-  | retGrade0 (s : SpecState P.n) (id : Fin P.n) (bnd : Bool)
-      (hbnd : (!bnd) ∈ s.excluded)
+  /-- Grade-0 return: no output. The guard `excluded ≠ ∅` is the Graded Binding witness, valid in
+  every extension because `excluded` only grows, and it enables the announcement of the bit not
+  excluded at every state from the return on. Both bits carry `f + 1` F-blind support (D15),
+  which is what makes returning no bit the right answer; the grade is written 0. -/
+  | retGrade0 (s : SpecState P.n) (id : Fin P.n)
+      (hexcluded : s.excluded ≠ ∅)
       (hwT : P.f + 1 ≤ (Finset.univ.filter
         (fun id' => s.call id' = some true ∨ id' ∈ s.F)).card)
       (hwF : P.f + 1 ≤ (Finset.univ.filter
         (fun id' => s.call id' = some false ∨ id' ∈ s.F)).card)
       (hg : s.grade = none ∨ s.grade = some false)
       (hr : s.ret id = false) :
-      Step P r s (.retG r id .grade0 bnd)
+      Step P r s (.retG r id .grade0)
         (PMF.pure { s with grade := some false, ret := Function.update s.ret id true })
+  /-- The announcement of the bound bit `b`, under the guard `(!b) ∈ excluded`: a Dirac
+  self-loop, enabled at every state from the exclusion on, which may repeat. Every return
+  requires an excluded bit, so the announcement is enabled at every state from the round's first
+  return on (D29). -/
+  | announceBound (s : SpecState P.n) (b : Bool) (h : (!b) ∈ s.excluded) :
+      Step P r s (.boundG r b) (PMF.pure s)
   /-- Corruption (deviation D1). -/
   | fail (s : SpecState P.n) (id : Fin P.n) :
       Step P r s (.fail id) (PMF.pure (s.corrupt P id))
+
+/-- The transition of the announcement: a self-loop under the guard `(!b) ∈ excluded`. -/
+theorem step_boundG_cases {P : Parameters} {r : ℕ} {s : SpecState P.n} {b : Bool}
+    {μ : PMF (SpecState P.n)} (h : Step P r s (.boundG r b) μ) :
+    (!b) ∈ s.excluded ∧ μ = PMF.pure s := by
+  cases h with
+  | announceBound _ h => exact ⟨h, rfl⟩
 
 /-- The round-`r` GBCA specification instance. -/
 noncomputable def specInst (P : Parameters) (r : ℕ) : System (SpecState P.n) (Label P.n) where
@@ -278,12 +299,54 @@ def failAct (P : Parameters) : Label P.n → SpecState P.n → SpecState P.n
 
 /-- The ℕ-indexed family of GBCA specification instances. -/
 noncomputable def specFamily (P : Parameters) :
-    System (ℕ → SpecState P.n) (Label P.n) :=
-  System.family (specInst P) Label.gbcaRound Label.isFail (failAct P)
+    System (InstanceFamilyState (SpecState.initial P.n) (failAct P)) (Label P.n) :=
+  System.family (specInst P) Label.gbcaRound Label.isFail (failAct P) (SpecState.initial P.n)
+
+/-- The family starts from the instances' initial states. -/
+theorem specFamily_init_apply (P : Parameters) (r : ℕ) :
+    (specFamily P).init r = (specInst P r).init :=
+  System.family_init_apply _ _ _ (specInst_init P) r
 
 /-- The GBCA spec family is an LTS. -/
 theorem specFamily_isLTS (P : Parameters) : (specFamily P).IsLTS :=
-  System.family_isLTS (specInst_isLTS P) _ _ _
+  System.family_isLTS (specInst_isLTS P) _ _ _ _
+
+/-! ### Inputs and outputs -/
+
+/-- The input labels and the output labels of the round-`r` instance: the calls and the
+corruptions are its inputs, the returns and the announcements its outputs. -/
+def specInstInputOutputLabels (P : Parameters) (r : ℕ) : InputOutputLabels (Label P.n) where
+  inputLabels := {l | ∃ id b, l = .callG r id b} ∪ {l | ∃ id, l = .fail id}
+  outputLabels := {l | ∃ id out, l = .retG r id out} ∪ {l | ∃ b, l = .boundG r b}
+
+/-- **The round-`r` instance is input-enabled.** `Step.callLoop` takes a call at every state,
+beside `Step.call` at a process holding no input, and `Step.fail` takes a corruption. -/
+theorem specInst_inputEnabled (P : Parameters) (r : ℕ) :
+    (specInst P r).InputEnabled (specInstInputOutputLabels P r).inputLabels := by
+  rintro s _ (⟨id, b, rfl⟩ | ⟨id, rfl⟩)
+  · exact ⟨_, Step.callLoop s id b⟩
+  · exact ⟨_, Step.fail s id⟩
+
+/-- The input labels and the output labels of the family: the returns and the announcements of
+every round are its outputs, and every other non-silent label is an input. -/
+def specFamilyInputOutputLabels (P : Parameters) : InputOutputLabels (Label P.n) where
+  inputLabels := {l | l ≠ .tau ∧ (∀ r id out, l ≠ .retG r id out) ∧ ∀ r b, l ≠ .boundG r b}
+  outputLabels := {l | ∃ r id out, l = .retG r id out} ∪ {l | ∃ r b, l = .boundG r b}
+
+/-- **The family is input-enabled.** A call of round `r` is taken by the round-`r` instance, a
+corruption by the broadcast, and every other non-silent label other than a return and an
+announcement by the family's idle transition (`System.InputEnabled.family`). -/
+theorem specFamily_inputEnabled (P : Parameters) :
+    (specFamily P).InputEnabled (specFamilyInputOutputLabels P).inputLabels := by
+  refine (System.InputEnabled.family (specInst_inputEnabled P) Label.gbcaRound Label.isFail
+    (failAct P) (SpecState.initial P.n)).mono ?_
+  rintro l ⟨hτ, hret, hbound⟩
+  cases l with
+  | tau => exact absurd rfl hτ
+  | callG r id b => exact Or.inr ⟨r, rfl, Or.inl ⟨id, b, rfl⟩⟩
+  | retG r id out => exact absurd rfl (hret r id out)
+  | boundG r b => exact absurd rfl (hbound r b)
+  | _ => exact Or.inl ⟨hτ, rfl⟩
 
 end GBCA
 end ABA

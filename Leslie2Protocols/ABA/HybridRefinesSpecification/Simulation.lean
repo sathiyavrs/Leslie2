@@ -8,35 +8,42 @@ import Leslie2Protocols.ABA.HybridRefinesSpecification.AbstractStatePreservation
 import Leslie2Protocols.ABA.HybridRefinesSpecification.WeakTransitions
 
 /-!
-# The core simulation `hybrid ⊑ ABA.spec`
+# The simulation `hybrid ⊑ ABA.spec`
 
-Assembles the relation and invariant of `HybridRefinesSpecification/Relation.lean`, their
-preservation in `HybridRefinesSpecification/InvariantPreservation/` and
+This file assembles the relation and the invariant of `HybridRefinesSpecification/Relation.lean`,
+their preservation in `HybridRefinesSpecification/InvariantPreservation/` and
 `HybridRefinesSpecification/AbstractStatePreservation.lean`, and the weak transitions of
 `HybridRefinesSpecification/WeakTransitions.lean` into `hybridRefinesSpecification`, the
 probabilistic forward simulation `hybrid P M ⊑ spec P` along `hybridSpecificationRelation P`.
 It holds for every type `M` of round messages: no step of the simulation reads a round message.
-`hybrid_spec` is the trace-distribution inclusion it yields, and both chains of the case study
-reach the ABA specification along it, ABDY22's at `GBCA.ByABDY.Message` and the gather-based one
-at `Empty`.
+`hybrid_spec` is the trace-distribution inclusion it yields. Both chains of the case study reach
+the ABA specification along it, ABDY22's at `GBCA.ByABDY.Message` and the gather-based one at
+`Empty`.
 
-The transitions dispatch as follows. A visible `callABA` is matched by
-`SpecStep.callSet` at a never-corrupted process holding no input, by
-`SpecStep.callLoop` at a never-corrupted process holding one, and by
-`SpecStep.callByzantine` at a corrupted process. A never-corrupted process's visible
-`retABA` is matched by `SpecStep.decide` followed by `SpecStep.ret` on the
-first such transition, and by `SpecStep.ret` alone on every later one. Every
-hidden transition, the coin's resolution included, is matched by a
-stutter: the abstract state's mode stays `ControlMode.flipEnabled`, so it never fires
-`SpecStep.coinFlip` and `SpecStep.decide` remains enabled when the first
-return arrives. A `fail` is matched by `SpecStep.fail`, whose two guards are
-the concrete transition's own, read across `AbstractState.F_eq`.
+The transitions of `hybrid` are matched label class by label class.
 
-A corruption replaces the program of the process it names (D23), and both systems of the
-interface carry the replacement. The corrupted process's `retABA` is matched by
-`SpecStep.retByzantine`: neither the concrete state nor the abstract state moves. On every other
-label the replaced program self-loops, and the concrete transition it contributes is the case of a
-corrupted process that the step cases already carry. -/
+* A silent transition is matched by the stutter `weakTau_refl`. The abstract state does not move,
+  and its mode is `ControlMode.flipEnabled`, so it never fires `SpecStep.coinFlip` and
+  `SpecStep.decide` is enabled when the first return occurs. The silent transitions include the
+  coin's resolution, the round loop's `retGLoop`, `retWLoop` and `decidedDeliverLoop`, and the
+  announcement `boundG`, which leaves the state of `hybrid` unchanged.
+* A `callABA` is matched by `SpecStep.callSet` at a never-corrupted process holding no input, by
+  `SpecStep.callLoop` at a never-corrupted process holding one, and by `SpecStep.callByzantine`
+  at a corrupted process.
+* A never-corrupted process's `retABA` is matched by `SpecStep.decide` followed by
+  `SpecStep.ret` at the first such transition, and by `SpecStep.ret` alone at every later one.
+  The guard `b ∈ c.decidedSent` of the round loop's return reads the round loop's own record of
+  its DECIDED sends. I4' (`Invariant.decidedSent_recorded`) identifies that record with the ABA
+  network's, so `hybrid_step_retABA` states the transition on the network's record, which the
+  invariant reads.
+* A corrupted process's `retABA` is the replaced round loop's self-loop beside the ABA network's
+  `retABAIdle`. Neither the state of `hybrid` nor the abstract state moves, and
+  `SpecStep.retByzantine` matches the transition (D23).
+* A `fail` is matched by `SpecStep.fail`, whose two guards follow from the concrete transition's
+  two guards and `AbstractState.F_eq`. The two families apply the corruption to every round, as
+  `GBCA.instanceState_applyBroadcast_fail` and `WCC.instanceState_applyBroadcast_fail` state.
+* The labels of the sub-protocol interface, `callG`, `retG`, `boundG`, `callW` and `retW`, are
+  hidden, so no transition of `hybrid` carries one of them. -/
 
 namespace PLTS
 namespace ABA
@@ -49,32 +56,35 @@ variable {P : Parameters}
 
 variable {M : Type} [DecidableEq M]
 
-/-- The core simulation relation, `Dirac`-lifted: every concrete state relates to the point
-mass on its (unique) abstract state. -/
-def hybridSpecificationRelation (P : Parameters) : HybridState P → PMF (SpecState P.n) → Prop :=
+omit [DecidableEq M] in
+/-- The simulation relation: a state of `hybrid` relates to the point mass at every abstract state
+it relates to under `hybridSpecificationStateRelation`. -/
+def hybridSpecificationRelation (P : Parameters) :
+    HybridState P M → PMF (SpecState P.n) → Prop :=
   diracRel (hybridSpecificationStateRelation P)
 
-/-- **Stutter-transition packaging.** If every post-state `s'` in the support of a concrete τ-step's
-outcome `μ_C` relates to the *same* abstract state `a` (via `hybridSpecificationStateRelation`), the
-abstract state matches it by the trivial `weakTau_refl` stutter: the coupling `Ω := μ_C.map (fun
-s' => (s', pure a))` has first marginal `μ_C` and second marginal the constant `pure (pure a)`
-(`PMF.map_const`), so `ω := pure (pure a)` and `ω.bind id = pure a` (`PMF.pure_bind`). Reused by
-every hidden transition, the coin's resolution included. -/
-private theorem stutter_step {P : Parameters} (μ_C : PMF (HybridState P)) (a : SpecState P.n)
+omit [DecidableEq M] in
+/-- **The stutter.** Let every state in the support of the outcome `μ_C` of a silent transition
+relate to the abstract state `a` under `hybridSpecificationStateRelation`. Then the stutter
+`weakTau_refl` at `a` matches the transition. The coupling is
+`Ω := μ_C.map (fun s' => (s', pure a))`. Its first marginal is `μ_C` and its second marginal is
+the constant `pure (pure a)` (`PMF.map_const`), so `ω := pure (pure a)` and `ω.bind id = pure a`
+(`PMF.pure_bind`). -/
+private theorem stutter_step {P : Parameters} (μ_C : PMF (HybridState P M)) (a : SpecState P.n)
     (hA : ∀ s' ∈ μ_C.support, hybridSpecificationStateRelation P s' a) :
     ∃ ω : PMF (PMF (SpecState P.n)),
       PMFRel (hybridSpecificationRelation P) μ_C ω ∧ weakTau (spec P) (PMF.pure a) (ω.bind id) := by
-  set Ω : PMF (HybridState P × PMF (SpecState P.n)) := μ_C.map (fun s' => (s',
+  set Ω : PMF (HybridState P M × PMF (SpecState P.n)) := μ_C.map (fun s' => (s',
     PMF.pure a)) with hΩdef
   have hFst : Ω.map Prod.fst = μ_C := by
     rw [hΩdef, PMF.map_comp]
     have hcomp : (Prod.fst ∘ fun s' => (s',
-      PMF.pure a)) = (id : HybridState P → HybridState P) := rfl
+      PMF.pure a)) = (id : HybridState P M → HybridState P M) := rfl
     rw [hcomp, PMF.map_id]
   have hSnd : Ω.map Prod.snd = PMF.pure (PMF.pure a) := by
     rw [hΩdef, PMF.map_comp]
     have hcomp : (Prod.snd ∘ fun s' => (s', PMF.pure a)) =
-        (Function.const (HybridState P) (PMF.pure a)) := rfl
+        (Function.const (HybridState P M) (PMF.pure a)) := rfl
     rw [hcomp, PMF.map_const]
   refine ⟨PMF.pure (PMF.pure a), ⟨Ω, hFst, hSnd, ?_⟩, ?_⟩
   · intro p hp
@@ -85,256 +95,184 @@ private theorem stutter_step {P : Parameters} (μ_C : PMF (HybridState P)) (a : 
   · rw [PMF.pure_bind]
     exact weakTau_refl _ _
 
-/-- Corruption of `F` is monotone (`fail`'s guard only ever inserts). -/
+/-- The corruption of a process enlarges the corrupted set or leaves it as it is. -/
 theorem ABAState.corrupt_F_subset {P : Parameters} (c : ABAState P) (id : Fin P.n) :
     c.F ⊆ (c.corrupt P id).F := by
   rw [ABAState.corrupt_F]; split_ifs with hcond
   · exact Finset.subset_insert _ _
   · exact Finset.Subset.refl _
 
-/-- The outcome of a visible transition collapses to a single Dirac: the specification stands, the
-ABA component lands on one state and the common coin stands, so the four components' outcome
-is the point mass `dirac_step` expects. -/
-private theorem prodPMF_pure_abaTransition {P : Parameters} (G : ℕ → GBCA.SpecState P.n)
-    (c : ABAState P) (o : ℕ → WCC.SpecState P.n) :
+/-- A transition at which the specification family reaches the state `G`, the round loops and the
+ABA network reach the state `c`, and the coin family reaches the state `o` has the point mass at
+`(G, c.1, c.2, o)` as its outcome. -/
+private theorem prodPMF_pure_abaTransition {P : Parameters} {α σ : Type} (G : α)
+    (c : ABAState P) (o : σ) :
     prodPMF (PMF.pure G) ((PMF.pure c).map fun x => (x.1, x.2, o))
       = PMF.pure (G, c.1, c.2, o) := by
   rw [PMF.pure_map, prodPMF_pure_pure]
 
-/-- **Visible-transition packaging.** A single concrete Dirac outcome `s_C'` matched by a single
-abstract state `a'` (`hybridSpecificationStateRelation`-related) closes the `weakStep` disjunct of
-the simulation clause: the coupling is the Dirac-of-Dirac `ω := pure (pure a')`, whose `bind id`
-collapses back to `pure a'` (`PMF.pure_bind`), so any `weakStep (spec P) (pure a) l (pure a')`
-transfers directly. -/
-private theorem dirac_step {P : Parameters} (s_C' : HybridState P)
-    (a' : SpecState P.n)
-    (hcoreR : hybridSpecificationStateRelation P s_C' a') :
+omit [DecidableEq M] in
+/-- **A visible step.** Let the outcome of a transition be the point mass at `s_C'`, and let
+`s_C'` relate to the abstract state `a'` under `hybridSpecificationStateRelation`. The coupling is
+the point mass `ω := pure (pure a')`, and `ω.bind id = pure a'` (`PMF.pure_bind`), so a weak step
+of `spec P` from `pure a` to `pure a'` matches the transition. -/
+private theorem dirac_step {P : Parameters} (s_C' : HybridState P M) (a' : SpecState P.n)
+    (hrelated : hybridSpecificationStateRelation P s_C' a') :
     ∃ ω : PMF (PMF (SpecState P.n)),
       PMFRel (hybridSpecificationRelation P) (PMF.pure s_C') ω ∧ ω.bind id = PMF.pure a' := by
   refine ⟨PMF.pure (PMF.pure a'), ⟨PMF.pure (s_C', PMF.pure a'), ?_, ?_, ?_⟩, ?_⟩
   · rw [PMF.pure_map]
   · rw [PMF.pure_map]
-  · intro p hp; rw [PMF.mem_support_pure_iff] at hp; subst hp; exact ⟨a', rfl, hcoreR⟩
+  · intro p hp; rw [PMF.mem_support_pure_iff] at hp; subst hp; exact ⟨a', rfl, hrelated⟩
   · rw [PMF.pure_bind]; rfl
 
-/-- A hidden-API label can never be visible at the `hybrid` level (it is always relabeled
-to `τ` by the outer hiding), so any purported `hybrid`-step carrying one is vacuous. -/
-private theorem hidden_label_impossible {P : Parameters} {s_C : HybridState P} {l : Label P.n}
-    {μ_C : PMF (HybridState P)} (hmem : l ∈ Label.hiddenAPI P.n) (hne : l ≠ Silent.τ)
+/-- A label of `Label.hiddenAPI` other than `τ` is hidden by the second hiding of `hybrid`, so no
+transition of `hybrid` carries it. -/
+private theorem hidden_label_impossible {P : Parameters} {s_C : HybridState P M} {l : Label P.n}
+    {μ_C : PMF (HybridState P M)} (hmem : l ∈ Label.hiddenAPI P.n) (hne : l ≠ Silent.τ)
     (hstep : (hybrid P M).step s_C l μ_C) : False := by
   rw [hybrid_step_iff] at hstep
   rcases hstep with ⟨h, -⟩ | ⟨h, -⟩
   · exact hne h
   · exact h hmem
 
-/-- **The core simulation.** `hybrid P` is a probabilistic forward simulation of `spec P`
-along `hybridSpecificationRelation P` (the never-flipping abstract state). -/
+/-- **The simulation.** `hybrid P M` is a probabilistic forward simulation of `spec P` along
+`hybridSpecificationRelation P`, at an abstract state that never fires `SpecStep.coinFlip`. -/
 theorem hybridRefinesSpecification (P : Parameters) (M : Type) [DecidableEq M] :
     ProbabilisticForwardSimulation (hybrid P M) (spec P) (hybridSpecificationRelation P) := by
-  refine ⟨⟨PMF.pure (SpecState.initial P.n), ?_, SpecState.initial P.n, rfl, Invariant.initial P,
-    AbstractState.initial P⟩, ?_⟩
+  refine ⟨⟨PMF.pure (SpecState.initial P.n), ?_, SpecState.initial P.n, rfl,
+    hybridSpecificationStateRelation_init P M⟩, ?_⟩
   · intro s_A hs_A; rw [PMF.mem_support_pure_iff] at hs_A; exact hs_A
   · intro s_C μ_A hR l μ_C hstep
-    obtain ⟨g, C, A, w⟩ := s_C
-    obtain ⟨a, rfl, hI, hAbs⟩ := hR
-    dsimp only [HybridState.aba, HybridState.wcc] at hI hAbs
+    obtain ⟨G, C, A, o⟩ := s_C
+    obtain ⟨a, rfl, hI, hAbstract⟩ := hR
+    dsimp only [HybridState.aba, HybridState.wcc] at hI hAbstract
     cases l with
     | tau =>
-      rcases hybrid_step_tau P g C A w hI.corrupted_F μ_C hstep with
-        ⟨r, μr, hstepG, rfl⟩ | ⟨μc, hstepC, rfl⟩ |
-        ⟨r, id, b, μr, μc, hstepG, hstepC, rfl⟩ |
-        ⟨r, id, out, bnd, μr, μc, hstepG, hstepC, rfl⟩ |
-        ⟨r, id, μw', μc, hstepW, hstepC, rfl⟩ | ⟨r, id, b, μw', μc, hstepW, hstepC, rfl⟩ |
-        ⟨id, b, μc, ⟨-, hph, hlg, rfl⟩, rfl⟩ | ⟨r, μw, hstepW, rfl⟩
-      · -- the round's own `GBCA.Step.bindUnset` — the abstract state stutters
-        obtain ⟨ω, hRel, hWeak⟩ := stutter_step _ a (fun s' hs' => by
-          obtain ⟨g', C', A', w'⟩ := s'
-          have hI' := hI.step hstep hs'
-          simp only [mem_support_prodPMF, PMF.mem_support_map_iff, PMF.mem_support_pure_iff,
-            Prod.mk.injEq] at hs'
-          obtain ⟨⟨gr', hgr', heq⟩, rfl, rfl, rfl⟩ := hs'
-          exact ⟨hI', by rw [← heq]; exact hAbs.step_gbcaTau hI r hstepG hgr'⟩)
-        exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
-      · -- the projection's own τ (DECIDED delivery/echo/byzantine)
-        obtain ⟨ω, hRel, hWeak⟩ := stutter_step _ a (fun s' hs' => by
-          obtain ⟨g', C', A', w'⟩ := s'
-          have hI' := hI.step hstep hs'
-          simp only [mem_support_prodPMF, PMF.mem_support_pure_iff] at hs'
-          obtain ⟨rfl, hs2⟩ := hs'
-          obtain ⟨hc2, rfl⟩ := mem_support_abaTransition hs2
-          exact ⟨hI', hAbs.step_roundLoopTau hI hstepC hc2⟩)
-        exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
-      · -- the callG call
-        obtain ⟨ω, hRel, hWeak⟩ := stutter_step _ a (fun s' hs' => by
-          obtain ⟨g', C', A', w'⟩ := s'
-          have hI' := hI.step hstep hs'
-          simp only [mem_support_prodPMF] at hs'
-          obtain ⟨h1, h2⟩ := hs'
-          rw [PMF.mem_support_map_iff] at h1
-          obtain ⟨gr', hgr', heq⟩ := h1
-          obtain ⟨hc2, rfl⟩ := mem_support_abaTransition h2
-          exact ⟨hI', by rw [← heq]; exact hAbs.step_callG hI r id b hstepG hstepC hgr' hc2⟩)
-        exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
-      · -- the retG return
-        obtain ⟨ω, hRel, hWeak⟩ := stutter_step _ a (fun s' hs' => by
-          obtain ⟨g', C', A', w'⟩ := s'
-          have hI' := hI.step hstep hs'
-          simp only [mem_support_prodPMF] at hs'
-          obtain ⟨h1, h2⟩ := hs'
-          rw [PMF.mem_support_map_iff] at h1
-          obtain ⟨gr', hgr', heq⟩ := h1
-          obtain ⟨hc2, rfl⟩ := mem_support_abaTransition h2
-          exact ⟨hI', by
-            rw [← heq]; exact hAbs.step_retG hI r id out bnd hstepG hstepC hgr' hc2⟩)
-        exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
-      · -- the callW call
-        obtain ⟨ω, hRel, hWeak⟩ := stutter_step _ a (fun s' hs' => by
-          obtain ⟨g', C', A', w'⟩ := s'
-          have hI' := hI.step hstep hs'
-          simp only [mem_support_prodPMF, PMF.mem_support_pure_iff] at hs'
-          obtain ⟨rfl, h2⟩ := hs'
-          obtain ⟨hc2, wr', hwr', rfl⟩ := mem_support_coinTransition h2
-          exact ⟨hI', hAbs.step_callW hI r id hstepW hstepC hwr' hc2⟩)
-        exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
-      · -- the retW return
-        obtain ⟨ω, hRel, hWeak⟩ := stutter_step _ a (fun s' hs' => by
-          obtain ⟨g', C', A', w'⟩ := s'
-          have hI' := hI.step hstep hs'
-          simp only [mem_support_prodPMF, PMF.mem_support_pure_iff] at hs'
-          obtain ⟨rfl, h2⟩ := hs'
-          obtain ⟨hc2, wr', hwr', rfl⟩ := mem_support_coinTransition h2
-          exact ⟨hI', hAbs.step_retW hI r id b hstepW hstepC hwr' hc2⟩)
-        exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
-      · -- the DECIDED send of a grade-2 round
-        obtain ⟨ω, hRel, hWeak⟩ := stutter_step _ a (fun s' hs' => by
-          obtain ⟨g', C', A', w'⟩ := s'
-          have hI' := hI.step hstep hs'
-          simp only [mem_support_prodPMF, PMF.mem_support_pure_iff] at hs'
-          obtain ⟨rfl, hs2⟩ := hs'
-          obtain ⟨hc2, rfl⟩ := mem_support_abaTransition hs2
-          rw [PMF.mem_support_pure_iff] at hc2
-          obtain ⟨rfl, rfl⟩ := Prod.ext_iff.mp hc2
-          exact ⟨hI', hAbs.step_decidedSend hI id b hph hlg⟩)
-        exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
-      · -- the coin's resolution
-        obtain ⟨ω, hRel, hWeak⟩ := stutter_step _ a (fun s' hs' => by
-          obtain ⟨g', C', A', w'⟩ := s'
-          have hI' := hI.step hstep hs'
-          obtain ⟨rfl, rfl, rfl, wr', -, rfl⟩ := mem_support_coinResolution hs'
-          exact ⟨hI', hAbs.step_resolve r wr'⟩)
-        exact ⟨ω, hRel, Or.inl ⟨rfl, hWeak⟩⟩
+      -- every silent transition, the loops and the announcement included: the abstract state
+      -- stutters
+      obtain ⟨ω, hcoupling, hweakTau⟩ := stutter_step μ_C a (fun s' hs' => by
+        obtain ⟨G', C', A', o'⟩ := s'
+        exact ⟨hI.step hstep hs', hAbstract.step_tau hI hstep hs'⟩)
+      exact ⟨ω, hcoupling, Or.inl ⟨rfl, hweakTau⟩⟩
     | callABA id b =>
-      rw [hybrid_step_callABA P g C A w id b hI.corrupted_F] at hstep
+      rw [hybrid_step_callABA P G C A o id b hI.corrupted_F] at hstep
       obtain ⟨μc, hstepC, rfl⟩ := hstep
-      have hdisj := hstepC
-      rcases hdisj with ⟨hidF, hin, rfl⟩ | ⟨hloop, rfl⟩
-      · -- the commit transition at a never-corrupted process holding no input: `SpecStep.callSet`,
-        -- whose empty-entry guard is `input_sync` read at `id`
+      have hcases := hstepC
+      rcases hcases with ⟨hidF, hin, rfl⟩ | ⟨hloop, rfl⟩
+      · -- the input of a never-corrupted process holding no input: `SpecStep.callSet`, whose
+        -- empty-entry guard is `input_sync` at `id`
         set c' := ABAState.setProcessVariables (C, A) id { ABAState.processes (C, A) id with
           input := some b, estimate := some b, round := 0, phase := .toCallG } with hc'def
         have hc'mem : c' ∈ (PMF.pure c').support := by
           rw [PMF.mem_support_pure_iff]
-        have hIAF := Invariant.step_callABA hI id b hstepC hc'mem
-        have hIA' : Invariant P g c' w := hIAF.1
-        have hCF : c'.F = ABAState.F (C, A) := ABAState.setProcessVariables_F _ _ _
+        have hstepInvariant := Invariant.step_callABA hI id b hstepC hc'mem
+        have hInvariant' : Invariant P G c' o := hstepInvariant.1
+        have hF' : c'.F = ABAState.F (C, A) := ABAState.setProcessVariables_F _ _ _
         have hSelf : c'.processes id = { ABAState.processes (C, A) id with
             input := some b, estimate := some b, round := 0, phase := .toCallG } := by
           rw [hc'def]; exact ABAState.setProcessVariables_processes_self _ _ _
-        have hNe : ∀ id', id' ≠ id → c'.processes id' = ABAState.processes (C, A) id' := by
+        have hOthers : ∀ id', id' ≠ id → c'.processes id' = ABAState.processes (C, A) id' := by
           intro id' h; rw [hc'def]; exact ABAState.setProcessVariables_processes_ne _ _ _ h
         have hempty : a.input id = none := by
-          rw [hAbs.input_sync id hidF]; exact hin
+          rw [hAbstract.input_sync id hidF]; exact hin
         set a' : SpecState P.n :=
           { a with input := Function.update a.input id (some b) } with ha'def
-        have hAbs' : AbstractState P g c' w a' := by
-          refine ⟨by rw [hCF]; exact hAbs.F_eq, fun id' => ?_, hAbs.mode_flipEnabled,
+        have hAbstract' : AbstractState P G c' o a' := by
+          refine ⟨by rw [hF']; exact hAbstract.F_eq, fun id' => ?_, hAbstract.mode_flipEnabled,
             fun id' hid' => ?_, ?_⟩
-          · show a.ret id' = (c'.processes id').returned
+          · change a.ret id' = (c'.processes id').returned
             by_cases h : id' = id
-            · rw [h, hSelf]; exact hAbs.ret_eq id
-            · rw [hNe id' h]; exact hAbs.ret_eq id'
-          · rw [hCF] at hid'
-            show Function.update a.input id (some b) id' = (c'.processes id').input
+            · rw [h, hSelf]; exact hAbstract.ret_eq id
+            · rw [hOthers id' h]; exact hAbstract.ret_eq id'
+          · rw [hF'] at hid'
+            change Function.update a.input id (some b) id' = (c'.processes id').input
             by_cases h : id' = id
             · rw [h, Function.update_self, hSelf]
-            · rw [Function.update_of_ne h, hNe id' h]
-              exact hAbs.input_sync id' hid'
-          · rcases hAbs.phase with hv | ⟨v, hv2, ⟨r0, hcv0⟩, hpin⟩
+            · rw [Function.update_of_ne h, hOthers id' h]
+              exact hAbstract.input_sync id' hid'
+          · rcases hAbstract.phase with hv | ⟨v, hval, ⟨r₀, hwitness⟩, hholders⟩
             · exact Or.inl hv
-            · exact Or.inr ⟨v, hv2, hIAF.2.1 r0 v hcv0, hIAF.2.2 v ⟨r0, hcv0⟩ hpin⟩
+            · exact Or.inr ⟨v, hval, hstepInvariant.2.1 r₀ v hwitness,
+                hstepInvariant.2.2 v ⟨r₀, hwitness⟩ hholders⟩
         simp only [prodPMF_pure_abaTransition]
-        obtain ⟨ω, hRel, hbid⟩ := dirac_step (g, c'.1, c'.2, w) a' ⟨hIA', hAbs'⟩
-        refine ⟨ω, hRel, Or.inr ⟨by simp, ?_⟩⟩
-        rw [hbid]
+        obtain ⟨ω, hcoupling, hbind⟩ := dirac_step (G, c'.1, c'.2, o) a' ⟨hInvariant', hAbstract'⟩
+        refine ⟨ω, hcoupling, Or.inr ⟨by simp, ?_⟩⟩
+        rw [hbind]
         exact weakStep_strong (SpecStep.callSet a id b hempty)
       · by_cases hidF : id ∈ ABAState.F (C, A)
-        · -- the replaced program's self-loop: `SpecStep.callByzantine`, whose write lands at a
+        · -- the replaced round loop's self-loop: `SpecStep.callByzantine`, whose write is at a
           -- corrupted process, where `input_sync` is vacuous
           set a' : SpecState P.n :=
             { a with input := Function.update a.input id (some b) } with ha'def
-          have hAbs' : AbstractState P g (C, A) w a' := by
-            refine ⟨hAbs.F_eq, hAbs.ret_eq, hAbs.mode_flipEnabled, fun id' hid' => ?_, hAbs.phase⟩
+          have hAbstract' : AbstractState P G (C, A) o a' := by
+            refine ⟨hAbstract.F_eq, hAbstract.ret_eq, hAbstract.mode_flipEnabled,
+              fun id' hid' => ?_, hAbstract.phase⟩
             have hne : id' ≠ id := by
               intro h; rw [h] at hid'; exact hid' hidF
-            show Function.update a.input id (some b) id' = (ABAState.processes (C, A) id').input
+            change Function.update a.input id (some b) id' = (ABAState.processes (C, A) id').input
             rw [Function.update_of_ne hne]
-            exact hAbs.input_sync id' hid'
+            exact hAbstract.input_sync id' hid'
           simp only [prodPMF_pure_abaTransition]
-          obtain ⟨ω, hRel, hbid⟩ := dirac_step (g, C, A, w) a' ⟨hI, hAbs'⟩
-          refine ⟨ω, hRel, Or.inr ⟨by simp, ?_⟩⟩
-          rw [hbid]
-          exact weakStep_strong (SpecStep.callByzantine a id b b (hAbs.F_eq ▸ hidF))
+          obtain ⟨ω, hcoupling, hbind⟩ := dirac_step (G, C, A, o) a' ⟨hI, hAbstract'⟩
+          refine ⟨ω, hcoupling, Or.inr ⟨by simp, ?_⟩⟩
+          rw [hbind]
+          exact weakStep_strong (SpecStep.callByzantine a id b b (hAbstract.F_eq ▸ hidF))
         · -- the input-enabledness loop at a never-corrupted process holding an input:
-          -- `SpecStep.callLoop`, whose filled-entry guard is `input_sync` read at `id`
-          have hcorr : ABAState.corrupted (C, A) id = false := by
-            cases hb : ABAState.corrupted (C, A) id
+          -- `SpecStep.callLoop`, whose filled-entry guard is `input_sync` at `id`
+          have hcorrupted : ABAState.corrupted (C, A) id = false := by
+            cases hflag : ABAState.corrupted (C, A) id
             · rfl
-            · exact absurd ((hI.corrupted_F id).mp hb) hidF
+            · exact absurd ((hI.corrupted_F id).mp hflag) hidF
           have hfilled : a.input id ≠ none := by
-            rw [hAbs.input_sync id hidF]
-            exact hloop.resolve_left (by rw [hcorr]; simp)
+            rw [hAbstract.input_sync id hidF]
+            exact hloop.resolve_left (by rw [hcorrupted]; simp)
           simp only [prodPMF_pure_abaTransition]
-          obtain ⟨ω, hRel, hbid⟩ := dirac_step (g, C, A, w) a ⟨hI, hAbs⟩
-          refine ⟨ω, hRel, Or.inr ⟨by simp, ?_⟩⟩
-          rw [hbid]
+          obtain ⟨ω, hcoupling, hbind⟩ := dirac_step (G, C, A, o) a ⟨hI, hAbstract⟩
+          refine ⟨ω, hcoupling, Or.inr ⟨by simp, ?_⟩⟩
+          rw [hbind]
           exact weakStep_strong (SpecStep.callLoop a id b hfilled)
     | retABA id b =>
-      rw [hybrid_step_retABA P g C A w id b hI.corrupted_F] at hstep
+      rw [hybrid_step_retABA P G C A o id b hI.corrupted_F hI.decidedSent_recorded] at hstep
       obtain ⟨μc, hstepC, rfl⟩ := hstep
-      have hdisj := hstepC
-      rcases hdisj with ⟨-, hcnt, hs, hret, rfl⟩ | ⟨hFbyz, rfl⟩
+      have hcases := hstepC
+      rcases hcases with ⟨-, hcount, -, hret, rfl⟩ | ⟨hidF, rfl⟩
       · -- a never-corrupted process's return: the abstract state decides and returns
         set c' := ABAState.setProcessVariables (C, A) id { ABAState.processes (C,
           A) id with returned := true } with hc'def
         have hc'mem : c' ∈ (PMF.pure c').support := by
           rw [PMF.mem_support_pure_iff]
-        have hIAF := Invariant.step_retABA hI id b hstepC hc'mem
-        have hIA' : Invariant P g c' w := hIAF.1
-        -- Correct DECIDED-sender pigeonhole: `n − f` distinct senders of `b` delivered to `id`,
-        -- only `f` corrupted — equivocating byzantine senders may count toward the tally, but
-        -- at least one counted sender is never-corrupted (D12′).
-        have hex : ∃ j, j ∉ ABAState.F (C, A) ∧ b ∈ ABAState.decidedReceived (C, A) id j := by
-          by_contra hcon; push Not at hcon
-          have hsub : (Finset.univ.filter (fun j => b ∈ ABAState.decidedReceived (C, A) id j))
-              ⊆ ABAState.F (C, A) := by
+        have hstepInvariant := Invariant.step_retABA hI id b hstepC hc'mem
+        have hInvariant' : Invariant P G c' o := hstepInvariant.1
+        -- the pigeonhole on the DECIDED senders: `id` holds `⟨DECIDED, b⟩` from `n − f` distinct
+        -- senders, at most `f` of them corrupted. A corrupted sender may send both bits, and its
+        -- message counts toward the tally, but `f < n − f` gives a counted sender outside `F`
+        -- (D12′).
+        have hcorrectSender :
+            ∃ j, j ∉ ABAState.F (C, A) ∧ b ∈ ABAState.decidedReceived (C, A) id j := by
+          by_contra hnone; push Not at hnone
+          have hsubset :
+              (Finset.univ.filter (fun j => b ∈ ABAState.decidedReceived (C, A) id j))
+                ⊆ ABAState.F (C, A) := by
             intro j hj
             simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hj
-            by_contra hnf; exact hcon j hnf hj
-          have hcard := Finset.card_le_card hsub
-          have hfc := hI.F_card
-          have hf3 := P.hResilience
-          unfold ABAState.decidedCount at hcnt
+            by_contra hnotF; exact hnone j hnotF hj
+          have hcard := Finset.card_le_card hsubset
+          have hFcard := hI.F_card
+          have hResilience := P.hResilience
+          unfold ABAState.decidedCount at hcount
           omega
-        obtain ⟨j, hjF, hjrecv⟩ := hex
-        have hjsent : b ∈ ABAState.decidedSent (C, A) j := hI.received_sound id j b hjrecv
-        obtain ⟨rA, hrA_witness⟩ := hI.decided_source j b hjF hjsent
-        -- the abstract holder universal for `b`: every correct grade-2 decision holder agrees
-        -- with the derived sender's sent bit (I30)
-        have hpinb : ∀ j0 b0', j0 ∉ ABAState.F (C, A) → Grade2Holder P (C, A) j0 b0' → b0' = b :=
-          fun j0 b0' hj0 hh0 => hI.grade2Bound_agree j0 j b0' b hj0 hjF hh0 (Or.inr hjsent)
+        obtain ⟨j, hjF, hjreceived⟩ := hcorrectSender
+        have hjsent : b ∈ ABAState.decidedSent (C, A) j := hI.received_sound id j b hjreceived
+        obtain ⟨rWitness, hwitness⟩ := hI.decided_source j b hjF hjsent
+        -- every correct holder of a grade-2 decision names the bit `b` the sender `j` sent (I30)
+        have hholdersB :
+            ∀ j₀ b₀, j₀ ∉ ABAState.F (C, A) → Grade2Holder P (C, A) j₀ b₀ → b₀ = b :=
+          fun j₀ b₀ hj₀ hholder₀ =>
+            hI.grade2Bound_agree j₀ j b₀ b hj₀ hjF hholder₀ (Or.inr hjsent)
         have hretfalse : a.ret id = false := by
-          rw [hAbs.ret_eq id]; exact hret
-        have hCF : c'.F = ABAState.F (C, A) := ABAState.setProcessVariables_F _ _ _
+          rw [hAbstract.ret_eq id]; exact hret
+        have hF' : c'.F = ABAState.F (C, A) := ABAState.setProcessVariables_F _ _ _
         have hInputEq : ∀ id', (c'.processes id').input = (ABAState.processes (C,
           A) id').input := by
           intro id'
@@ -343,122 +281,127 @@ theorem hybridRefinesSpecification (P : Parameters) (M : Type) [DecidableEq M] :
           · rw [hc'def, ABAState.setProcessVariables_processes_ne _ _ _ h]
         have hSync : ∀ id', id' ∉ c'.F → a.input id' = (c'.processes id').input := by
           intro id' hid'
-          rw [hCF] at hid'
+          rw [hF'] at hid'
           rw [hInputEq id']
-          exact hAbs.input_sync id' hid'
-        rcases hAbs.phase with hv | ⟨v, hv2, ⟨r0, hcv0⟩, hpin⟩
-        · -- phase 1: the `decide` τ-step, then `SpecStep.ret`
-          have hsup : InputSupport P a b :=
-            inputSupport_of_roundLoopInputSupport hAbs.F_eq hAbs.input_sync (hI.bind_support rA b
-              hrA_witness.2.1)
+          exact hAbstract.input_sync id' hid'
+        rcases hAbstract.phase with hv | ⟨v, hval, ⟨r₀, hwitness₀⟩, hholders⟩
+        · -- phase 1: the silent step `SpecStep.decide`, then `SpecStep.ret`
+          have hsupport : InputSupport P a b :=
+            inputSupport_of_roundLoopInputSupport hAbstract.F_eq hAbstract.input_sync
+              (hI.bind_support rWitness b hwitness.2.1)
           have hmode : a.mode ≠ .noTransitionEnabled := by
-            rw [hAbs.mode_flipEnabled]; exact fun h => by cases h
-          set a1 : SpecState P.n := { a with val := some b, mode := .flipEnabled } with ha1def
-          have hrun : weakTau (spec P) (PMF.pure a) (PMF.pure a1) :=
-            decide_step hv hsup hmode
-          have hval1 : a1.val = some b := rfl
-          have hretid : a1.ret id = false := hretfalse
-          set a'' : SpecState P.n := { a1 with ret := Function.update a1.ret id true } with ha''def
-          have hAbs'' : AbstractState P g c' w a'' := by
-            refine ⟨?_, ?_, rfl, hSync, Or.inr ⟨b, rfl, hIAF.2.1 rA b hrA_witness,
-              hIAF.2.2 b ⟨rA, hrA_witness⟩ hpinb⟩⟩
-            · show a.F = c'.F
-              rw [hAbs.F_eq, hCF]
+            rw [hAbstract.mode_flipEnabled]; exact fun h => by cases h
+          set a₁ : SpecState P.n := { a with val := some b, mode := .flipEnabled } with ha₁def
+          have hrun : weakTau (spec P) (PMF.pure a) (PMF.pure a₁) :=
+            decide_step hv hsupport hmode
+          have hval₁ : a₁.val = some b := rfl
+          have hretid : a₁.ret id = false := hretfalse
+          set a'' : SpecState P.n := { a₁ with ret := Function.update a₁.ret id true }
+            with ha''def
+          have hAbstract'' : AbstractState P G c' o a'' := by
+            refine ⟨?_, ?_, rfl, hSync, Or.inr ⟨b, rfl, hstepInvariant.2.1 rWitness b hwitness,
+              hstepInvariant.2.2 b ⟨rWitness, hwitness⟩ hholdersB⟩⟩
+            · change a.F = c'.F
+              rw [hAbstract.F_eq, hF']
             · intro id'
-              show Function.update a1.ret id true id' = (c'.processes id').returned
+              change Function.update a₁.ret id true id' = (c'.processes id').returned
               by_cases h : id' = id
               · rw [h, Function.update_self, hc'def, ABAState.setProcessVariables_processes_self]
-              · rw [Function.update_of_ne h, hc'def, ABAState.setProcessVariables_processes_ne _ _ _
-                  h]
-                exact hAbs.ret_eq id'
+              · rw [Function.update_of_ne h, hc'def,
+                  ABAState.setProcessVariables_processes_ne _ _ _ h]
+                exact hAbstract.ret_eq id'
           simp only [prodPMF_pure_abaTransition]
-          obtain ⟨ω, hRel, hbid⟩ := dirac_step (g, c'.1, c'.2, w) a'' ⟨hIA', hAbs''⟩
-          refine ⟨ω, hRel, Or.inr ⟨by simp, ?_⟩⟩
-          rw [hbid]
-          exact weakStep_of_run_then_step hrun (SpecStep.ret a1 id b hval1 hretid)
-        · -- phase 2: `b` agrees with the witnessed value through the abstract state's holder
-          -- universal
-          -- (I30 holds the derived sender's sent `b` equal at every correct holder, and the
-          -- abstract state's universal names `v`; `SpecStep.ret` fires alone)
-          have hD3 : v = b := (hpin j b hjF (Or.inr hjsent)).symm
+          obtain ⟨ω, hcoupling, hbind⟩ :=
+            dirac_step (G, c'.1, c'.2, o) a'' ⟨hInvariant', hAbstract''⟩
+          refine ⟨ω, hcoupling, Or.inr ⟨by simp, ?_⟩⟩
+          rw [hbind]
+          exact weakStep_of_run_then_step hrun (SpecStep.ret a₁ id b hval₁ hretid)
+        · -- phase 2: `b` is the decided value `v`, since every correct holder of a grade-2
+          -- decision names `v` and the sender `j` sent `b` (I30). `SpecStep.ret` matches the
+          -- return alone.
+          have hvb : v = b := (hholders j b hjF (Or.inr hjsent)).symm
           have hvalb : a.val = some b := by
-            rw [hv2, hD3]
+            rw [hval, hvb]
           set a'' : SpecState P.n := { a with ret := Function.update a.ret id true } with ha''def
-          have hAbs'' : AbstractState P g c' w a'' := by
-            refine ⟨?_, ?_, hAbs.mode_flipEnabled, hSync, Or.inr ⟨v, hv2, hIAF.2.1 r0 v hcv0,
-              hIAF.2.2 v ⟨r0, hcv0⟩ hpin⟩⟩
-            · show a.F = c'.F
-              rw [hAbs.F_eq, hCF]
+          have hAbstract'' : AbstractState P G c' o a'' := by
+            refine ⟨?_, ?_, hAbstract.mode_flipEnabled, hSync, Or.inr ⟨v, hval,
+              hstepInvariant.2.1 r₀ v hwitness₀, hstepInvariant.2.2 v ⟨r₀, hwitness₀⟩ hholders⟩⟩
+            · change a.F = c'.F
+              rw [hAbstract.F_eq, hF']
             · intro id'
-              show Function.update a.ret id true id' = (c'.processes id').returned
+              change Function.update a.ret id true id' = (c'.processes id').returned
               by_cases h : id' = id
               · rw [h, Function.update_self, hc'def, ABAState.setProcessVariables_processes_self]
-              · rw [Function.update_of_ne h, hc'def, ABAState.setProcessVariables_processes_ne _ _ _
-                  h]
-                exact hAbs.ret_eq id'
+              · rw [Function.update_of_ne h, hc'def,
+                  ABAState.setProcessVariables_processes_ne _ _ _ h]
+                exact hAbstract.ret_eq id'
           simp only [prodPMF_pure_abaTransition]
-          obtain ⟨ω, hRel, hbid⟩ := dirac_step (g, c'.1, c'.2, w) a'' ⟨hIA', hAbs''⟩
-          refine ⟨ω, hRel, Or.inr ⟨by simp, ?_⟩⟩
-          rw [hbid]
+          obtain ⟨ω, hcoupling, hbind⟩ :=
+            dirac_step (G, c'.1, c'.2, o) a'' ⟨hInvariant', hAbstract''⟩
+          refine ⟨ω, hcoupling, Or.inr ⟨by simp, ?_⟩⟩
+          rw [hbind]
           exact weakStep_strong (SpecStep.ret a id b hvalb hretfalse)
-      · -- a corrupted process's return (D23): neither system moves, and the abstract state matches
-        -- it with `SpecStep.retByzantine`
+      · -- a corrupted process's return, the replaced round loop's self-loop beside the ABA
+        -- network's `retABAIdle`: neither system moves, and `SpecStep.retByzantine` matches it
+        -- (D23)
         simp only [prodPMF_pure_abaTransition]
-        obtain ⟨ω, hRel, hbid⟩ := dirac_step (g, C, A, w) a ⟨hI, hAbs⟩
-        refine ⟨ω, hRel, Or.inr ⟨by simp, ?_⟩⟩
-        rw [hbid]
-        exact weakStep_strong (SpecStep.retByzantine a id b (hAbs.F_eq ▸ hFbyz))
+        obtain ⟨ω, hcoupling, hbind⟩ := dirac_step (G, C, A, o) a ⟨hI, hAbstract⟩
+        refine ⟨ω, hcoupling, Or.inr ⟨by simp, ?_⟩⟩
+        rw [hbind]
+        exact weakStep_strong (SpecStep.retByzantine a id b (hAbstract.F_eq ▸ hidF))
     | callG r id b => exact (hidden_label_impossible (by simp) (by simp) hstep).elim
-    | retG r id out bnd => exact (hidden_label_impossible (by simp) (by simp) hstep).elim
+    | retG r id out => exact (hidden_label_impossible (by simp) (by simp) hstep).elim
+    | boundG r b => exact (hidden_label_impossible (by simp) (by simp) hstep).elim
     | callW r id => exact (hidden_label_impossible (by simp) (by simp) hstep).elim
     | retW r id b => exact (hidden_label_impossible (by simp) (by simp) hstep).elim
     | fail id =>
-      rw [hybrid_step_fail P g C A w id hI.corrupted_F] at hstep
-      obtain ⟨hnew, hbud, rfl⟩ := hstep
+      rw [hybrid_step_fail P G C A o id hI.corrupted_F] at hstep
+      obtain ⟨hcorrect, hbudget, rfl⟩ := hstep
       set c' : ABAState P := ABAState.corrupt P id (C, A) with hc'def
       simp only [prodPMF_pure_abaTransition]
-      have hFsub := ABAState.corrupt_F_subset (C, A) id
-      have hAbs' : AbstractState P (fun r => (g r).corrupt P id) c'
-          (fun r => (w r).corrupt P id) (a.corrupt P id) := by
+      have hFsubset := ABAState.corrupt_F_subset (C, A) id
+      have hAbstract' : AbstractState P (fun r => (G r).corrupt P id) c'
+          (fun r => (o r).corrupt P id) (a.corrupt P id) := by
         refine ⟨?_, ?_, ?_, ?_, ?_⟩
         · show (a.corrupt P id).F = c'.F
           rw [hc'def, ABAState.corrupt_F]
           unfold SpecState.corrupt
-          rw [hAbs.F_eq]
-          split_ifs <;> simp [hAbs.F_eq]
+          rw [hAbstract.F_eq]
+          split_ifs <;> simp [hAbstract.F_eq]
         · intro id'
-          rw [corrupt_ret, hc'def, ABAState.corrupt_processes]; exact hAbs.ret_eq id'
-        · rw [corrupt_mode]; exact hAbs.mode_flipEnabled
+          rw [corrupt_ret, hc'def, ABAState.corrupt_processes]; exact hAbstract.ret_eq id'
+        · rw [corrupt_mode]; exact hAbstract.mode_flipEnabled
         · intro id' hid'
           rw [corrupt_input, hc'def, ABAState.corrupt_processes]
-          exact hAbs.input_sync id' (fun hh => hid' (hFsub hh))
-        · rcases hAbs.phase with hv | ⟨v, hv, ⟨r0, hcv0⟩, hpin⟩
+          exact hAbstract.input_sync id' (fun hmemF => hid' (hFsubset hmemF))
+        · rcases hAbstract.phase with hv | ⟨v, hv, ⟨r₀, hwitness⟩, hholders⟩
           · exact Or.inl (by rw [corrupt_val]; exact hv)
           · exact Or.inr ⟨v, by rw [corrupt_val]; exact hv,
-              (hI.step_fail id hnew hbud).2.1 r0 v hcv0,
-              (hI.step_fail id hnew hbud).2.2 v ⟨r0, hcv0⟩ hpin⟩
-      have hIA' : Invariant P (fun r => (g r).corrupt P id) c'
-          (fun r => (w r).corrupt P id) := (hI.step_fail id hnew hbud).1
-      refine ⟨PMF.pure (PMF.pure (a.corrupt P id)), ⟨PMF.pure
-        ((fun r => (g r).corrupt P id, c'.1, c'.2, fun r => (w r).corrupt P id),
-          PMF.pure (a.corrupt P id)), ?_, ?_, ?_⟩, Or.inr ⟨by simp, ?_⟩⟩
-      · rw [PMF.pure_map]
-      · rw [PMF.pure_map]
-      · intro p hp
-        rw [PMF.mem_support_pure_iff] at hp
-        subst hp
-        exact ⟨a.corrupt P id, rfl, hIA', hAbs'⟩
-      · rw [PMF.pure_bind]
-        exact weakStep_strong (SpecStep.fail a id (hAbs.F_eq ▸ hnew)
-          (by rw [hAbs.F_eq]; exact hbud))
+              (hI.step_fail id hcorrect hbudget).2.1 r₀ v hwitness,
+              (hI.step_fail id hcorrect hbudget).2.2 v ⟨r₀, hwitness⟩ hholders⟩
+      have hInvariant' : Invariant P (fun r => (G r).corrupt P id) c'
+          (fun r => (o r).corrupt P id) := (hI.step_fail id hcorrect hbudget).1
+      -- the two families read through their accessors: the broadcast corrupts every round
+      have hrelated : hybridSpecificationStateRelation P
+          (G.applyBroadcast (Sum.inl (Label.fail id)), c'.1, c'.2,
+            o.applyBroadcast (Label.fail id)) (a.corrupt P id) := by
+        refine ⟨?_, ?_⟩ <;> dsimp only [HybridState.aba, HybridState.wcc] <;>
+          rw [GBCA.instanceState_applyBroadcast_fail, WCC.instanceState_applyBroadcast_fail]
+        · exact hInvariant'
+        · exact hAbstract'
+      obtain ⟨ω, hcoupling, hbind⟩ := dirac_step _ (a.corrupt P id) hrelated
+      refine ⟨ω, hcoupling, Or.inr ⟨by simp, ?_⟩⟩
+      rw [hbind]
+      exact weakStep_strong (SpecStep.fail a id (hAbstract.F_eq ▸ hcorrect)
+        (by rw [hAbstract.F_eq]; exact hbudget))
 
-/-- **The protocol-shaped specification refines the ABA specification**: the
-soundness of the core simulation. -/
+/-- **Every achievable trace distribution of `hybrid` is one of Transition System 1**, by
+`ProbabilisticForwardSimulation.achievableTraceDists_subset` at `hybridRefinesSpecification`. -/
 theorem hybrid_spec (P : Parameters) (M : Type) [DecidableEq M] :
     achievableTraceDists (hybrid P M) ⊆ achievableTraceDists (spec P) :=
   (hybridRefinesSpecification P M).achievableTraceDists_subset
 
-/-! ### Mechanical axiom check -/
+/-! ### The axioms -/
 
 /-- info: 'PLTS.ABA.hybrid_spec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in

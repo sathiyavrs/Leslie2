@@ -5,7 +5,7 @@ Authors: Sathiya / Claude
 -/
 
 import Leslie2Protocols.ABA.Vocabulary.Labels
-import Leslie2Protocols.Framework.LoopsAndInstanceFamilies
+import Leslie2Protocols.Framework.InputEnabledness
 
 /-!
 # The WCC specification instance (blueprint Transition System 3)
@@ -50,6 +50,16 @@ out-of-scope Unpredictability property), and `fail` is the determinised
 The instance steps on its own round-`r` API labels, on `fail`, and on `τ` by the
 resolution (`WCC.step_tau_cases`). The family combinator (`System.family`)
 supplies idle self-loops on every other label.
+
+## Inputs and outputs
+
+The calls `callW r id` and the corruptions `fail id` are the inputs of the round-`r` instance, and
+the returns `retW r id b` are its outputs (`WCC.specInstInputOutputLabels`). `Step.callLoop` takes
+a call at every state and `Step.fail` a corruption, so the instance is input-enabled
+(`WCC.specInst_inputEnabled`). The family takes every non-silent label other than a return as an
+input (`WCC.specFamily_inputEnabled`). An instance initial under any list of corruptions has
+no silent transition (`WCC.specInst_noSilentAtUntouched`): the resolution needs more than `f`
+callers, and a corruption records no caller.
 -/
 
 namespace PLTS
@@ -135,6 +145,11 @@ def threshold (P : Parameters) (s : SpecState P.n) : Prop :=
 def corrupt (P : Parameters) (id : Fin P.n) (s : SpecState P.n) : SpecState P.n :=
   if id ∉ s.F ∧ s.F.card < P.f then { s with F := insert id s.F } else s
 
+/-- A corruption writes `F` alone, so it records no caller. -/
+@[simp] theorem corrupt_called (P : Parameters) (id : Fin P.n) (s : SpecState P.n) :
+    (s.corrupt P id).called = s.called := by
+  unfold corrupt; split <;> rfl
+
 end SpecState
 
 /-- The step relation of the round-`r` WCC specification instance. -/
@@ -210,23 +225,90 @@ def failAct (P : Parameters) : Label P.n → SpecState P.n → SpecState P.n
   | .fail id, s => s.corrupt P id
   | _, s => s
 
+/-- The broadcast transform leaves the callers where they stand. -/
+theorem failAct_called (P : Parameters) (l : Label P.n) (s : SpecState P.n) :
+    (failAct P l s).called = s.called := by
+  cases l <;> simp [failAct]
+
+/-- **An untouched instance has no silent transition.** The instance initial under any list of
+`fail` broadcasts has no caller, since `failAct` writes `F` alone, and the resolution needs more
+than `f` callers. -/
+theorem specInst_noSilentAtUntouched (P : Parameters) (r : ℕ) :
+    ∀ (broadcasts : List (Label P.n)) (μ : PMF (SpecState P.n)),
+      ¬ (specInst P r).step (broadcasts.foldr (failAct P) (SpecState.initial P.n)) .tau μ := by
+  have hcalled : ∀ L : List (Label P.n),
+      (L.foldr (failAct P) (SpecState.initial P.n)).called = fun _ => false := by
+    intro L
+    induction L with
+    | nil => rfl
+    | cons l L ih => rw [List.foldr_cons, failAct_called, ih]
+  intro broadcasts μ hstep
+  obtain ⟨-, ht, -⟩ := step_tau_cases hstep
+  unfold SpecState.threshold at ht
+  rw [hcalled broadcasts] at ht
+  simp at ht
+
 /-- The ℕ-indexed family of WCC specification instances: one instance per
 round, `fail` broadcast to all of them, idle on the labels it does not own. -/
 noncomputable def specFamily (P : Parameters) :
-    System (ℕ → SpecState P.n) (Label P.n) :=
-  System.family (specInst P) Label.wccRound Label.isFail (failAct P)
+    System (InstanceFamilyState (SpecState.initial P.n) (failAct P)) (Label P.n) :=
+  System.family (specInst P) Label.wccRound Label.isFail (failAct P) (SpecState.initial P.n)
 
-/-- The silent transition of the family is one instance's resolution: some round `r`
-takes its `τ`, and every other round is unchanged. -/
-theorem specFamily_tau_cases (P : Parameters) {o : ℕ → SpecState P.n}
-    {ω : PMF (ℕ → SpecState P.n)} (h : (specFamily P).step o Label.tau ω) :
-    ∃ r μr, Step P r (o r) .tau μr ∧ ω = μr.map (Function.update o r) := by
+/-- The family starts from the instances' initial states. -/
+theorem specFamily_init_apply (P : Parameters) (r : ℕ) :
+    (specFamily P).init r = (specInst P r).init :=
+  System.family_init_apply _ _ _ (specInst_init P) r
+
+/-- The silent transition of the family is one instance's resolution: some round `r` of the
+map takes its `τ`, and every other round is unchanged. -/
+theorem specFamily_tau_cases (P : Parameters)
+    {o : InstanceFamilyState (SpecState.initial P.n) (failAct P)}
+    {ω : PMF (InstanceFamilyState (SpecState.initial P.n) (failAct P))}
+    (h : (specFamily P).step o Label.tau ω) :
+    ∃ r ∈ o.instanceMap.keys, ∃ μr, Step P r (o r) .tau μr ∧
+      ω = μr.map (o.setInstanceState r) := by
   rw [specFamily, System.family_step_iff] at h
-  rcases h with ⟨-, r, μr, hstep, rfl⟩ | ⟨r, hr, -⟩ | ⟨hτ, -⟩ | ⟨hτ, -⟩
-  · exact ⟨r, μr, hstep, rfl⟩
+  rcases h with ⟨-, r, hr, μr, hstep, rfl⟩ | ⟨r, hr, -⟩ | ⟨hτ, -⟩ | ⟨hτ, -⟩
+  · exact ⟨r, hr, μr, hstep, rfl⟩
   · exact absurd hr (by simp [Label.wccRound])
   · exact absurd rfl hτ
   · exact absurd rfl hτ
+
+/-! ### Inputs and outputs -/
+
+/-- The input labels and the output labels of the round-`r` instance: the calls and the
+corruptions are its inputs, the returns its outputs. -/
+def specInstInputOutputLabels (P : Parameters) (r : ℕ) : InputOutputLabels (Label P.n) where
+  inputLabels := {l | ∃ id, l = .callW r id} ∪ {l | ∃ id, l = .fail id}
+  outputLabels := {l | ∃ id b, l = .retW r id b}
+
+/-- **The round-`r` instance is input-enabled.** `Step.callLoop` takes a call at every state,
+beside `Step.call` at a process that has not called, and `Step.fail` takes a corruption. -/
+theorem specInst_inputEnabled (P : Parameters) (r : ℕ) :
+    (specInst P r).InputEnabled (specInstInputOutputLabels P r).inputLabels := by
+  rintro s _ (⟨id, rfl⟩ | ⟨id, rfl⟩)
+  · exact ⟨_, Step.callLoop s id⟩
+  · exact ⟨_, Step.fail s id⟩
+
+/-- The input labels and the output labels of the family: the returns of every round are its
+outputs, and every other non-silent label is an input. -/
+def specFamilyInputOutputLabels (P : Parameters) : InputOutputLabels (Label P.n) where
+  inputLabels := {l | l ≠ .tau ∧ ∀ r id b, l ≠ .retW r id b}
+  outputLabels := {l | ∃ r id b, l = .retW r id b}
+
+/-- **The family is input-enabled.** A call of round `r` is taken by the round-`r` instance, a
+corruption by the broadcast, and every other non-silent label other than a return by the
+family's idle transition (`System.InputEnabled.family`). -/
+theorem specFamily_inputEnabled (P : Parameters) :
+    (specFamily P).InputEnabled (specFamilyInputOutputLabels P).inputLabels := by
+  refine (System.InputEnabled.family (specInst_inputEnabled P) Label.wccRound Label.isFail
+    (failAct P) (SpecState.initial P.n)).mono ?_
+  rintro l ⟨hτ, hret⟩
+  cases l with
+  | tau => exact absurd rfl hτ
+  | callW r id => exact Or.inr ⟨r, rfl, Or.inl ⟨id, rfl⟩⟩
+  | retW r id b => exact absurd rfl (hret r id b)
+  | _ => exact Or.inl ⟨hτ, rfl⟩
 
 end WCC
 end ABA
